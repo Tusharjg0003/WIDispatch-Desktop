@@ -1,0 +1,379 @@
+.metric {
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --line: rgba(255, 255, 255, 0.08);
+  --line-soft: rgba(255, 255, 255, 0.05);
+  --ink: #e8eaf0;
+  --ink-dim: rgba(232, 234, 240, 0.55);
+  --accent: #567cff;
+  --good: #5fd0a8;
+  --warn: #ffb056;
+  --bad: #ff8a8a;
+
+  width: 100%;
+  padding: 28px 32px 64px;
+}
+
+.mono {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* ---- Header ---- */
+.metric__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 24px;
+}
+
+.metric__eyebrow {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--accent);
+}
+
+.metric__title {
+  margin: 6px 0 0;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.metric__filters {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.metric__filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-dim);
+}
+
+.metric__filters input,
+.metric__filters select {
+  height: 36px;
+  padding: 0 11px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--ink);
+  font-size: 0.85rem;
+  color-scheme: dark;
+}
+
+.metric__filters input:focus-visible,
+.metric__filters select:focus-visible,
+.metric__clear:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.metric__clear {
+  height: 36px;
+  padding: 0 15px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink-dim);
+  cursor: pointer;
+}
+
+.metric__clear:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+
+/* ---- Notices ---- */
+.metric__notice {
+  padding: 48px;
+  text-align: center;
+  border-radius: 14px;
+  border: 1px dashed var(--line);
+  color: var(--ink-dim);
+}
+
+.metric__notice--error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  border-style: solid;
+  border-color: rgba(255, 138, 138, 0.4);
+  color: var(--bad);
+}
+
+.metric__notice--error button {
+  padding: 7px 15px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 138, 138, 0.5);
+  background: transparent;
+  color: var(--bad);
+  cursor: pointer;
+}
+
+/* ---- KPI status strip ---- */
+.status-strip {
+  display: grid;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 28px;
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 18px 20px;
+  border-left: 1px solid var(--line-soft);
+  position: relative;
+}
+
+.kpi:first-child {
+  border-left: none;
+}
+
+.kpi::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 16px;
+  bottom: 16px;
+  width: 2px;
+  background: transparent;
+}
+
+.kpi--good::before { background: var(--good); }
+.kpi--warn::before { background: var(--warn); }
+
+.kpi__eyebrow {
+  font-size: 0.64rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-dim);
+}
+
+.kpi__value {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 1.55rem;
+  font-weight: 600;
+  line-height: 1;
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+
+.kpi__unit {
+  margin-left: 5px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--ink-dim);
+}
+
+.kpi__sub {
+  font-size: 0.74rem;
+  color: var(--ink-dim);
+}
+
+.kpi--warn .kpi__value { color: var(--warn); }
+
+/* ---- Plant supply sheets ---- */
+.sheets {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.sheet {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.sheet__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  flex-wrap: wrap;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(86, 124, 255, 0.06), transparent);
+}
+
+.sheet__eyebrow {
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--accent);
+}
+
+.sheet__name {
+  margin: 4px 0 5px;
+  font-size: 1.2rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.sheet__meta {
+  font-size: 0.8rem;
+  color: var(--ink-dim);
+}
+
+.sheet__rollup {
+  display: flex;
+  gap: 28px;
+  margin: 0;
+  flex-wrap: wrap;
+}
+
+.rollup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rollup dt {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--ink-dim);
+}
+
+.rollup dd {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.rollup__unit {
+  margin-left: 4px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--ink-dim);
+}
+
+.rollup--good dd { color: var(--good); }
+.rollup--warn dd { color: var(--warn); }
+
+/* ---- Ledger table ---- */
+.sheet__table-wrap {
+  overflow-x: auto;
+}
+
+.ledger {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.ledger th,
+.ledger td {
+  padding: 11px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--line-soft);
+  white-space: nowrap;
+}
+
+.ledger thead th {
+  font-size: 0.64rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-dim);
+  background: rgba(20, 23, 32, 0.6);
+}
+
+.ledger .num {
+  text-align: right;
+}
+
+.ledger tbody tr:hover {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.ledger tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.approved {
+  color: var(--ink-dim);
+}
+
+/* Utilization meter */
+.util-col {
+  width: 160px;
+}
+
+.meter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.meter--empty {
+  color: rgba(232, 234, 240, 0.35);
+}
+
+.meter__track {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+
+.meter__fill {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--good));
+}
+
+.meter__num {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.78rem;
+  color: var(--ink-dim);
+  min-width: 38px;
+  text-align: right;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 1100px) {
+  .status-strip {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+  .kpi {
+    border-left: 1px solid var(--line-soft);
+  }
+}
+
+@media (max-width: 640px) {
+  .metric {
+    padding: 20px 16px 48px;
+  }
+  .status-strip {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}

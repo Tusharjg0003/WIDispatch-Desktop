@@ -1,0 +1,148 @@
+.home-page {
+  position: relative;
+  height: 100%;
+  width: 100%;
+}
+
+/* Full-bleed brand stage */
+.home-brand-stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 90% at 50% -10%, rgba(86, 124, 255, 0.18), transparent 60%),
+    radial-gradient(80% 60% at 50% 120%, rgba(64, 220, 196, 0.12), transparent 55%),
+    #0a0b0f;
+}
+
+/* Slow ambient glow behind the wordmark */
+.home-brand-stage::before {
+  content: "";
+  position: absolute;
+  width: 60vw;
+  height: 60vw;
+  max-width: 720px;
+  max-height: 720px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(86, 124, 255, 0.22), transparent 70%);
+  filter: blur(40px);
+  animation: brand-pulse 9s ease-in-out infinite;
+}
+
+.home-brand-title {
+  position: relative;
+  margin: 0;
+  padding: 0 24px;
+  font-size: clamp(2.5rem, 9vw, 7rem);
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  line-height: 1;
+  text-align: center;
+  text-transform: uppercase;
+  background: linear-gradient(180deg, #ffffff 0%, #aeb6d8 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 0 60px rgba(86, 124, 255, 0.25);
+}
+
+@keyframes brand-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
+
+/* Entrance transition for the route */
+.page-transition {
+  animation: page-fade-in 0.5s ease both;
+}
+
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Access denied toast */
+.access-denied-alert {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 1000;
+  max-width: 360px;
+  animation: alert-slide-in 0.35s ease both;
+}
+
+.access-denied-alert-content {
+  position: relative;
+  padding: 18px 44px 18px 20px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 99, 99, 0.4);
+  background: rgba(40, 16, 18, 0.92);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+}
+
+.access-denied-alert-content h3 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  color: #ff8a8a;
+}
+
+.access-denied-alert-content p {
+  margin: 4px 0;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: rgba(232, 234, 240, 0.85);
+}
+
+.access-denied-alert-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  border: none;
+  background: transparent;
+  color: rgba(232, 234, 240, 0.6);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.access-denied-alert-close:hover {
+  color: #fff;
+}
+
+@keyframes alert-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-brand-stage::before,
+  .page-transition,
+  .access-denied-alert {
+    animation: none;
+  }
+}
