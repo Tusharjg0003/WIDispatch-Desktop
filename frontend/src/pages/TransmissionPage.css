@@ -1,0 +1,58 @@
+/* Builds on MetricDashboard.css tokens/classes (.metric, .sheet, .ledger, .kpi). */
+
+.kpi--bad::before { background: #ff8a8a; }
+.kpi--bad .kpi__value { color: #ff8a8a; }
+
+/* Asset status matrix */
+.matrix td:first-child,
+.matrix th:first-child {
+  font-weight: 500;
+}
+
+.matrix .zero {
+  color: rgba(232, 234, 240, 0.25);
+}
+
+.matrix .total {
+  color: #fff;
+  font-weight: 600;
+}
+
+.matrix__totals td {
+  border-top: 1px solid var(--line);
+  border-bottom: none;
+  background: rgba(255, 255, 255, 0.02);
+  font-weight: 600;
+  color: #fff;
+}
+
+/* Status / type pills */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  border: 1px solid var(--line);
+  color: var(--ink-dim);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.pill--emergency {
+  color: #ff9a9a;
+  border-color: rgba(255, 138, 138, 0.4);
+  background: rgba(255, 138, 138, 0.1);
+}
+
+.pill--preventive,
+.pill--planned {
+  color: #8fb0ff;
+  border-color: rgba(86, 124, 255, 0.4);
+  background: rgba(86, 124, 255, 0.1);
+}
+
+.var--shortfall {
+  color: #ff8a8a;
+}

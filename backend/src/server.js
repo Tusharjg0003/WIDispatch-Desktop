@@ -1,6 +1,10 @@
 import express from "express";
 import cors from "cors";
 import { buildSummary, buildRecords, DOMAINS } from "./metrics.js";
+import { buildTransmission } from "./transmission.js";
+import { buildQuality } from "./quality.js";
+import { buildEconomics } from "./economics.js";
+import { listAssets, createAsset } from "./assetRegistry.js";
 
 const app = express();
 const PORT = Number(process.env.PORT ?? 4000);
@@ -35,6 +39,54 @@ for (const domain of Object.keys(DOMAINS)) {
     }
   });
 }
+
+app.get("/api/transmission/summary", async (req, res) => {
+  try {
+    res.json(await buildTransmission(filtersFrom(req)));
+  } catch (err) {
+    console.error("transmission error:", err);
+    res.status(500).json({ error: "Failed to build transmission summary" });
+  }
+});
+
+app.get("/api/quality", async (req, res) => {
+  try {
+    res.json(await buildQuality(filtersFrom(req)));
+  } catch (err) {
+    console.error("quality error:", err);
+    res.status(500).json({ error: "Failed to fetch quality records" });
+  }
+});
+
+app.get("/api/economics", async (req, res) => {
+  try {
+    res.json(await buildEconomics(filtersFrom(req)));
+  } catch (err) {
+    console.error("economics error:", err);
+    res.status(500).json({ error: "Failed to build economics summary" });
+  }
+});
+
+app.get("/api/assets", async (req, res) => {
+  try {
+    const { category, status, region, q, limit } = req.query;
+    res.json(await listAssets({ category, status, region, q, limit }));
+  } catch (err) {
+    console.error("assets list error:", err);
+    res.status(500).json({ error: "Failed to list assets" });
+  }
+});
+
+app.post("/api/assets", async (req, res) => {
+  try {
+    const { category, ...body } = req.body || {};
+    const created = await createAsset(category, body);
+    res.status(201).json(created);
+  } catch (err) {
+    console.error("asset create error:", err);
+    res.status(err.statusCode || 500).json({ error: err.message || "Failed to create asset" });
+  }
+});
 
 app.listen(PORT, () => {
   console.log(`WIDispatch API listening on http://localhost:${PORT}`);

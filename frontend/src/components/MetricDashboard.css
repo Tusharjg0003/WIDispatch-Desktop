@@ -276,9 +276,75 @@
 .rollup--good dd { color: var(--good); }
 .rollup--warn dd { color: var(--warn); }
 
+/* Simple section header (no rollup) — shared by Quality / Transmission sections */
+.sheet__head--simple {
+  display: flex;
+  align-items: center;
+}
+
+.sheet__name--sm {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.sheet__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 10px;
+  background: rgba(86, 124, 255, 0.18);
+  color: #aebbff;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
 /* ---- Ledger table ---- */
 .sheet__table-wrap {
   overflow-x: auto;
+}
+
+.ledger__empty {
+  padding: 24px 16px !important;
+  text-align: center;
+  color: var(--ink-dim);
+}
+
+.notes {
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--ink-dim);
+}
+
+/* Compliance flag pill (quality) */
+.q-flag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border: 1px solid var(--line);
+}
+
+.q-flag--ok {
+  color: var(--good);
+  border-color: rgba(95, 208, 168, 0.4);
+  background: rgba(95, 208, 168, 0.1);
+}
+
+.q-flag--bad {
+  color: var(--bad);
+  border-color: rgba(255, 138, 138, 0.4);
+  background: rgba(255, 138, 138, 0.1);
 }
 
 .ledger {

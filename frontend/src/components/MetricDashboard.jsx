@@ -213,6 +213,8 @@ export default function MetricDashboard({ domain, config }) {
               <PlantSheet key={p.plantId} plant={p} config={config} />
             ))}
           </div>
+
+          {config.renderFooter?.(filters)}
         </>
       )}
     </div>

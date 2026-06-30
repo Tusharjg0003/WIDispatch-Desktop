@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { id: "economics", label: "Economics", path: "/economics" },
   { id: "network-builder", label: "Network Builder", path: "/network-builder" },
   { id: "simulation-config", label: "Simulation Config", path: "/simulation-config" },
+  { id: "asset-registry", label: "Asset Registry", path: "/asset-registry" },
 ];
 
 const TopNavigationBar = () => {

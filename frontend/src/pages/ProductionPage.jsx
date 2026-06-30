@@ -1,5 +1,6 @@
 import React from "react";
 import MetricDashboard, { fmtM3 } from "../components/MetricDashboard";
+import QualitySection from "../components/QualitySection";
 
 const config = {
   eyebrow: "Dispatch · Supply",
@@ -30,6 +31,7 @@ const config = {
     { label: "Headroom", key: "headroomM3", format: "m3", unit: "m³" },
     { label: "Days", key: "days", format: "int" },
   ],
+  renderFooter: (filters) => <QualitySection filters={filters} />,
 };
 
 export default function ProductionPage() {

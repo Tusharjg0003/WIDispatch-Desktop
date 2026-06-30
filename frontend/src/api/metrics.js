@@ -23,3 +23,35 @@ export function fetchSummary(domain, filters) {
 export function fetchRecords(domain, filters) {
   return getJson(`/api/${domain}/records${buildQuery(filters)}`);
 }
+
+export function fetchTransmission(filters) {
+  return getJson(`/api/transmission/summary${buildQuery(filters)}`);
+}
+
+export function fetchQuality(filters) {
+  return getJson(`/api/quality${buildQuery(filters)}`);
+}
+
+export function fetchEconomics(filters) {
+  return getJson(`/api/economics${buildQuery(filters)}`);
+}
+
+export function fetchAssets(filters = {}) {
+  const params = new URLSearchParams();
+  for (const [k, v] of Object.entries(filters)) {
+    if (v) params.set(k, v);
+  }
+  const qs = params.toString();
+  return getJson(`/api/assets${qs ? `?${qs}` : ""}`);
+}
+
+export async function createAsset(payload) {
+  const res = await fetch(`${API_BASE}/api/assets`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+  return data;
+}
