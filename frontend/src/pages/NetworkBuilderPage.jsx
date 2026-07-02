@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useLayout } from "../contexts/LayoutContext";
 import { buildCyStyle, ENTITY_TYPE_LABELS } from "../cytoscape/buildCyStyle";
+import { applyCardIcon } from "../cytoscape/nodeCard";
 import { fetchNetwork, fetchNetworks, saveNetwork, updateNetwork } from "../api/networks";
 import NetworkPalette from "../components/NetworkPalette";
 import NetworkNodeDetails from "../components/NetworkNodeDetails";
@@ -44,7 +45,11 @@ const assetMeta = (a) => ({
 // their full data + position; edges keep full data. Older saves used a flat
 // shape, so addGraph tolerates both.
 const serializeGraph = (cy) => ({
-  nodes: cy.nodes().map((n) => ({ data: { ...n.data() }, position: { ...n.position() } })),
+  // cardIcon is a derived data-URI regenerated on load — don't persist it.
+  nodes: cy.nodes().map((n) => {
+    const { cardIcon, ...data } = n.data();
+    return { data, position: { ...n.position() } };
+  }),
   edges: cy.edges().map((e) => ({ data: { ...e.data() } })),
 });
 
@@ -414,6 +419,7 @@ export default function NetworkBuilderPage() {
     cy.on("add", (evt) => {
       if (!showLabelsRef.current) evt.target.addClass("hide-labels");
     });
+    cy.on("add", "node", (evt) => applyCardIcon(evt.target));
     cy.on("add remove", () => {
       syncGraph();
       syncSelection();
@@ -535,7 +541,9 @@ export default function NetworkBuilderPage() {
     (value) => {
       const cy = cyRef.current;
       if (!cy || !selectedEl) return;
-      cy.getElementById(selectedEl.id).data("status", value);
+      const el = cy.getElementById(selectedEl.id);
+      el.data("status", value);
+      if (el.isNode()) applyCardIcon(el); // refresh the status band
       syncSelection();
     },
     [selectedEl, syncSelection]
