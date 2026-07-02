@@ -1,0 +1,720 @@
+/* Network Builder — reuses the app's dark tokens (see MetricDashboard.css). */
+
+/* ── Page shell: canvas + right inspector ─────────────────────────────────── */
+.nb-page {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+}
+
+.nb-canvas-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.nb-canvas {
+  position: absolute;
+  inset: 0;
+  background-color: #0b0d13;
+}
+.nb-canvas--grid {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+.nb-page--place-asset .nb-canvas,
+.nb-page--place-entity .nb-canvas,
+.nb-page--place-note .nb-canvas,
+.nb-page--insert-on-edge .nb-canvas,
+.nb-page--draw-pipe .nb-canvas {
+  cursor: crosshair;
+}
+
+/* Contextual mode banner (with cancel) — mirrors the reference's mode banner. */
+.nb-mode-banner {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 8px 7px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(86, 124, 255, 0.4);
+  background: rgba(86, 124, 255, 0.16);
+  color: #cdd8ff;
+  font-size: 0.82rem;
+  font-weight: 500;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+.nb-mode-banner__cancel {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ink);
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+.nb-mode-banner__cancel:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.nb-canvas__empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+  color: var(--ink-dim);
+  pointer-events: none;
+}
+.nb-canvas__empty h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--ink);
+}
+.nb-canvas__empty p {
+  margin: 0;
+  max-width: 340px;
+  font-size: 0.85rem;
+}
+
+.nb-toast {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
+  padding: 9px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #0f1118;
+  color: var(--ink);
+  font-size: 0.83rem;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.nb-inspector {
+  width: 320px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--line);
+  overflow-y: auto;
+  background: #0c0e14;
+}
+
+/* ── Contextual toolbar — Microsoft Word–style ribbon, dark-themed ────────────
+   Full-width band directly under the nav. Each group is a column of small
+   icon+label buttons (up to 3 rows) with a centered caption below, separated
+   by faint vertical dividers. */
+.contextual-toolbar {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  padding: 6px 8px 3px;
+  box-sizing: border-box;
+  background: linear-gradient(180deg, #151925 0%, #10131c 100%);
+  border-bottom: 1px solid var(--line);
+}
+.contextual-toolbar__container {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  width: 100%;
+  min-width: 0;
+}
+
+/* ── Group (column of buttons + caption, divided by a vertical rule) ─────── */
+.toolbar-group {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  flex: 0 0 auto;
+  padding: 2px 6px 0;
+}
+.toolbar-group:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 6px;
+  bottom: 20px;
+  width: 1px;
+  background: var(--line);
+}
+.toolbar-group--fill {
+  flex: 1 1 auto;
+  min-width: 110px;
+  justify-content: center;
+}
+.toolbar-group__buttons {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(3, 23px);
+  grid-auto-columns: max-content;
+  gap: 2px 3px;
+  align-items: stretch;
+  flex: 1;
+}
+.toolbar-group--fill .toolbar-group__buttons,
+.toolbar-group__buttons--file {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.toolbar-group__label {
+  margin-top: 3px;
+  padding: 0 2px;
+  color: var(--ink-dim);
+  font-size: 0.56rem;
+  font-weight: 600;
+  line-height: 13px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* ── Button ──────────────────────────────────────────────────────────────── */
+.toolbar-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 5px;
+  width: auto;
+  height: 23px;
+  padding: 0 7px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 0.7rem;
+  font-weight: 500;
+  line-height: 1.1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+.toolbar-button svg {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  color: var(--accent);
+  opacity: 0.85;
+}
+.toolbar-button:hover:not(:disabled) {
+  background: rgba(86, 124, 255, 0.12);
+  border-color: rgba(86, 124, 255, 0.32);
+  color: #dbe3ff;
+}
+.toolbar-button.active {
+  background: rgba(86, 124, 255, 0.2);
+  border-color: rgba(86, 124, 255, 0.55);
+  color: #fff;
+}
+.toolbar-button.active svg {
+  color: #cdd8ff;
+  opacity: 1;
+}
+.toolbar-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #0a0b0f, 0 0 0 3px var(--accent);
+  position: relative;
+  z-index: 2;
+}
+.toolbar-button:disabled {
+  color: var(--ink-dim);
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.toolbar-button:disabled svg {
+  color: var(--ink-dim);
+}
+.toolbar-button--icon {
+  min-width: 24px;
+  width: 24px;
+  padding: 0;
+  gap: 0;
+  justify-content: center;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+.toolbar-button--danger:not(:disabled) {
+  color: #ffb3b3;
+}
+.toolbar-button--danger:not(:disabled) svg {
+  color: #ff9d9d;
+}
+.toolbar-button--danger:not(:disabled):hover {
+  background: rgba(255, 138, 138, 0.12);
+  border-color: rgba(255, 138, 138, 0.4);
+  color: #ffd0d0;
+}
+.toolbar-button--primary {
+  border-color: rgba(86, 124, 255, 0.5);
+  background: rgba(86, 124, 255, 0.2);
+  color: #dbe3ff;
+}
+.toolbar-button--primary:hover:not(:disabled) {
+  background: rgba(86, 124, 255, 0.3);
+}
+
+/* ── Name input (inside Network group) ───────────────────────────────────── */
+.toolbar-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 7px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--ink);
+  font-size: 0.8rem;
+}
+.toolbar-name:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* ── Note Format cluster (mixed selects + toggles, wraps in the column) ──── */
+.toolbar-group__buttons--note {
+  display: flex;
+  flex-flow: row wrap;
+  align-content: center;
+  gap: 2px;
+  width: 190px;
+}
+.toolbar-group__buttons--note .toolbar-select {
+  flex: 1 1 44px;
+  min-width: 0;
+}
+.toolbar-group__buttons--note .toolbar-button {
+  flex: 0 0 auto;
+}
+
+/* ── Metadata chips ──────────────────────────────────────────────────────── */
+.toolbar-metadata {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 4px;
+  align-self: center;
+  flex-shrink: 0;
+  margin-left: auto;
+  padding-left: 10px;
+}
+.toolbar-metadata__item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 22px;
+  padding: 0 11px;
+  border: 1px solid rgba(86, 124, 255, 0.35);
+  border-radius: 999px;
+  background: rgba(86, 124, 255, 0.08);
+}
+.toolbar-metadata__label {
+  color: #aebbff;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Toolbar dropdowns (Note Format font/size). */
+.toolbar-select {
+  height: 26px;
+  min-width: 64px;
+  padding: 0 6px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--ink);
+  font-size: 0.74rem;
+  cursor: pointer;
+  color-scheme: dark;
+}
+.toolbar-select:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.toolbar-group__buttons--note {
+  gap: 3px;
+}
+
+/* Area-zoom drag overlay. */
+.nb-area-capture {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  cursor: crosshair;
+}
+.nb-area-rect {
+  position: absolute;
+  border: 1px solid var(--accent);
+  background: rgba(86, 124, 255, 0.15);
+  pointer-events: none;
+}
+
+/* Find box (top-right of canvas). */
+.nb-find {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #0f1118;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+.nb-find input {
+  width: 240px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  font-size: 0.85rem;
+  outline: none;
+}
+.nb-find button {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-dim);
+  font-size: 1rem;
+  cursor: pointer;
+}
+.nb-find button:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--ink);
+}
+
+/* ── Palette (left sidebar) ───────────────────────────────────────────────── */
+.np {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.np__search {
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--ink);
+  font-size: 0.85rem;
+}
+.np__search:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.np__select {
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--ink);
+  font-size: 0.85rem;
+  cursor: pointer;
+  color-scheme: dark;
+}
+.np__select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.np__notice {
+  font-size: 0.8rem;
+  color: var(--ink-dim);
+  padding: 4px 2px;
+}
+.np__notice--error {
+  color: var(--bad);
+}
+.np__groups {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.np__group-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.66rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-dim);
+  margin-bottom: 6px;
+}
+.np__group-count {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  color: var(--ink-dim);
+}
+.np__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+}
+.np__dot--plant { background: #567cff; }
+.np__dot--pump { background: #ec4899; }
+.np__dot--valve { background: #f59e0b; }
+.np__dot--pipeline { background: #10b981; }
+.np__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.np__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.np__item:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.07);
+}
+.np__item.is-armed {
+  border-color: rgba(86, 124, 255, 0.6);
+  background: rgba(86, 124, 255, 0.14);
+}
+.np__item.is-placed {
+  opacity: 0.45;
+  cursor: default;
+}
+.np__item-name {
+  font-size: 0.83rem;
+  font-weight: 500;
+}
+.np__item-meta {
+  font-size: 0.72rem;
+  color: var(--ink-dim);
+}
+
+/* ── Inspector body ───────────────────────────────────────────────────────── */
+.nnd {
+  padding: 0;
+}
+.nnd--empty {
+  padding: 24px 20px;
+  color: var(--ink-dim);
+  font-size: 0.85rem;
+}
+.nnd__hint {
+  margin-top: 8px;
+  font-size: 0.78rem;
+  opacity: 0.8;
+}
+.nnd__head {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--line);
+}
+.nnd__head .adr__name {
+  font-size: 1.05rem;
+}
+.nnd__body {
+  padding: 6px 20px 24px;
+}
+.nnd__field {
+  margin: 14px 0 4px;
+}
+.nnd__field input,
+.nnd__field select {
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--ink);
+  font-size: 0.86rem;
+  text-transform: none;
+  letter-spacing: 0;
+  color-scheme: dark;
+}
+.nnd__field textarea {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--ink);
+  font-size: 0.86rem;
+  font-family: inherit;
+  resize: vertical;
+}
+.nnd__field input:focus-visible,
+.nnd__field select:focus-visible,
+.nnd__field textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.nnd__delete {
+  margin-top: 20px;
+  width: 100%;
+  border-color: rgba(255, 138, 138, 0.35);
+  color: var(--bad);
+}
+.nnd__delete:hover {
+  background: rgba(255, 138, 138, 0.08);
+}
+
+/* ── Saved-networks rail (fixed, far left) ────────────────────────────────── */
+.nb-rail {
+  width: 190px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid var(--line);
+  background: #0b0d12;
+}
+.nb-rail__new {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 12px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid rgba(86, 124, 255, 0.5);
+  background: rgba(86, 124, 255, 0.18);
+  color: #cdd8ff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+.nb-rail__new:hover {
+  background: rgba(86, 124, 255, 0.28);
+}
+.nb-rail__head {
+  padding: 2px 16px 8px;
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-dim);
+}
+.nb-rail__list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.nb-rail__empty {
+  padding: 8px;
+  font-size: 0.78rem;
+  color: var(--ink-dim);
+}
+.nb-rail__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.nb-rail__item:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+.nb-rail__item.is-active {
+  border-color: rgba(86, 124, 255, 0.5);
+  background: rgba(86, 124, 255, 0.14);
+}
+.nb-rail__name {
+  font-size: 0.83rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nb-rail__meta {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--ink-dim);
+}
+
+/* ── Asset library panel (toggled from the toolbar) ───────────────────────── */
+.nb-library {
+  width: 252px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid var(--line);
+  background: #0c0e14;
+}
+.nb-library__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 14px 11px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.nb-library__title {
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-dim);
+}
+.nb-library__close {
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink-dim);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.nb-library__close:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ink);
+}
+.nb-library .np {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px 14px;
+}

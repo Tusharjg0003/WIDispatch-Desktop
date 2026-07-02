@@ -5,6 +5,7 @@ import { buildTransmission } from "./transmission.js";
 import { buildQuality } from "./quality.js";
 import { buildEconomics } from "./economics.js";
 import { listAssets, createAsset } from "./assetRegistry.js";
+import { listNetworks, getNetwork, createNetwork, updateNetwork } from "./networks.js";
 
 const app = express();
 const PORT = Number(process.env.PORT ?? 4000);
@@ -85,6 +86,44 @@ app.post("/api/assets", async (req, res) => {
   } catch (err) {
     console.error("asset create error:", err);
     res.status(err.statusCode || 500).json({ error: err.message || "Failed to create asset" });
+  }
+});
+
+// ── Network Builder: saved canvas graphs ─────────────────────────────────────
+app.get("/api/networks", async (_req, res) => {
+  try {
+    res.json(await listNetworks());
+  } catch (err) {
+    console.error("networks list error:", err);
+    res.status(500).json({ error: "Failed to list networks" });
+  }
+});
+
+app.get("/api/networks/:id", async (req, res) => {
+  try {
+    res.json(await getNetwork(req.params.id));
+  } catch (err) {
+    console.error("network get error:", err);
+    res.status(err.statusCode || 500).json({ error: err.message || "Failed to fetch network" });
+  }
+});
+
+app.post("/api/networks", async (req, res) => {
+  try {
+    const created = await createNetwork(req.body || {});
+    res.status(201).json(created);
+  } catch (err) {
+    console.error("network create error:", err);
+    res.status(err.statusCode || 500).json({ error: err.message || "Failed to create network" });
+  }
+});
+
+app.put("/api/networks/:id", async (req, res) => {
+  try {
+    res.json(await updateNetwork(req.params.id, req.body || {}));
+  } catch (err) {
+    console.error("network update error:", err);
+    res.status(err.statusCode || 500).json({ error: err.message || "Failed to update network" });
   }
 });
 

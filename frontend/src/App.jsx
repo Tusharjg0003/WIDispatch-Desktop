@@ -8,6 +8,7 @@ import DemandPage from "./pages/DemandPage";
 import TransmissionPage from "./pages/TransmissionPage";
 import EconomicsPage from "./pages/EconomicsPage";
 import AssetRegistryPage from "./pages/AssetRegistryPage";
+import NetworkBuilderPage from "./pages/NetworkBuilderPage";
 import "./App.css";
 
 export default function App() {
@@ -34,6 +35,8 @@ export default function App() {
             <Route path="/demand" element={<DemandPage />} />
             <Route path="/transmission" element={<TransmissionPage />} />
             <Route path="/economics" element={<EconomicsPage />} />
+            <Route path="/network-builder" element={<NetworkBuilderPage />} />
+            <Route path="/network-builder/:id" element={<NetworkBuilderPage />} />
             <Route path="/asset-registry" element={<AssetRegistryPage />} />
             <Route path="/asset-registry/:tab" element={<AssetRegistryPage />} />
           </Routes>
