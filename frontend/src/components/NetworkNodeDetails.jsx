@@ -13,6 +13,20 @@ const statusLabel = (s) =>
   s ? s.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase()) : "—";
 const clean = (v) => (v == null || v === "" || v === "NULL" ? null : v);
 
+function capacityLimitLabel(spec) {
+  const mode = spec.capacity_limit_mode;
+  if (!mode || mode === "none") return mode === "none" ? "None" : null;
+  if (mode === "percentage") {
+    return spec.capacity_limit_percentage != null ? `${spec.capacity_limit_percentage}% of design capacity` : null;
+  }
+  if (mode === "absolute") {
+    return spec.capacity_limit_absolute != null ? `${spec.capacity_limit_absolute} m³/day` : null;
+  }
+  return null;
+}
+
+const yesNo = (v) => (v == null ? null : v ? "Yes" : "No");
+
 function Row({ label, value }) {
   const v = clean(value);
   if (v == null) return null;
@@ -43,7 +57,7 @@ export default function NetworkNodeDetails({ selected, onLabelChange, onStatusCh
     return (
       <div className="nnd">
         <header className="nnd__head">
-          <span className="adr__cat">{selected.assetId ? "Pipeline" : "Pipe"}</span>
+          <span className="adr__cat">Pipe</span>
           <h3 className="adr__name">{selected.label || `${selected.sourceLabel} → ${selected.targetLabel}`}</h3>
           {selected.status && (
             <span className={`st st--${selected.status}`}>{statusLabel(selected.status)}</span>
@@ -180,18 +194,39 @@ export default function NetworkNodeDetails({ selected, onLabelChange, onStatusCh
           <Row label="Region" value={meta.region} />
           <Row label="Cluster" value={meta.cluster} />
           <Row label="Asset type" value={meta.asset_type} />
+          <Row label="Entity category" value={meta.entity_category} />
+          <Row label="Active" value={yesNo(meta.active)} />
           <Row label="Coordinates" value={coords} />
         </dl>
 
-        {Object.keys(spec).length > 0 && (
+        {selected.category === "plant" && Object.keys(spec).length > 0 && (
           <>
             <div className="af__section">Specifications</div>
             <dl className="adr__list">
-              <Row label="Technology" value={spec.technology} />
+              <Row label="Plant type" value={spec.plant_type} />
               <Row label="Water source" value={spec.water_source} />
+              <Row label="Technology" value={spec.technology} />
               <Row label="Design capacity (m³/day)" value={spec.design_capacity} />
-              <Row label="Length (km)" value={spec.length_km} />
-              <Row label="Diameter (mm)" value={spec.diameter_mm} />
+              <Row label="Maximum capacity (m³/day)" value={spec.maximum_capacity} />
+              <Row label="Contracted capacity (m³/day)" value={spec.contracted_capacity} />
+              <Row label="Treatment level" value={spec.treatment_level} />
+              <Row label="Capacity limitation" value={capacityLimitLabel(spec)} />
+              <Row label="Variable O&M (SAR/m³)" value={spec.variable_om} />
+            </dl>
+          </>
+        )}
+
+        {selected.category === "pump" && Array.isArray(spec.pumps) && spec.pumps.length > 0 && (
+          <>
+            <div className="af__section">Pump Configuration</div>
+            <dl className="adr__list">
+              {spec.pumps.map((p) => (
+                <Row
+                  key={p.id}
+                  label={p.name || "Pump"}
+                  value={`${p.capacity_m3_day ?? "—"} m³/day · ${p.role === "backup" ? "Backup" : "Functional"} · ${p.active ? "On" : "Off"}`}
+                />
+              ))}
             </dl>
           </>
         )}
