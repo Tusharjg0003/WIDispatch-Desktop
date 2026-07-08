@@ -25,7 +25,7 @@ const TOP_LEVEL_FIELDS = [
 // plant fields, pump configuration arrays, etc.), so rather than an allowlist
 // of scalar fields we store `specifications` mostly as given and only coerce
 // keys that are unambiguously numeric by name.
-const NUMERIC_SPEC_PATTERN = /capacity|capex|ccr|_om$/i;
+const NUMERIC_SPEC_PATTERN = /(_capacity|_percentage|_absolute|capex|ccr|_om)$/i;
 
 export async function listAssets(filters = {}) {
   const db = await getDb();
