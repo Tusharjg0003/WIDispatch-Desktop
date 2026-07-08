@@ -13,6 +13,7 @@ const LIST_PROJECTION = {
   activity: 1, asset_type: 1, region: 1, cluster: 1, governorate: 1, city: 1,
   latitude: 1, longitude: 1, end_latitude: 1, end_longitude: 1, status: 1,
   commissioning_date: 1, decommissioning_date: 1, specifications: 1,
+  active: 1, entity_category: 1,
 };
 
 const TOP_LEVEL_FIELDS = [

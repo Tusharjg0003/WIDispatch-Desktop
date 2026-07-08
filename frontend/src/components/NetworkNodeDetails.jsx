@@ -15,12 +15,17 @@ const clean = (v) => (v == null || v === "" || v === "NULL" ? null : v);
 
 function capacityLimitLabel(spec) {
   const mode = spec.capacity_limit_mode;
-  if (!mode || mode === "none") return mode === "none" ? "None" : null;
+  if (!mode) return null;
+  if (mode === "none") return "None";
   if (mode === "percentage") {
-    return spec.capacity_limit_percentage != null ? `${spec.capacity_limit_percentage}% of design capacity` : null;
+    return spec.capacity_limit_percentage != null
+      ? `${spec.capacity_limit_percentage}% of design capacity`
+      : "Percentage (value not set)";
   }
   if (mode === "absolute") {
-    return spec.capacity_limit_absolute != null ? `${spec.capacity_limit_absolute} m³/day` : null;
+    return spec.capacity_limit_absolute != null
+      ? `${spec.capacity_limit_absolute} m³/day`
+      : "Absolute (value not set)";
   }
   return null;
 }

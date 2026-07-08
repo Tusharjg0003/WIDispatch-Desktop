@@ -100,11 +100,15 @@ defaults to `true`).
 `backend/src/assetRegistry.js`:
 1. Add `"active"` and `"entity_category"` to `TOP_LEVEL_FIELDS`.
 2. Broaden `NUMERIC_SPEC_PATTERN` from `/(_capacity|capex|ccr|_om)$/i` to
-   `/capacity|capex|ccr|_om$/i` so `capacity_limit_percentage` and
-   `capacity_limit_absolute` get numeric coercion too. Existing keys
-   (`design_capacity`, `maximum_capacity`, `contracted_capacity`,
-   `expansion_capacity`) still match under the broadened pattern, so this
-   is additive only.
+   `/(_capacity|_percentage|_absolute|capex|ccr|_om)$/i` so
+   `capacity_limit_percentage` and `capacity_limit_absolute` get numeric
+   coercion too. Existing keys (`design_capacity`, `maximum_capacity`,
+   `contracted_capacity`, `expansion_capacity`) still match under the
+   broadened pattern, so this is additive only. (An earlier draft used
+   `/capacity|capex|ccr|_om$/i`, a bare substring match rather than a
+   suffix-anchored alternation — that would have wrongly matched
+   `capacity_limit_mode`, a string enum, and coerced it via
+   `Number("percentage")` → `NaN` → `null`.)
 
 No other backend changes — `createAsset` already stores arbitrary
 `specifications` keys and already defaults `status` to `"planned"` when
