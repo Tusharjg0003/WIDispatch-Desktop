@@ -5,8 +5,6 @@ import { finite } from "./assets.js";
 export const ASSET_CATEGORIES = {
   plant: "plants",
   pump: "pumps",
-  valve: "valves",
-  pipeline: "pipelines",
 };
 
 const LIST_PROJECTION = {
@@ -20,10 +18,14 @@ const LIST_PROJECTION = {
 const TOP_LEVEL_FIELDS = [
   "external_id", "name", "asset_name_ar", "entity", "entity_type", "activity",
   "asset_type", "region", "cluster", "governorate", "city", "status",
-  "commissioning_date", "decommissioning_date",
+  "commissioning_date", "decommissioning_date", "active", "entity_category",
 ];
 
-const SPEC_FIELDS = ["technology", "water_source", "design_capacity", "contracted_capacity"];
+// Specifications vary a lot by category/plant type (production vs. treatment
+// plant fields, pump configuration arrays, etc.), so rather than an allowlist
+// of scalar fields we store `specifications` mostly as given and only coerce
+// keys that are unambiguously numeric by name.
+const NUMERIC_SPEC_PATTERN = /capacity|capex|ccr|_om$/i;
 
 export async function listAssets(filters = {}) {
   const db = await getDb();
@@ -55,16 +57,36 @@ export async function listAssets(filters = {}) {
   const total = assets.length;
   assets = assets.slice(0, Number(limit));
 
-  // KPI overview across the full registry (unfiltered).
-  const kpis = { total: 0, byCategory: {}, operational: 0 };
+  // KPI overview across the full registry (unfiltered), including a
+  // per-category status breakdown for the registry's KPI cards.
+  const kpis = { total: 0, byCategory: {}, operational: 0, statusByCategory: {} };
   for (const [cat, coll] of Object.entries(ASSET_CATEGORIES)) {
-    const n = await db.collection(coll).countDocuments();
+    const rows = await db.collection(coll).aggregate([
+      { $group: { _id: "$status", n: { $sum: 1 } } },
+    ]).toArray();
+    const statuses = {};
+    let n = 0;
+    for (const r of rows) {
+      const status = r._id || "unknown";
+      statuses[status] = r.n;
+      n += r.n;
+    }
     kpis.byCategory[cat] = n;
+    kpis.statusByCategory[cat] = statuses;
     kpis.total += n;
-    kpis.operational += await db.collection(coll).countDocuments({ status: "operational" });
+    kpis.operational += statuses.operational || 0;
   }
 
   return { kpis, assets, total, returned: assets.length };
+}
+
+export async function getAssetById(id) {
+  const db = await getDb();
+  for (const [cat, collection] of Object.entries(ASSET_CATEGORIES)) {
+    const doc = await db.collection(collection).findOne({ id }, { projection: { _id: 0 } });
+    if (doc) return { category: cat, ...doc };
+  }
+  return null;
 }
 
 export async function createAsset(category, body = {}) {
@@ -91,12 +113,10 @@ export async function createAsset(category, body = {}) {
   if (body.longitude != null && body.longitude !== "") doc.longitude = finite(Number(body.longitude));
 
   const spec = {};
-  const inSpec = body.specifications || body;
-  for (const f of SPEC_FIELDS) {
-    const v = inSpec[f];
-    if (v != null && v !== "") {
-      spec[f] = f.includes("capacity") ? finite(Number(v)) : v;
-    }
+  const inSpec = body.specifications || {};
+  for (const [f, v] of Object.entries(inSpec)) {
+    if (v == null || v === "") continue;
+    spec[f] = NUMERIC_SPEC_PATTERN.test(f) ? finite(Number(v)) : v;
   }
   if (Object.keys(spec).length) doc.specifications = spec;
 
