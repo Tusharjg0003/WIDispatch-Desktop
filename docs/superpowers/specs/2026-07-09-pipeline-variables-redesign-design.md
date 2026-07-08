@@ -178,21 +178,38 @@ existing `fetchAssets`/`createAsset`: `fetchTransmissionSystems`,
 `createTransmissionLine`.
 
 `NetworkBuilderPage.jsx`:
-- `pipeForm` state's shape changes to match the new field list (replacing
-  `EMPTY_PIPE_FORM`'s `{label, length_km, diameter_mm, material, status}`).
-- The modal loads Systems and Lines (via the two new fetch functions) when
-  it opens, into new state (e.g. `systems`, `lines`).
-- `submitPipe` gains the create-new-System/Line logic described above
-  before calling the existing `createPipeEdge`.
+- `pipeForm` state moves into the new `PipeVariablesModal.jsx` component
+  (self-contained form state, like `NetworkEntityCreateModal`), replacing
+  the page-level `EMPTY_PIPE_FORM`/`pipeForm` state.
+- `NetworkBuilderPage.jsx` fetches Systems and Lines **once, on mount**
+  (not each time the modal opens) into page-level state (`transmissionSystems`,
+  `transmissionLines`), passed as props into both `PipeVariablesModal` and
+  `NetworkNodeDetails`. This is a deliberate deviation from
+  `NetworkEntityCreateModal`'s self-contained pattern: both the modal and
+  the inspector need the same lists, and if each fetched independently, a
+  system/line created inline in the modal wouldn't appear by name in the
+  inspector (which stays mounted across selections and wouldn't naturally
+  refetch) until an unrelated remount — a real staleness bug on the most
+  common path (draw pipe → create new system inline → immediately inspect
+  it). Single source of truth avoids that.
+- The modal's `onSubmit` prop is called with the **raw, unresolved form
+  values** (not the resolved `{top-level fields, specifications}` payload)
+  — including `newTransmissionSystemName`/`newLineName`/branch fields as
+  the user typed them. `submitPipe` (in `NetworkBuilderPage.jsx`) is what
+  performs the create-new-System/Line POSTs described above, appends any
+  newly-created system/line to the page-level `transmissionSystems`/
+  `transmissionLines` state (keeping the inspector in sync immediately),
+  resolves the final `specifications`, and calls the existing
+  `createPipeEdge`. This differs from `NetworkEntityCreateModal` (which
+  self-contains its API call and hands the parent an already-created
+  asset) specifically because of the shared-state requirement above.
 - The modal's JSX (currently ~50 lines inline in `NetworkBuilderPage.jsx`)
   grows substantially with the new field count. Given the precedent set by
   `NetworkEntityCreateModal.jsx` (extracted to its own file for the same
   reason — inline modals in `NetworkBuilderPage.jsx` were fine at ~5 fields,
   not at ~20), this modal is extracted too: new
-  `frontend/src/components/PipeVariablesModal.jsx`, following the same
-  props pattern (`onCancel`, `onSubmit` receiving the resolved
-  `{top-level fields, specifications}` — mirroring how
-  `NetworkEntityCreateModal` calls `onCreated`).
+  `frontend/src/components/PipeVariablesModal.jsx`, props
+  `{ systems, lines, onCancel, onSubmit(rawForm) }`.
 
 ## Out of scope
 
