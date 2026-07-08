@@ -19,10 +19,15 @@ import { useLayout } from "../contexts/LayoutContext";
 import { buildCyStyle, ENTITY_TYPE_LABELS } from "../cytoscape/buildCyStyle";
 import { applyCardIcon } from "../cytoscape/nodeCard";
 import { fetchNetwork, fetchNetworks, saveNetwork, updateNetwork, deleteNetwork } from "../api/networks";
+import {
+  fetchTransmissionSystems, createTransmissionSystem,
+  fetchTransmissionLines, createTransmissionLine,
+} from "../api/metrics";
 import NetworkPalette from "../components/NetworkPalette";
 import NetworkNodeDetails from "../components/NetworkNodeDetails";
 import WorkspaceRecordSidebar from "../components/WorkspaceRecordSidebar";
 import NetworkEntityCreateModal from "../components/NetworkEntityCreateModal";
+import PipeVariablesModal from "../components/PipeVariablesModal";
 import "./NetworkBuilderPage.css";
 
 // Dispatched after a successful save/update so WorkspaceRecordSidebar (which
@@ -30,7 +35,6 @@ import "./NetworkBuilderPage.css";
 const NETWORK_SAVED_EVENT = "widispatch:network-saved";
 
 const rid = (p) => `${p}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-const EMPTY_PIPE_FORM = { label: "", length_km: "", diameter_mm: "", material: "", status: "operational" };
 const INSERT_ENTITIES = ["plant", "pump", "node"];
 const ENTITY_ICONS = { plant: Factory, pump: Droplet, node: Dot };
 const ANNOTATION_TYPES = ["note", "group-box"];
@@ -148,7 +152,8 @@ export default function NetworkBuilderPage() {
   const [showLibrary, setShowLibrary] = useState(true);
   const [toast, setToast] = useState(null);
   const [pipeModal, setPipeModal] = useState({ open: false, source: null, target: null });
-  const [pipeForm, setPipeForm] = useState(EMPTY_PIPE_FORM);
+  const [transmissionSystems, setTransmissionSystems] = useState([]);
+  const [transmissionLines, setTransmissionLines] = useState([]);
   const [entityModal, setEntityModal] = useState({ open: false, type: null, position: null });
   const [showLabels, setShowLabels] = useState(true);
   const [showGrid, setShowGrid] = useState(true);
@@ -253,8 +258,10 @@ export default function NetworkBuilderPage() {
     setHistTick((t) => t + 1);
   }, [restoreEls]);
 
-  // Create an ad-hoc pipe edge between two nodes.
-  const createPipeEdge = useCallback(({ source, target, label, status, specs }) => {
+  // Create an ad-hoc pipe edge between two nodes. `active` drives the derived
+  // `status` (used for the canvas status color band) since the pipe modal has
+  // no separate Status field, only Active.
+  const createPipeEdge = useCallback(({ source, target, label, active, commissioningDate, decommissioningDate, specs }) => {
     const cy = cyRef.current;
     if (!cy) return;
     const name = (label && label.trim()) || "Pipe";
@@ -268,7 +275,10 @@ export default function NetworkBuilderPage() {
         assetId: null,
         label: name,
         displayLabel: name,
-        status: status || "",
+        status: active ? "operational" : "inactive",
+        active: !!active,
+        commissioningDate: commissioningDate || "",
+        decommissioningDate: decommissioningDate || "",
         meta: { specifications: specs || {} },
       },
     });
@@ -383,7 +393,6 @@ export default function NetworkBuilderPage() {
       const source = lineSourceRef.current;
       const target = node.id();
       clearDrawSource();
-      setPipeForm(EMPTY_PIPE_FORM);
       setPipeModal({ open: true, source, target });
       backToSelect();
     });
@@ -455,6 +464,22 @@ export default function NetworkBuilderPage() {
       cancelled = true;
     };
   }, [id, cyReady, syncGraph, resetHistory]);
+
+  // ── Transmission Systems/Lines: fetched once, shared by the pipe modal and
+  // the canvas inspector so a newly-created system/line is immediately known
+  // to both (see submitPipe, which appends to this state on creation). ──────────
+  useEffect(() => {
+    let cancelled = false;
+    fetchTransmissionSystems()
+      .then((data) => { if (!cancelled) setTransmissionSystems(data.systems || []); })
+      .catch(() => {});
+    fetchTransmissionLines()
+      .then((data) => { if (!cancelled) setTransmissionLines(data.lines || []); })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // ── Mode / placement ─────────────────────────────────────────────────────────
   const setModeSafe = useCallback((next) => {
@@ -570,21 +595,61 @@ export default function NetworkBuilderPage() {
     setSelectedEl(null);
   }, []);
 
-  const submitPipe = useCallback(() => {
-    const specs = {};
-    if (pipeForm.length_km !== "") specs.length_km = Number(pipeForm.length_km);
-    if (pipeForm.diameter_mm !== "") specs.diameter_mm = Number(pipeForm.diameter_mm);
-    if (pipeForm.material.trim()) specs.material = pipeForm.material.trim();
-    createPipeEdge({
-      source: pipeModal.source,
-      target: pipeModal.target,
-      asset: null,
-      label: pipeForm.label,
-      status: pipeForm.status,
-      specs,
-    });
-    setPipeModal({ open: false, source: null, target: null });
-  }, [pipeForm, pipeModal, createPipeEdge]);
+  // Called by PipeVariablesModal's onSubmit with the raw form values. Creates
+  // any new Transmission System/Line first (appending to the shared state so
+  // the inspector picks them up immediately), then builds the pipe edge. If
+  // either creation POST rejects, this rejects too — PipeVariablesModal
+  // catches it, shows the error inline, and keeps the modal open.
+  const submitPipe = useCallback(
+    async (form) => {
+      let systemId = form.transmissionSystemId || null;
+      let lineIds = [...form.lineGroupIds];
+
+      if (form.newTransmissionSystemName.trim()) {
+        const created = await createTransmissionSystem({ name: form.newTransmissionSystemName.trim() });
+        setTransmissionSystems((s) => [...s, created]);
+        systemId = created.id;
+      }
+      if (form.newLineName.trim()) {
+        const created = await createTransmissionLine({
+          name: form.newLineName.trim(),
+          isBranch: form.isBranch,
+          parentLineId: form.isBranch ? form.parentLineId || null : null,
+          branchName: form.isBranch ? form.branchName : null,
+        });
+        setTransmissionLines((s) => [...s, created]);
+        lineIds = [...lineIds, created.id];
+      }
+
+      const specs = {};
+      if (form.capacity !== "") specs.capacity = Number(form.capacity);
+      if (form.pipelineLength !== "") specs.pipelineLength = Number(form.pipelineLength);
+      if (form.pipelineDiameter !== "") specs.pipelineDiameter = Number(form.pipelineDiameter);
+      if (form.pipelineMaterial) specs.pipelineMaterial = form.pipelineMaterial;
+      if (form.designCapacity !== "") specs.designCapacity = Number(form.designCapacity);
+      if (form.maximumCapacity !== "") specs.maximumCapacity = Number(form.maximumCapacity);
+      if (form.infraSource.trim()) specs.infraSource = form.infraSource.trim();
+      specs.bidirectional = !!form.bidirectional;
+      if (systemId) specs.transmissionSystemId = systemId;
+      if (lineIds.length) specs.lineGroupIds = lineIds;
+      specs.capacityLimitationType = form.capacityLimitationType;
+      if (form.capacityLimitationType !== "none" && form.capacityLimitationValue !== "") {
+        specs.capacityLimitationValue = Number(form.capacityLimitationValue);
+      }
+
+      createPipeEdge({
+        source: pipeModal.source,
+        target: pipeModal.target,
+        label: form.name,
+        active: form.active,
+        commissioningDate: form.commissioningDate,
+        decommissioningDate: form.decommissioningDate,
+        specs,
+      });
+      setPipeModal({ open: false, source: null, target: null });
+    },
+    [pipeModal, createPipeEdge]
+  );
 
   // ── View ─────────────────────────────────────────────────────────────────────
   const handleFit = useCallback(() => {
@@ -1331,52 +1396,12 @@ export default function NetworkBuilderPage() {
       )}
 
       {pipeModal.open && (
-        <div className="af__overlay" onMouseDown={() => setPipeModal({ open: false, source: null, target: null })}>
-          <div className="af__modal nb-pipe-modal" onMouseDown={(e) => e.stopPropagation()}>
-            <header className="af__head">
-              <h2 className="af__title">Pipeline variables</h2>
-              <button className="af__close" onClick={() => setPipeModal({ open: false, source: null, target: null })} aria-label="Close">×</button>
-            </header>
-            <form className="af__body" onSubmit={(e) => { e.preventDefault(); submitPipe(); }}>
-              <div className="af__grid">
-                <label className="af__field">
-                  Name / label
-                  <input type="text" value={pipeForm.label} placeholder="e.g. West trunk main"
-                    onChange={(e) => setPipeForm((f) => ({ ...f, label: e.target.value }))} />
-                </label>
-                <label className="af__field">
-                  Status
-                  <select value={pipeForm.status} onChange={(e) => setPipeForm((f) => ({ ...f, status: e.target.value }))}>
-                    <option value="operational">Operational</option>
-                    <option value="maintenance">Maintenance</option>
-                    <option value="under_construction">Under construction</option>
-                    <option value="planned">Planned</option>
-                    <option value="decommissioned">Decommissioned</option>
-                  </select>
-                </label>
-                <label className="af__field">
-                  Length (km)
-                  <input type="number" step="any" value={pipeForm.length_km}
-                    onChange={(e) => setPipeForm((f) => ({ ...f, length_km: e.target.value }))} />
-                </label>
-                <label className="af__field">
-                  Diameter (mm)
-                  <input type="number" step="any" value={pipeForm.diameter_mm}
-                    onChange={(e) => setPipeForm((f) => ({ ...f, diameter_mm: e.target.value }))} />
-                </label>
-                <label className="af__field">
-                  Material
-                  <input type="text" value={pipeForm.material} placeholder="e.g. Ductile iron"
-                    onChange={(e) => setPipeForm((f) => ({ ...f, material: e.target.value }))} />
-                </label>
-              </div>
-              <div className="af__footer">
-                <button type="button" className="af__btn af__btn--ghost" onClick={() => setPipeModal({ open: false, source: null, target: null })}>Cancel</button>
-                <button type="submit" className="af__btn af__btn--primary">Add pipe</button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <PipeVariablesModal
+          systems={transmissionSystems}
+          lines={transmissionLines}
+          onCancel={() => setPipeModal({ open: false, source: null, target: null })}
+          onSubmit={submitPipe}
+        />
       )}
     </div>
   );

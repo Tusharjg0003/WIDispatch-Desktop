@@ -45,6 +45,10 @@ export function fetchAssets(filters = {}) {
   return getJson(`/api/assets${qs ? `?${qs}` : ""}`);
 }
 
+export function fetchAsset(id) {
+  return getJson(`/api/assets/${encodeURIComponent(id)}`);
+}
+
 export async function createAsset(payload) {
   const res = await fetch(`${API_BASE}/api/assets`, {
     method: "POST",
@@ -54,4 +58,31 @@ export async function createAsset(payload) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
   return data;
+}
+
+async function postJson(path, payload) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+  return data;
+}
+
+export function fetchTransmissionSystems() {
+  return getJson("/api/transmission-systems");
+}
+
+export function createTransmissionSystem(payload) {
+  return postJson("/api/transmission-systems", payload);
+}
+
+export function fetchTransmissionLines() {
+  return getJson("/api/transmission-lines");
+}
+
+export function createTransmissionLine(payload) {
+  return postJson("/api/transmission-lines", payload);
 }
