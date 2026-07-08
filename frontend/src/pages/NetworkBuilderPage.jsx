@@ -1,10 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import cytoscape from "cytoscape";
 import {
   Save, CopyPlus, FileUp, Download, FileSpreadsheet,
   Undo2, Redo2,
-  Factory, Droplet, Gauge, Dot, Library, Spline, Split,
+  Factory, Droplet, Dot, Library, Spline, Split,
   MousePointer2, Search, Crosshair,
   Maximize, Frame, Tag, Grid3x3,
   AlignStartVertical, AlignCenterVertical, AlignEndVertical,
@@ -18,15 +18,21 @@ import {
 import { useLayout } from "../contexts/LayoutContext";
 import { buildCyStyle, ENTITY_TYPE_LABELS } from "../cytoscape/buildCyStyle";
 import { applyCardIcon } from "../cytoscape/nodeCard";
-import { fetchNetwork, fetchNetworks, saveNetwork, updateNetwork } from "../api/networks";
+import { fetchNetwork, fetchNetworks, saveNetwork, updateNetwork, deleteNetwork } from "../api/networks";
 import NetworkPalette from "../components/NetworkPalette";
 import NetworkNodeDetails from "../components/NetworkNodeDetails";
+import WorkspaceRecordSidebar from "../components/WorkspaceRecordSidebar";
+import NetworkEntityCreateModal from "../components/NetworkEntityCreateModal";
 import "./NetworkBuilderPage.css";
+
+// Dispatched after a successful save/update so WorkspaceRecordSidebar (which
+// owns its own fetch) knows to refresh its list.
+const NETWORK_SAVED_EVENT = "widispatch:network-saved";
 
 const rid = (p) => `${p}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 const EMPTY_PIPE_FORM = { label: "", length_km: "", diameter_mm: "", material: "", status: "operational" };
-const INSERT_ENTITIES = ["plant", "pump", "valve", "node"];
-const ENTITY_ICONS = { plant: Factory, pump: Droplet, valve: Gauge, node: Dot };
+const INSERT_ENTITIES = ["plant", "pump", "node"];
+const ENTITY_ICONS = { plant: Factory, pump: Droplet, node: Dot };
 const ANNOTATION_TYPES = ["note", "group-box"];
 const NOTE_SIZES = ["small", "normal", "large", "xlarge"];
 
@@ -38,6 +44,8 @@ const assetMeta = (a) => ({
   asset_type: a.asset_type,
   latitude: a.latitude,
   longitude: a.longitude,
+  active: a.active,
+  entity_category: a.entity_category,
   specifications: a.specifications || {},
 });
 
@@ -115,7 +123,6 @@ export default function NetworkBuilderPage() {
   const modeRef = useRef("select");
   const lineSourceRef = useRef(null);
   const pendingRef = useRef(null); // asset armed for placement
-  const drawAssetRef = useRef(null); // pipeline asset being laid as an edge
   const pendingEntityRef = useRef(null); // blank entity type being inserted
   const loadedIdRef = useRef(null);
   const saveTimerRef = useRef(null);
@@ -130,7 +137,6 @@ export default function NetworkBuilderPage() {
   const [cyReady, setCyReady] = useState(false);
   const [mode, setMode] = useState("select");
   const [pendingAsset, setPendingAsset] = useState(null);
-  const [drawAsset, setDrawAsset] = useState(null);
   const [pendingEntity, setPendingEntity] = useState(null);
   const [lineSource, setLineSource] = useState(null);
   const [selectedEl, setSelectedEl] = useState(null);
@@ -140,10 +146,10 @@ export default function NetworkBuilderPage() {
   const [network, setNetwork] = useState({ id: null, name: "", description: "" });
   const [saveStatus, setSaveStatus] = useState("idle");
   const [showLibrary, setShowLibrary] = useState(true);
-  const [savedList, setSavedList] = useState(null);
   const [toast, setToast] = useState(null);
   const [pipeModal, setPipeModal] = useState({ open: false, source: null, target: null });
   const [pipeForm, setPipeForm] = useState(EMPTY_PIPE_FORM);
+  const [entityModal, setEntityModal] = useState({ open: false, type: null, position: null });
   const [showLabels, setShowLabels] = useState(true);
   const [showGrid, setShowGrid] = useState(true);
   const [showInspector, setShowInspector] = useState(true);
@@ -247,16 +253,11 @@ export default function NetworkBuilderPage() {
     setHistTick((t) => t + 1);
   }, [restoreEls]);
 
-  // Create a pipe edge (asset-backed or ad-hoc).
-  const createPipeEdge = useCallback(({ source, target, asset, label, status, specs }) => {
+  // Create an ad-hoc pipe edge between two nodes.
+  const createPipeEdge = useCallback(({ source, target, label, status, specs }) => {
     const cy = cyRef.current;
     if (!cy) return;
-    if (asset && cy.edges().some((e) => e.data("assetId") === asset.id)) {
-      setToast(`"${asset.name || asset.id}" is already laid on the canvas.`);
-      return;
-    }
-    const name = (label && label.trim()) || (asset ? asset.name || asset.id : "Pipe");
-    const meta = asset ? assetMeta(asset) : { specifications: specs || {} };
+    const name = (label && label.trim()) || "Pipe";
     const edge = cy.add({
       group: "edges",
       data: {
@@ -264,11 +265,11 @@ export default function NetworkBuilderPage() {
         source,
         target,
         kind: "pipe",
-        assetId: asset ? asset.id : null,
+        assetId: null,
         label: name,
         displayLabel: name,
-        status: status || (asset ? asset.status : "") || "",
-        meta,
+        status: status || "",
+        meta: { specifications: specs || {} },
       },
     });
     cy.$(":selected").unselect();
@@ -305,10 +306,16 @@ export default function NetworkBuilderPage() {
 
       if (m === "place-entity" && pendingEntityRef.current) {
         const type = pendingEntityRef.current;
-        const label = type === "node" ? "" : `New ${ENTITY_TYPE_LABELS[type] || type}`;
+        if (type === "plant" || type === "pump") {
+          pendingEntityRef.current = null;
+          setPendingEntity(null);
+          setEntityModal({ open: true, type, position: { x: evt.position.x, y: evt.position.y } });
+          backToSelect();
+          return;
+        }
         const node = cy.add({
           group: "nodes",
-          data: { id: rid("n"), type, category: type, label, displayLabel: label, status: "", meta: { specifications: {} } },
+          data: { id: rid("n"), type, category: type, label: "", displayLabel: "", status: "", meta: { specifications: {} } },
           position: { x: evt.position.x, y: evt.position.y },
         });
         cy.$(":selected").unselect();
@@ -357,14 +364,7 @@ export default function NetworkBuilderPage() {
       }
 
       if (m === "draw-pipe") {
-        if (drawAssetRef.current) {
-          clearDrawSource();
-          drawAssetRef.current = null;
-          setDrawAsset(null);
-          backToSelect();
-        } else {
-          clearDrawSource();
-        }
+        clearDrawSource();
       }
     });
 
@@ -382,18 +382,10 @@ export default function NetworkBuilderPage() {
       if (lineSourceRef.current === node.id()) return;
       const source = lineSourceRef.current;
       const target = node.id();
-      const asset = drawAssetRef.current;
       clearDrawSource();
-      if (asset) {
-        createPipeEdge({ source, target, asset });
-        drawAssetRef.current = null;
-        setDrawAsset(null);
-        backToSelect();
-      } else {
-        setPipeForm(EMPTY_PIPE_FORM);
-        setPipeModal({ open: true, source, target });
-        backToSelect();
-      }
+      setPipeForm(EMPTY_PIPE_FORM);
+      setPipeModal({ open: true, source, target });
+      backToSelect();
     });
 
     // Edge tap: insert a junction that splits the pipe.
@@ -474,8 +466,6 @@ export default function NetworkBuilderPage() {
     }
     pendingRef.current = null;
     setPendingAsset(null);
-    drawAssetRef.current = null;
-    setDrawAsset(null);
     pendingEntityRef.current = null;
     setPendingEntity(null);
     setAreaBox(null);
@@ -494,27 +484,6 @@ export default function NetworkBuilderPage() {
   );
 
   const handlePick = useCallback((asset) => {
-    const cy = cyRef.current;
-    if (asset.category === "pipeline") {
-      if (!cy || cy.nodes().filter((n) => !ANNOTATION_TYPES.includes(n.data("type"))).length < 2) {
-        setToast("Place at least two assets before laying a pipeline.");
-        return;
-      }
-      pendingRef.current = null;
-      setPendingAsset(null);
-      pendingEntityRef.current = null;
-      setPendingEntity(null);
-      drawAssetRef.current = asset;
-      setDrawAsset(asset);
-      lineSourceRef.current = null;
-      setLineSource(null);
-      modeRef.current = "draw-pipe";
-      setMode("draw-pipe");
-      setToast(`Click two nodes to lay "${asset.name || asset.id}".`);
-      return;
-    }
-    drawAssetRef.current = null;
-    setDrawAsset(null);
     pendingEntityRef.current = null;
     setPendingEntity(null);
     pendingRef.current = asset;
@@ -523,6 +492,33 @@ export default function NetworkBuilderPage() {
     setMode("place-asset");
     setToast(`Click the canvas to place "${asset.name || asset.id}".`);
   }, []);
+
+  const closeEntityModal = useCallback(() => {
+    setEntityModal({ open: false, type: null, position: null });
+  }, []);
+
+  const handleEntityCreated = useCallback((asset) => {
+    const cy = cyRef.current;
+    if (cy && entityModal.position) {
+      const node = cy.add({
+        group: "nodes",
+        data: {
+          id: rid("n"),
+          assetId: asset.id,
+          category: asset.category,
+          type: asset.category,
+          label: asset.name || asset.id,
+          displayLabel: asset.name || asset.id,
+          status: asset.status || "",
+          meta: assetMeta(asset),
+        },
+        position: entityModal.position,
+      });
+      cy.$(":selected").unselect();
+      node.select();
+    }
+    setEntityModal({ open: false, type: null, position: null });
+  }, [entityModal.position]);
 
   // ── Inspector edits ────────────────────────────────────────────────────────
   const handleLabelChange = useCallback(
@@ -780,12 +776,6 @@ export default function NetworkBuilderPage() {
   }, []);
 
   // ── File ─────────────────────────────────────────────────────────────────────
-  const refreshSaved = useCallback(() => {
-    fetchNetworks()
-      .then((d) => setSavedList(d.networks || []))
-      .catch(() => setSavedList([]));
-  }, []);
-
   const persist = useCallback(
     async (asNew) => {
       const cy = cyRef.current;
@@ -816,7 +806,7 @@ export default function NetworkBuilderPage() {
           loadedIdRef.current = doc.id;
           navigate(`/network-builder/${doc.id}`, { replace: true });
         }
-        refreshSaved();
+        window.dispatchEvent(new Event(NETWORK_SAVED_EVENT));
         clearTimeout(saveTimerRef.current);
         saveTimerRef.current = setTimeout(() => setSaveStatus("idle"), 2000);
       } catch (e) {
@@ -824,11 +814,20 @@ export default function NetworkBuilderPage() {
         setToast(e.message || "Save failed");
       }
     },
-    [network, navigate, refreshSaved]
+    [network, navigate]
   );
 
   const handleSave = useCallback(() => persist(false), [persist]);
   const handleSaveAs = useCallback(() => persist(true), [persist]);
+
+  // Stable identity — an inline object literal here would change on every
+  // NetworkBuilderPage render (canvas drags, selection changes, etc. all
+  // re-render this page), which would re-trigger WorkspaceRecordSidebar's
+  // load effect constantly.
+  const networkSidebarApi = useMemo(
+    () => ({ list: () => fetchNetworks().then((d) => d.networks || []), remove: deleteNetwork }),
+    []
+  );
 
   const handleExportJSON = useCallback(() => {
     const cy = cyRef.current;
@@ -904,10 +903,6 @@ export default function NetworkBuilderPage() {
     resetHistory();
     navigate("/network-builder");
   }, [navigate, setModeSafe, syncGraph, resetHistory]);
-
-  useEffect(() => {
-    if (cyReady) refreshSaved();
-  }, [cyReady, refreshSaved]);
 
   // ── Area-zoom drag overlay ───────────────────────────────────────────────────
   const areaDown = useCallback((e) => {
@@ -1168,11 +1163,6 @@ export default function NetworkBuilderPage() {
             </div>
             <span className="toolbar-group__label">Edit</span>
           </div>
-
-          <div className="toolbar-metadata">
-            <span className="toolbar-metadata__item"><span className="toolbar-metadata__label">{realNodeCount} nodes</span></span>
-            <span className="toolbar-metadata__item"><span className="toolbar-metadata__label">{counts.edges} pipes</span></span>
-          </div>
         </div>
       </div>
     );
@@ -1210,11 +1200,7 @@ export default function NetworkBuilderPage() {
       : mode === "area-zoom"
       ? "Drag a rectangle to zoom into that region"
       : mode === "draw-pipe"
-      ? drawAsset
-        ? lineSource
-          ? `Laying "${drawAsset.name || drawAsset.id}" — click the target node`
-          : `Laying "${drawAsset.name || drawAsset.id}" — click the source node`
-        : lineSource
+      ? lineSource
         ? "Draw Pipe — click the target node"
         : "Draw Pipe — click the source node"
       : null;
@@ -1234,25 +1220,16 @@ export default function NetworkBuilderPage() {
 
       {/* Saved networks rail */}
       <aside className="nb-rail">
-        <button className="nb-rail__new" onClick={handleNew}>
-          <span aria-hidden="true">+</span> New Network
-        </button>
-        <div className="nb-rail__head">Saved</div>
-        <div className="nb-rail__list">
-          {!savedList && <div className="nb-rail__empty">Loading…</div>}
-          {savedList && savedList.length === 0 && <div className="nb-rail__empty">No saved networks yet.</div>}
-          {(savedList || []).map((n) => (
-            <button
-              key={n.id}
-              className={`nb-rail__item ${network.id === n.id ? "is-active" : ""}`}
-              onClick={() => navigate(`/network-builder/${n.id}`)}
-              title={n.name}
-            >
-              <span className="nb-rail__name">{n.name}</span>
-              <span className="nb-rail__meta">{n.nodeCount} nodes · {n.edgeCount} pipes</span>
-            </button>
-          ))}
-        </div>
+        <WorkspaceRecordSidebar
+          recordLabel="Network"
+          newTitle="New Network"
+          activeId={network.id}
+          api={networkSidebarApi}
+          savedEvent={NETWORK_SAVED_EVENT}
+          getMeta={(n) => `${n.nodeCount} nodes · ${n.edgeCount} pipes`}
+          onNew={handleNew}
+          onSelect={(id) => navigate(`/network-builder/${id}`)}
+        />
       </aside>
 
       {/* Asset library */}
@@ -1262,7 +1239,7 @@ export default function NetworkBuilderPage() {
             <span className="nb-library__title">Asset Library</span>
             <button className="nb-library__close" onClick={() => setShowLibrary(false)} aria-label="Hide library">×</button>
           </div>
-          <NetworkPalette onPick={handlePick} placedIds={placedIds} armedId={pendingAsset?.id || drawAsset?.id} />
+          <NetworkPalette onPick={handlePick} placedIds={placedIds} armedId={pendingAsset?.id} />
         </aside>
       )}
 
@@ -1343,6 +1320,14 @@ export default function NetworkBuilderPage() {
             onDelete={handleDelete}
           />
         </aside>
+      )}
+
+      {entityModal.open && (
+        <NetworkEntityCreateModal
+          type={entityModal.type}
+          onCancel={closeEntityModal}
+          onCreated={handleEntityCreated}
+        />
       )}
 
       {pipeModal.open && (
