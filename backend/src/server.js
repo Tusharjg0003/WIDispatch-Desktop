@@ -4,8 +4,12 @@ import { buildSummary, buildRecords, DOMAINS } from "./metrics.js";
 import { buildTransmission } from "./transmission.js";
 import { buildQuality } from "./quality.js";
 import { buildEconomics } from "./economics.js";
-import { listAssets, createAsset } from "./assetRegistry.js";
-import { listNetworks, getNetwork, createNetwork, updateNetwork } from "./networks.js";
+import { listAssets, createAsset, getAssetById } from "./assetRegistry.js";
+import {
+  listTransmissionSystems, createTransmissionSystem,
+  listTransmissionLines, createTransmissionLine,
+} from "./transmissionRegistry.js";
+import { listNetworks, getNetwork, createNetwork, updateNetwork, deleteNetwork } from "./networks.js";
 
 const app = express();
 const PORT = Number(process.env.PORT ?? 4000);
@@ -50,6 +54,44 @@ app.get("/api/transmission/summary", async (req, res) => {
   }
 });
 
+app.get("/api/transmission-systems", async (_req, res) => {
+  try {
+    res.json(await listTransmissionSystems());
+  } catch (err) {
+    console.error("transmission systems list error:", err);
+    res.status(500).json({ error: "Failed to list transmission systems" });
+  }
+});
+
+app.post("/api/transmission-systems", async (req, res) => {
+  try {
+    const created = await createTransmissionSystem(req.body || {});
+    res.status(201).json(created);
+  } catch (err) {
+    console.error("transmission system create error:", err);
+    res.status(err.statusCode || 500).json({ error: err.message || "Failed to create transmission system" });
+  }
+});
+
+app.get("/api/transmission-lines", async (_req, res) => {
+  try {
+    res.json(await listTransmissionLines());
+  } catch (err) {
+    console.error("transmission lines list error:", err);
+    res.status(500).json({ error: "Failed to list transmission lines" });
+  }
+});
+
+app.post("/api/transmission-lines", async (req, res) => {
+  try {
+    const created = await createTransmissionLine(req.body || {});
+    res.status(201).json(created);
+  } catch (err) {
+    console.error("transmission line create error:", err);
+    res.status(err.statusCode || 500).json({ error: err.message || "Failed to create transmission line" });
+  }
+});
+
 app.get("/api/quality", async (req, res) => {
   try {
     res.json(await buildQuality(filtersFrom(req)));
@@ -75,6 +117,17 @@ app.get("/api/assets", async (req, res) => {
   } catch (err) {
     console.error("assets list error:", err);
     res.status(500).json({ error: "Failed to list assets" });
+  }
+});
+
+app.get("/api/assets/:id", async (req, res) => {
+  try {
+    const asset = await getAssetById(req.params.id);
+    if (!asset) return res.status(404).json({ error: "Asset not found" });
+    res.json(asset);
+  } catch (err) {
+    console.error("asset get error:", err);
+    res.status(500).json({ error: "Failed to load asset" });
   }
 });
 
@@ -124,6 +177,16 @@ app.put("/api/networks/:id", async (req, res) => {
   } catch (err) {
     console.error("network update error:", err);
     res.status(err.statusCode || 500).json({ error: err.message || "Failed to update network" });
+  }
+});
+
+app.delete("/api/networks/:id", async (req, res) => {
+  try {
+    await deleteNetwork(req.params.id);
+    res.status(204).end();
+  } catch (err) {
+    console.error(`network delete error (id=${req.params.id}):`, err);
+    res.status(err.statusCode || 500).json({ error: err.message || "Failed to delete network" });
   }
 });
 
