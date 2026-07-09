@@ -24,3 +24,17 @@ test("assetsToCsv: escapes commas, quotes, and treats NULL governorate as blank"
 test("assetsToCsv: empty list yields header only", () => {
   assert.equal(assetsToCsv([]), "generated_id,name,activity,asset_type,region,governorate,status");
 });
+
+test("assetsToCsv: neutralizes leading formula metacharacters", () => {
+  const csv = assetsToCsv([
+    { id: "=cmd", name: "@SUM(A1)", activity: "-2", asset_type: "+3", region: "", governorate: "", status: "" },
+  ]);
+  assert.equal(csv.split("\n")[1], "'=cmd,'@SUM(A1),'-2,'+3,,,");
+});
+
+test("assetsToCsv: quotes values containing a carriage return", () => {
+  const csv = assetsToCsv([
+    { id: "X", name: "line1\rline2", activity: "", asset_type: "", region: "", governorate: "", status: "" },
+  ]);
+  assert.equal(csv.split("\n")[1], 'X,"line1\rline2",,,,,');
+});
