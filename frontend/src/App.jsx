@@ -38,9 +38,10 @@ export default function App() {
             <Route path="/economics" element={<EconomicsPage />} />
             <Route path="/network-builder" element={<NetworkBuilderPage />} />
             <Route path="/network-builder/:id" element={<NetworkBuilderPage />} />
-            <Route path="/asset-registry" element={<AssetRegistryPage />} />
+            <Route path="/asset-registry" element={<AssetRegistryPage mode="list" />} />
+            <Route path="/asset-registry/create" element={<AssetRegistryPage mode="create" />} />
+            <Route path="/asset-registry/edit/:id" element={<AssetRegistryPage mode="edit" />} />
             <Route path="/asset-registry/view/:id" element={<AssetDetailPage />} />
-            <Route path="/asset-registry/:tab" element={<AssetRegistryPage />} />
           </Routes>
         </div>
       </div>

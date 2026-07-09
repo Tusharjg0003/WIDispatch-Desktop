@@ -89,7 +89,7 @@ export default function AssetDetailPage() {
     );
   }
 
-  const backTo = `/asset-registry/${asset.category}`;
+  const backTo = "/asset-registry";
   const hasLocation = validCoord(asset.latitude, asset.longitude);
   const categoryLabel = CATEGORY_LABEL[asset.category] || asset.category;
   const showProduction = isProductionAsset(asset);
