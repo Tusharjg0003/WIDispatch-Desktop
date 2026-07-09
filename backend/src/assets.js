@@ -10,7 +10,7 @@ export function dateMatch(field, { from, to } = {}, isDatetime = false) {
 }
 
 // Records can reference any asset type, so resolve names across all of them.
-const ASSET_NAME_COLLECTIONS = ["plants", "pumps", "valves", "pipelines", "cityGates"];
+const ASSET_NAME_COLLECTIONS = ["plants", "pumps", "cityGates"];
 
 export async function resolveAssetNames(db, ids) {
   const unique = [...new Set(ids.filter(Boolean))];

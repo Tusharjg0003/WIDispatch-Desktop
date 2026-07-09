@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 18.1.1, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 24 24" enable-background="new 0 0 24 24" xml:space="preserve">
+<symbol  id="Main_Icon" viewBox="-16 -16 32 32">
+	<polygon fill="none" points="16,-16 -16,-16 -16,16 16,16 	"/>
+	
+		<line fill="none" stroke="#939598" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" x1="10" y1="0" x2="-8" y2="0"/>
+	
+		<polyline fill="none" stroke="#939598" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" points="
+		-2.1,6 -10,0 -2,-6 	"/>
+</symbol>
+<g id="Background" display="none">
+	<g display="inline">
+		
+			<image overflow="visible" opacity="0.1" width="36" height="36" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACQAAAAkCAYAAADhAJiYAAAACXBIWXMAAAsSAAALEgHS3X78AAAA
+GXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAadJREFUeNrsmG9PgzAQxgt0I9Et
+Tl+o0VfG7/+1jJoMGagJCNSreZqc/BkLBVOTNnlSVpa73x5Yc1chHBvByHqwUF7VmgeBAqYQCmYE
+U1ADKaYOkIGISJK0xhwxMFsYDVGTKlKJuWZwPwk5UASQM9IGswGzccq4YEA+Se+YS+6SbD0qCYgd
+6Zp0CbA1YG2AaiTXIG+kV9wzrunYijtk3NEAN6RH0h3pinTOXJoKpN35ICWkJ8Tij64Zc0jDPJBu
+SVvA2gDpxDnpGWt7OJWx/GroHdrAGQ1zT7rAejgRqAHQAZ8PQ6+C7PmX6bUYj2kLmB3WbIAKXGeI
+HSNXOAQkWvuPvrfCr4hnABKItWIgne1EHtmpORzX1BGestmGwrHhgTyQB/JAHsgD/XcgeWK70rAS
+Ymr50fS0P6NAHELXuV+o9ApLR02BViJm1YLrBVIMpEBBnrOyc64SNkfsgoGpISDeqiSsIM9mLvIT
+5CiRswPEGzndvKVoVUxBvkQblCJX1dcoipY7L/jCfuFGkbt01CGB6/QPWulfDjl32OD0cYwTB1bO
+jW8BBgB77ro22wtpYQAAAABJRU5ErkJggg==" transform="matrix(1 0 0 1 -6 -6)">
+		</image>
+		<g>
+			<rect fill="#FFFFFF" width="24" height="24"/>
+		</g>
+	</g>
+</g>
+<g id="Editable">
+</g>
+<g id="Lock">
+	
+		<use xlink:href="#Main_Icon"  width="32" height="32" id="XMLID_3_" x="-16" y="-16" transform="matrix(0.75 0 0 -0.75 12.0005 11.9973)" overflow="visible"/>
+</g>
+<g id="Guide">
+</g>
+</svg>

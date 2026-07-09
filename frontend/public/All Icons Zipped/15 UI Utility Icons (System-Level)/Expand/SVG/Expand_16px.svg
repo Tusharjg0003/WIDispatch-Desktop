@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 18.1.1, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 16 16" enable-background="new 0 0 16 16" xml:space="preserve">
+<symbol  id="Main_Icon" viewBox="-16 -16 32 32">
+	<polygon fill="none" points="16,-16 -16,-16 -16,16 16,16 	"/>
+	
+		<line fill="none" stroke="#939598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" x1="10" y1="10" x2="10" y2="4"/>
+	
+		<line fill="none" stroke="#939598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" x1="10" y1="10" x2="4" y2="10"/>
+	
+		<line fill="none" stroke="#939598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" x1="2" y1="2" x2="10" y2="10"/>
+	
+		<line fill="none" stroke="#939598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" x1="-10" y1="-10" x2="-10" y2="-4"/>
+	
+		<line fill="none" stroke="#939598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" x1="-10" y1="-10" x2="-4" y2="-10"/>
+	
+		<line fill="none" stroke="#939598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" x1="-2" y1="-2" x2="-10" y2="-10"/>
+</symbol>
+<g id="Background" display="none">
+	<g display="inline">
+		
+			<image overflow="visible" opacity="0.1" width="29" height="29" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB0AAAAdCAYAAABWk2cPAAAACXBIWXMAAAsSAAALEgHS3X78AAAA
+GXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAZNJREFUeNrslmFPgzAQhgt0I9Et
+Tj+o0U/G//+3jJoMGagJCNQ78zY5kZYyjRiV5E1Zoff0LetdlZrhigKeRXvGNr3WC42EYiiaADdQ
+BxmhQagFJSRNWqJNBHwMyKCW1JBqtK2YwFvAPjQB7IC0QmvhPsfWjYU9kx7R1tKtHlhWDdCGdEo6
+BnyJCfmgLQAMeyDd45l1z2NN36l1yZAz0jXpgnRCOhRuXVB2+UTKSDd4Vy5zF+KUgVekc9IaE/JB
+OXhJukXfFo4LEd/4vukKDhl4STpCf+yAdoDu8Hvn+iza8e/l/hRLugZwgz4ftMJ9gbEpYsU+qOrt
+T36+wGzTAKjCuwsB+7DV9EhGkhOQcl1xSEKJ58i9/9DfB9UTSlQntoVry3QDJS0IKkGcL1+QaaqR
+1bHJocaYpjcBJ9QIWIXkXYrUFpoGS4ytBNz4oLI8ZSJ5FxMTfoYYNWIOQmUR5sKbozzZ5L1PacsR
+q3EVcdVzeYeXtp8s4tLtqFOF+/wLjivvnM5yMPsRR9BvOWz/netVgAEA39O6JvEMoJ0AAAAASUVO
+RK5CYII=" transform="matrix(1 0 0 1 -7 -6)">
+		</image>
+		<g>
+			<rect fill="#FFFFFF" width="16" height="16"/>
+		</g>
+	</g>
+</g>
+<g id="Editable">
+</g>
+<g id="Lock">
+	
+		<use xlink:href="#Main_Icon"  width="32" height="32" id="XMLID_1_" x="-16" y="-16" transform="matrix(0.5 0 0 -0.5 8.0003 7.9982)" overflow="visible"/>
+</g>
+<g id="Guide">
+</g>
+</svg>

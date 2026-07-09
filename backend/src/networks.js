@@ -115,3 +115,9 @@ export async function updateNetwork(id, body = {}) {
   if (!doc || !doc.id) throw notFound("Network not found");
   return doc;
 }
+
+export async function deleteNetwork(id) {
+  const db = await getDb();
+  const result = await db.collection(COLLECTION).deleteOne({ id });
+  if (result.deletedCount === 0) throw notFound("Network not found");
+}

@@ -2,15 +2,52 @@ import React, { useState, useRef, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import "./TopNavigationBar.css";
 
+const iconPath = (path) => encodeURI(`/All Icons Zipped/${path}`);
+
 // Pages are wired into routes later; for now each item just navigates to its path.
 const NAV_ITEMS = [
-  { id: "production", label: "Production", path: "/production" },
-  { id: "demand", label: "Demand", path: "/demand" },
-  { id: "transmission", label: "Transmission", path: "/transmission" },
-  { id: "economics", label: "Economics", path: "/economics" },
-  { id: "network-builder", label: "Network Builder", path: "/network-builder" },
-  { id: "simulation-config", label: "Simulation Config", path: "/simulation-config" },
-  { id: "asset-registry", label: "Asset Registry", path: "/asset-registry" },
+  {
+    id: "production",
+    label: "Production",
+    path: "/production",
+    icon: iconPath("02 Asset & Infrastructure Icons/Desalination Plant/SVG/Desalination Plant_20px.svg"),
+  },
+  {
+    id: "demand",
+    label: "Demand",
+    path: "/demand",
+    icon: iconPath("05 Data, Analytics & Reporting/Line Chart/SVG/Line Chart_20px.svg"),
+  },
+  {
+    id: "transmission",
+    label: "Transmission",
+    path: "/transmission",
+    icon: iconPath("02 Asset & Infrastructure Icons/Pipeline Network/SVG/Pipeline Network_20px.svg"),
+  },
+  {
+    id: "economics",
+    label: "Economics",
+    path: "/economics",
+    icon: iconPath("05 Data, Analytics & Reporting/Bar Chart/SVG/Bar Chart_20px.svg"),
+  },
+  {
+    id: "network-builder",
+    label: "Network Builder",
+    path: "/network-builder",
+    icon: iconPath("02 Asset & Infrastructure Icons/Distribution Network/SVG/Distribution Network_20px.svg"),
+  },
+  {
+    id: "simulation-config",
+    label: "Simulation Config",
+    path: "/simulation-config",
+    icon: iconPath("07 Operations & Control/Control Panel/SVG/Control Panel_20px.svg"),
+  },
+  {
+    id: "asset-registry",
+    label: "Asset Registry",
+    path: "/asset-registry",
+    icon: iconPath("11 Map & Location (GIS)/Asset Location/SVG/Asset Location_20px.svg"),
+  },
 ];
 
 const TopNavigationBar = () => {
@@ -21,12 +58,6 @@ const TopNavigationBar = () => {
   const userMenuRef = useRef(null);
   const searchRef = useRef(null);
   const searchInputRef = useRef(null);
-
-  const handleLogoClick = () => {
-    setUserMenuOpen(false);
-    setSearchOpen(false);
-    navigate("/", { replace: true });
-  };
 
   const isActive = (path) => {
     if (path === "/") {
@@ -90,19 +121,13 @@ const TopNavigationBar = () => {
   return (
     <nav className="top-navigation-bar">
       <div className="top-navigation-bar__container">
-        <button
-          type="button"
-          className="top-navigation-bar__logo"
-          onClick={handleLogoClick}
-          aria-label="Go to homepage"
-          title="Home"
-        >
+        <div className="top-navigation-bar__logo" aria-label="WIDispatch">
           <img
             className="top-navigation-bar__logo-mark"
-            src="/WIDispatch_logo.png"
+            src="/SVG(No background)_Horizontal_Outlined for Dark BG_WIDISPATCH.svg"
             alt="WIDispatch"
           />
-        </button>
+        </div>
 
         <div className="top-navigation-bar__items">
           {NAV_ITEMS.map((item) => {
@@ -113,6 +138,13 @@ const TopNavigationBar = () => {
                 className={`top-navigation-bar__item ${active ? "active" : ""}`}
                 onClick={() => handleNavClick(item.path)}
               >
+                <img
+                  className="top-navigation-bar__item-icon"
+                  src={item.icon}
+                  alt=""
+                  aria-hidden="true"
+                  draggable="false"
+                />
                 <span>{item.label}</span>
               </button>
             );

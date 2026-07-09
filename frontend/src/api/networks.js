@@ -39,3 +39,12 @@ export function saveNetwork(payload) {
 export function updateNetwork(id, payload) {
   return sendJson(`/api/networks/${id}`, "PUT", payload);
 }
+
+// Delete a saved network. No response body (204).
+export async function deleteNetwork(id) {
+  const res = await fetch(`${API_BASE}/api/networks/${id}`, { method: "DELETE" });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || `Request failed (${res.status})`);
+  }
+}

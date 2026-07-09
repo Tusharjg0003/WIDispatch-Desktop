@@ -4,8 +4,6 @@ import { finite, dateMatch, resolveAssetNames } from "./assets.js";
 const ASSET_COLLECTIONS = [
   { key: "plants", label: "Plants" },
   { key: "pumps", label: "Pumps" },
-  { key: "valves", label: "Valves" },
-  { key: "pipelines", label: "Pipelines" },
 ];
 
 const ASSET_STATUSES = [

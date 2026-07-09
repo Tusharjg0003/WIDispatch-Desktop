@@ -152,7 +152,7 @@ export default function MetricDashboard({ domain, config }) {
   const filtered = filters.from || filters.to || filters.plant;
 
   return (
-    <div className="metric page-transition">
+    <div className={["metric", "page-transition", config.pageClassName].filter(Boolean).join(" ")}>
       <header className="metric__head">
         <div className="metric__title-block">
           <span className="metric__eyebrow">{config.eyebrow}</span>

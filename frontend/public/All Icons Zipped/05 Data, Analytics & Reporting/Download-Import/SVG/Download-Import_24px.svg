@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 18.1.1, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 24 24" enable-background="new 0 0 24 24" xml:space="preserve">
+<symbol  id="Main_Icon" viewBox="-16 -16 32 32">
+	<polygon fill="none" points="16,-16 -16,-16 -16,16 16,16 	"/>
+	
+		<polyline fill="none" stroke="#939598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" points="
+		-10,0 -10,-8 10,-8 10,0 	"/>
+	
+		<polyline fill="none" stroke="#939598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" points="
+		-4,0 0,-4 4,0 	"/>
+	
+		<line fill="none" stroke="#939598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" x1="0" y1="-4" x2="0" y2="8"/>
+</symbol>
+<g id="Background" display="none">
+	<g display="inline">
+		
+			<image overflow="visible" opacity="0.1" width="36" height="36" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACQAAAAkCAYAAADhAJiYAAAACXBIWXMAAAsSAAALEgHS3X78AAAA
+GXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAZhJREFUeNrsmG9rwjAQh5s0WtAN
+nS822V6Nff+vJWOwTlsntOufXeAXONN2SlMhgwQeYivmHs8Y7hpFng1x4b64UdzWmgeFBEMCMaFY
+CxrQMjpCRiImFDHHHDMxVxktURMVUWKumdxZEMlEFsQdZiPmkimTBSNyIo6YjVhj7xUtlEBkTTwS
+D7ieI1MuQjWCa5Ev4oPY47owWVLsQzECa4En4o14JjbEkmVprJDOwjeREjusVdkZUtZmVviZ1pB5
+JbbEPWRdhHTgnHjHvU9kKmPxzzIkrCxtIPNCrHBfjhRqIHTA9WFoK6ief5nCXloiMytkLHEUKvA6
+w9oJYskhocg6f/R7M3yLZAKhCGvNmEjnOFF/nNRcjjN2yGsOWxl5NoJQEApCQSgIBaH/LqSubFca
+VkKMLT+anvbnohCX0HXuDyq9wjGjpkArsWZlyfUKtUykQEGes7JzqhI2x9oFE2uHhHirkrKCPJu4
+yE8Ro0TMjhBv5E7ol3asIL9FG7RHrIrvKe8aRW9baS8fNnj3OMaLB1bejV8BBgDYIrLTP5cpRQAA
+AABJRU5ErkJggg==" transform="matrix(1 0 0 1 -6 -6)">
+		</image>
+		<g>
+			<rect fill="#FFFFFF" width="24" height="24"/>
+		</g>
+	</g>
+</g>
+<g id="Editable">
+</g>
+<g id="Lock">
+	
+		<use xlink:href="#Main_Icon"  width="32" height="32" id="XMLID_3_" x="-16" y="-16" transform="matrix(0.75 0 0 -0.75 12.0005 11.9973)" overflow="visible"/>
+</g>
+<g id="Guide">
+</g>
+</svg>

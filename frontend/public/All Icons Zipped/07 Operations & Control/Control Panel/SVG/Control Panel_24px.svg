@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 18.1.1, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 24 24" enable-background="new 0 0 24 24" xml:space="preserve">
+<symbol  id="Main_Icon" viewBox="-16 -16 32 32">
+	<polygon fill="none" points="16,-16 -16,-16 -16,16 16,16 	"/>
+	
+		<polygon fill="none" stroke="#939598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" points="
+		12,-12 -12,-12 -12,12 12,12 	"/>
+	
+		<line fill="none" stroke="#939598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" x1="-6" y1="2" x2="-6" y2="-8"/>
+	
+		<line fill="none" stroke="#939598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" x1="-6" y1="8" x2="-6" y2="6"/>
+	
+		<line fill="none" stroke="#939598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" x1="0" y1="-6" x2="0" y2="-8"/>
+	
+		<line fill="none" stroke="#939598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" x1="0" y1="8" x2="0" y2="-2"/>
+	
+		<line fill="none" stroke="#939598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" x1="6" y1="-2" x2="6" y2="-8"/>
+	
+		<line fill="none" stroke="#939598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" x1="6" y1="8" x2="6" y2="2"/>
+	<path fill="none" stroke="#939598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+		M-4,4c0-1.1-0.9-2-2-2s-2,0.9-2,2s0.9,2,2,2S-4,5.1-4,4z"/>
+	<path fill="none" stroke="#939598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+		M2-4c0-1.1-0.9-2-2-2s-2,0.9-2,2s0.9,2,2,2S2-2.9,2-4z"/>
+	<path fill="none" stroke="#939598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+		M8,0c0-1.1-0.9-2-2-2S4-1.1,4,0s0.9,2,2,2S8,1.1,8,0z"/>
+</symbol>
+<g id="Background" display="none">
+	<g display="inline">
+		
+			<image overflow="visible" opacity="0.1" width="36" height="36" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACQAAAAkCAYAAADhAJiYAAAACXBIWXMAAAsSAAALEgHS3X78AAAA
+GXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAadJREFUeNrsmG9PgzAQxgt0I9Et
+Tl+o0VfG7/+1jJoMGagJCNSreZqc/BkLBVOTNnlSVpa73x5Yc1chHBvByHqwUF7VmgeBAqYQCmYE
+U1ADKaYOkIGISJK0xhwxMFsYDVGTKlKJuWZwPwk5UASQM9IGswGzccq4YEA+Se+YS+6SbD0qCYgd
+6Zp0CbA1YG2AaiTXIG+kV9wzrunYijtk3NEAN6RH0h3pinTOXJoKpN35ICWkJ8Tij64Zc0jDPJBu
+SVvA2gDpxDnpGWt7OJWx/GroHdrAGQ1zT7rAejgRqAHQAZ8PQ6+C7PmX6bUYj2kLmB3WbIAKXGeI
+HSNXOAQkWvuPvrfCr4hnABKItWIgne1EHtmpORzX1BGestmGwrHhgTyQB/JAHsgD/XcgeWK70rAS
+Ymr50fS0P6NAHELXuV+o9ApLR02BViJm1YLrBVIMpEBBnrOyc64SNkfsgoGpISDeqiSsIM9mLvIT
+5CiRswPEGzndvKVoVUxBvkQblCJX1dcoipY7L/jCfuFGkbt01CGB6/QPWulfDjl32OD0cYwTB1bO
+jW8BBgB77ro22wtpYQAAAABJRU5ErkJggg==" transform="matrix(1 0 0 1 -6 -6)">
+		</image>
+		<g>
+			<rect fill="#FFFFFF" width="24" height="24"/>
+		</g>
+	</g>
+</g>
+<g id="Editable">
+</g>
+<g id="Lock">
+	
+		<use xlink:href="#Main_Icon"  width="32" height="32" id="XMLID_3_" x="-16" y="-16" transform="matrix(0.75 0 0 -0.75 12.0005 11.9973)" overflow="visible"/>
+</g>
+<g id="Guide">
+</g>
+</svg>

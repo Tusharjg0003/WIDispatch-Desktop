@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 18.1.1, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 64 64" enable-background="new 0 0 64 64" xml:space="preserve">
+<symbol  id="Main_Icon" viewBox="-16 -16 32 32">
+	<polygon fill="none" points="16,-16 -16,-16 -16,16 16,16 	"/>
+	
+		<line fill="none" stroke="#939598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" x1="10" y1="6" x2="-10" y2="6"/>
+	
+		<line fill="none" stroke="#939598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" x1="10" y1="-2" x2="-10" y2="-2"/>
+	
+		<line fill="none" stroke="#939598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" x1="10" y1="2" x2="-4" y2="2"/>
+	
+		<line fill="none" stroke="#939598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" x1="10" y1="-6" x2="-4" y2="-6"/>
+</symbol>
+<g id="Background" display="none">
+	<g display="inline">
+		
+			<image overflow="visible" opacity="0.1" width="76" height="76" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEwAAABMCAYAAADHl1ErAAAACXBIWXMAAAsSAAALEgHS3X78AAAA
+GXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAhpJREFUeNrs3F1L61AQheHdNlrw
+Az8uzhG9Ev//3xIV1Fo9B1rbxhldG8a0iYqIsPMOLFJTvcjDpI03KyXmSzP44Pygpy5149gKNggZ
+KoMewdXKSqlD1sAy0shSWbZ1HAW40rEcaWlZWOY6LgPeK0gEGwlqx7KnY4YredPyFmWo/5YnHedx
+y6rGrVgJ6dDyx3IkuG1hlgy2FI5D3Vtu9F7eOr/2Om5Y3i4H+mu5sJxaji27YctKBfPt+me5s1zq
+WuOtufpowxzr3HJi2RdmyWAO82i50rlbbdo0+NRtn2F72izHOrMc6PywULCVwB7080PbR1G14VvS
+z411G+4L61DnSgab6fVU1z6WxbANLDWev/y9LSmPewCWdK1bAWrtcarqeNKPeDGlzvAzD+slA/yY
+KgMYYIABBhgDGGCAAQYYYAxggAEGGGAMYIABBhhggDGAAQYYYIAxgAEGGGCAAQYBYIABBhhgDGCA
+AQYYYAxggAEGGGCAMYAB9jvT1irQrIXKKXWa1/muAqsLLCJ538xzemsMmRW+kbnoY65rXjTwNoLV
+Acr/2It7vIsm16v0pUrmUdc+C3B1G1ishPKWo1zcM039Kiu6k8FcJmtgsXDMS8Ym6a0SKkm9j3VY
+E1ks0obCtdTYrmv9gldC9blwLW5Z54YlvZ4kKv3ebRilketfep2lkdSSdj9/dtaSNuFSovi25n+b
+b86LAAMAsi+6hl/Mrg8AAAAASUVORK5CYII=" transform="matrix(1 0 0 1 -6 -6)">
+		</image>
+		<g>
+			<rect fill="#FFFFFF" width="64" height="64"/>
+		</g>
+	</g>
+</g>
+<g id="Editable">
+</g>
+<g id="Lock">
+	
+		<use xlink:href="#Main_Icon"  width="32" height="32" id="XMLID_7_" x="-16" y="-16" transform="matrix(2 0 0 -2 32.001 31.9945)" overflow="visible"/>
+</g>
+<g id="Guide">
+</g>
+</svg>

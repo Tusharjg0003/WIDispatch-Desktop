@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 18.1.1, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 128 128" enable-background="new 0 0 128 128" xml:space="preserve">
+<symbol  id="Main_Icon" viewBox="-16 -16 32 32">
+	<polygon fill="none" points="16,-16 -16,-16 -16,16 16,16 	"/>
+	
+		<polygon fill="none" stroke="#939598" stroke-width="1.9935" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" points="
+		6,-4 6,4 10,4 10,-4 	"/>
+	
+		<polygon fill="none" stroke="#939598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" points="
+		-10,-6 -10,6 -6,6 -6,-6 	"/>
+	
+		<polygon fill="none" stroke="#939598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" points="
+		-2,-10 -2,10 2,10 2,-10 	"/>
+	
+		<line fill="none" stroke="#939598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" x1="6" y1="0" x2="2" y2="0"/>
+	
+		<line fill="none" stroke="#939598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" x1="-2" y1="0" x2="-6" y2="0"/>
+</symbol>
+<g id="Background" display="none">
+	<g display="inline">
+		
+			<image overflow="visible" opacity="0.1" width="140" height="140" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIwAAACMCAYAAACuwEE+AAAACXBIWXMAAAsSAAALEgHS3X78AAAA
+GXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAwNJREFUeNrs2FtLG1EUgNHJRYWq
+1PahLe1T6f//W2IFr1EhMcl0T9kDhzHTaB+P64NNdKI+5Cx24swa6Q1N9lyfeIneZe3gcRTMpJhp
+zgScdwWlm21OW8wLMD2SWcw85jAfZwUc1Y2lQ7KJWces8nFT4PkLogQzSygfYk7ysYdj09S/WXoo
+TzEP+bgqt8x88FY0TyRnMV9iPiWcw8QETL1gNomjg3ITc5nP9VunO/u23DD9dumAfI35FfM95nPM
+cbFlVCeYbrs8xlzHnOdZl29N230bpsPyM+ZbzGliAqZeMB2MRcxFXrvKTXNf+GjHPsOc5GbpsPyI
++ZjXp17bKtsmmLv8/m7so8h8x39J3bWjfBs6TSxneQ2YesEs8+v7PPujtDAdA9MM7r90zx2ksiNg
+qgfT5FkfFFBe3E6Zj/yB4c27clRn0+YVN2sB0JtVScAIGAEjYASMBIyAETACRsAIGAkYASNgBIyA
+ETASMAJGwAgYASNgvAQCRsAIGAEjYCRgBIyAETACRsBIwAgYASNgBIyAkYARMAJGwAgYCRgBI2AE
+jIARMBIwAkbACBgBI2AkYASMgBEwAkbASMAIGAEjYASMBIyAETACRsAIGAkYASNgBIyAETASMAJG
+wAgYASNgJGAEjIARMAJGAkbACBgBI2AEjASMgBEwAkbACBgJGAEjYASMgBEwXgIBI2AEjIARMBIw
++t/mI9fbnO1gVGfDc+7Pfy+YEsk65jlmFbO0kaoHs8yzfs6zL/HsBNMWULpffoxZxNzl84fAVA1m
+lWe9yLNfFnDaMTCb/MWHmOuYi3zuPsFMvLZV1ua5L/LMr9PAKk28ANO/Z3WinmJuY87zuU7dcf4s
+MPWCWedmuc6zv00L6/IzTblhyu3yO3/gKuYkt8sMmKrBlOd/E3M52DL/3DBNfn2bWPrtAky9YPrz
+X6WBh10bpgQwyQ+1swTSQ5nldVjqR7PNbdLDWef3211gmmKL9HimNsu73DTD+zFtCWRXkz3Pq344
+TTNy8056dX8EGAC+o7sJhKmb4gAAAABJRU5ErkJggg==" transform="matrix(1 0 0 1 -6 -6)">
+		</image>
+		<g>
+			<rect fill="#FFFFFF" width="128" height="128"/>
+		</g>
+	</g>
+</g>
+<g id="Editable">
+</g>
+<g id="Lock">
+	
+		<use xlink:href="#Main_Icon"  width="32" height="32" id="XMLID_8_" x="-16" y="-16" transform="matrix(4 0 0 -4 64.0026 63.9854)" overflow="visible"/>
+</g>
+<g id="Guide">
+</g>
+</svg>

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 18.1.1, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 128 128" enable-background="new 0 0 128 128" xml:space="preserve">
+<symbol  id="Main_Icon" viewBox="-16 -16 32 32">
+	<polygon fill="none" points="16,-16 -16,-16 -16,16 16,16 	"/>
+	
+		<polyline fill="none" stroke="#939598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" points="
+		10,0 10,-10 -10,-10 -10,10 0,10 	"/>
+	<path fill="none" stroke="#939598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+		M10,9.9L10,9.9c1.1-1.1,1.1-2.9,0-4L0-4h-4v4l9.9,9.9C7.1,11.1,8.9,11,10,9.9z"/>
+	
+		<line fill="none" stroke="#939598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" x1="4" y1="8" x2="8" y2="4"/>
+</symbol>
+<g id="Background" display="none">
+	<g display="inline">
+		
+			<image overflow="visible" opacity="0.1" width="140" height="140" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIwAAACMCAYAAACuwEE+AAAACXBIWXMAAAsSAAALEgHS3X78AAAA
+GXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAwFJREFUeNrs2FtLG1EUgNHJRYWq
+1PrQlvap9P//LbGC8RIVEpNM98AeOEwSrX08WR9sohPzkrPYiTNupA803XN9NHjUYdUOHveCGRUz
+zhmBc1BQutnktMVsgemRTPL6cT5OCjiqG0uHZB2zilnm47rAswVmklA+xZzlYw/Hpql/s/RQXmKe
+8nFZbpnp4KNomkguYr7GfEk4x4kJmHrBrBNHB+Uu5iaf67dOd/ZtuWH67dIB+RbzO+ZHzGXMabFl
+VCeYbrs8x8xirvKsy4+mzXsbpsPyK+Z7zHliAqZeMB2Mecx1XrvNTfNY+Gj3fYc5y83SYfkZ8zmv
+j723VbZJMA/5+8O+ryK7/kvqrp3kx9B5YrnIa8DUC2aRPz/m2Z+khfE+MM3g/kv33FEqOwGmejBN
+nvVRAWXrdspbd3pLPOWozsbNP9ysBUAfViUBI2AEjIARMBIwAkbACBgBI2AkYASMgBEwAkbASMAI
+GAEjYASMgPEWCBgBI2AEjICRgBEwAkbACBgBIwEjYASMgBEwAkYCRsAIGAEjYCRgBIyAETACRsBI
+wAgYASNgBIyAkYARMAJGwAgYASMBI2AEjIARMBIwAkbACBgBI2AkYASMgBEwAkbASMAIGAEjYASM
+gJGAETACRsAIGAkYASNgBIyAETASMAJGwAgYASNgJGAEjIARMAJGwHgLBIyAETACRsBIwOh/m+65
+3uZsBqM6G55zf/7vgimRrGJeY5YxCxupejCLPOvXPPsSz04wbQGle/FzzDzmIZ8/BqZqMMs863me
+/aKA0+4Ds84XPsXMYq7zuccEM/LeVlmb5z7PM5+lgWWa2ALTf2Z1ol5i7mOu8rlO3Wn+LTD1glnl
+Zpnl2d+nhVX5nabcMOV2+ZN/cBtzlttlAkzVYMrzv4u5GWyZNzdMkz/fJ5Z+uwBTL5j+/Jdp4GnX
+hikBjPJL7SSB9FAmeR2W+tFscpv0cFb5+2YXmKbYIj2esc1ykJtmeD+mLYHsavTO86ofTtPsuHk3
+/egLdNj9FWAAXP29ExWVyIEAAAAASUVORK5CYII=" transform="matrix(1 0 0 1 -6 -6)">
+		</image>
+		<g>
+			<rect fill="#FFFFFF" width="128" height="128"/>
+		</g>
+	</g>
+</g>
+<g id="Editable">
+</g>
+<g id="Lock">
+	
+		<use xlink:href="#Main_Icon"  width="32" height="32" id="XMLID_8_" x="-16" y="-16" transform="matrix(4 0 0 -4 64.0026 63.9854)" overflow="visible"/>
+</g>
+<g id="Guide">
+</g>
+</svg>

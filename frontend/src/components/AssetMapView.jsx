@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from "react";
-import { MapContainer, TileLayer, CircleMarker, Polyline, Tooltip, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, CircleMarker, Tooltip, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 
 const STATUS_COLOR = {
@@ -28,23 +28,12 @@ function FitBounds({ points }) {
   return null;
 }
 
-const hasLine = (a) =>
-  validCoord(a.latitude, a.longitude) && validCoord(a.end_latitude, a.end_longitude);
-
 export default function AssetMapView({ assets, onSelect }) {
   const located = useMemo(
     () => assets.filter((a) => validCoord(a.latitude, a.longitude)),
     [assets]
   );
-  // Include both endpoints of pipeline segments when fitting the view.
-  const points = useMemo(() => {
-    const pts = [];
-    for (const a of located) {
-      pts.push([a.latitude, a.longitude]);
-      if (hasLine(a)) pts.push([a.end_latitude, a.end_longitude]);
-    }
-    return pts;
-  }, [located]);
+  const points = useMemo(() => located.map((a) => [a.latitude, a.longitude]), [located]);
   const missing = assets.length - located.length;
 
   return (
@@ -63,22 +52,6 @@ export default function AssetMapView({ assets, onSelect }) {
             <FitBounds points={points} />
             {located.map((a) => {
               const color = STATUS_COLOR[a.status] || "#8fb0ff";
-              // Pipelines have a start + end: draw them as a pipe-like segment.
-              if (hasLine(a)) {
-                return (
-                  <Polyline
-                    key={`${a.category}-${a.id}`}
-                    positions={[[a.latitude, a.longitude], [a.end_latitude, a.end_longitude]]}
-                    pathOptions={{ color, weight: 5, opacity: 0.85, lineCap: "round" }}
-                    eventHandlers={{ click: () => onSelect(a) }}
-                  >
-                    <Tooltip>
-                      {a.name || a.id}
-                      {a.specifications?.length_km ? ` · ${a.specifications.length_km} km` : ""}
-                    </Tooltip>
-                  </Polyline>
-                );
-              }
               return (
                 <CircleMarker
                   key={`${a.category}-${a.id}`}

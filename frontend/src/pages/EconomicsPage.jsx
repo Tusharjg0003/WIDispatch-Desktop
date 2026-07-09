@@ -39,7 +39,7 @@ export default function EconomicsPage() {
   const compMax = data ? Math.max(1, ...data.composition.map((c) => c.value)) : 1;
 
   return (
-    <div className="metric page-transition">
+    <div className="metric page-transition economics-page economics-page--boxy">
       <header className="metric__head">
         <div className="metric__title-block">
           <span className="metric__eyebrow">Dispatch · Economics</span>

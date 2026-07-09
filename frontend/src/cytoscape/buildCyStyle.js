@@ -2,56 +2,50 @@
 // Lifted and trimmed from the reference NetworkSimulation2Page.js (entity
 // constants ~132-189, buildCyStyle ~632-1019) — simulation/trace/note/group-box
 // selectors and the base64-SVG card-icon pipeline are dropped. Colors are
-// restyled toward this app's dark theme (see App.css / MetricDashboard.css).
+// restyled toward this app's light theme (see MetricDashboard.css / NetworkBuilderPage.css).
 
 // This app's asset categories map straight onto cytoscape node "type".
 // `node` is the internal junction type (a small dot, not a DB asset).
 export const ENTITY_TYPE_COLORS = {
   plant: "#567cff",
   pump: "#ec4899",
-  valve: "#f59e0b",
-  pipeline: "#10b981",
   node: "#8b93a7",
 };
 
 export const ENTITY_TYPE_ABBREVIATIONS = {
   plant: "PL",
   pump: "PU",
-  valve: "VL",
-  pipeline: "PP",
   node: "ND",
 };
 
 export const ENTITY_TYPE_LABELS = {
   plant: "Plant",
-  pump: "Pump",
-  valve: "Valve",
-  pipeline: "Pipeline",
+  pump: "Pump Station",
   node: "Junction",
 };
 
 // Category order for the palette + any grouped UI.
-export const CATEGORY_ORDER = ["plant", "pump", "valve", "pipeline"];
+export const CATEGORY_ORDER = ["plant", "pump"];
 
 // Statuses that should read as "not in service" → dashed node border.
 const INACTIVE_STATUSES = new Set(["decommissioned", "inactive"]);
 
 export const isInactiveStatus = (status) => INACTIVE_STATUSES.has(status);
 
-const ACCENT = "#567cff";
+const ACCENT = "#1a4a8a";
 
 export function buildCyStyle() {
   return [
     // ── Base asset card ──────────────────────────────────────────────────
-    // A dark card body with a status-tinted icon band on the left (supplied as
-    // a data-URI SVG via data(cardIcon)) and the label in the right region.
+    // A white card body with a status-tinted icon band on the left (supplied
+    // as a data-URI SVG via data(cardIcon)) and the label in the right region.
     {
       selector: "node",
       style: {
         shape: "round-rectangle",
         width: 186,
         height: 54,
-        "background-color": "#1b1f2b",
+        "background-color": "#ffffff",
         "background-opacity": 1,
         "background-image": "data(cardIcon)",
         "background-fit": "none",
@@ -61,25 +55,25 @@ export function buildCyStyle() {
         "background-position-y": "0px",
         "background-clip": "node",
         "border-width": 1.5,
-        "border-color": "#2b3350",
+        "border-color": "#cbd5e1",
         "border-style": "solid",
         label: "data(displayLabel)",
         "text-valign": "center",
         "text-halign": "center",
         // Shift the label into the right region (past the 54px band).
         "text-margin-x": 28,
-        color: "#e8eaf0",
+        color: "#1e293b",
         "font-size": 11,
         "font-family": '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
         "font-weight": "600",
         "line-height": 1.2,
         "text-wrap": "wrap",
         "text-max-width": 118,
-        "shadow-blur": 12,
-        "shadow-color": "#000000",
-        "shadow-opacity": 0.45,
+        "shadow-blur": 8,
+        "shadow-color": "#0f172a",
+        "shadow-opacity": 0.12,
         "shadow-offset-x": 0,
-        "shadow-offset-y": 3,
+        "shadow-offset-y": 2,
       },
     },
     // Inactive assets read as "not in service" via a dashed border.
@@ -97,15 +91,16 @@ export function buildCyStyle() {
         shape: "ellipse",
         width: 16,
         height: 16,
-        "background-color": "#8b93a7",
+        "background-color": "#64748b",
         "background-image": "none",
-        color: "#8b93a7",
+        color: "#64748b",
         label: "",
         "text-margin-x": 0,
         "border-width": 2,
-        "border-color": "#c2c8d6",
+        "border-color": "#ffffff",
         "shadow-blur": 4,
-        "shadow-opacity": 0.4,
+        "shadow-color": "#0f172a",
+        "shadow-opacity": 0.18,
       },
     },
     // Selection highlight.
@@ -116,7 +111,7 @@ export function buildCyStyle() {
         "border-width": 3,
         "overlay-color": ACCENT,
         "overlay-padding": 5,
-        "overlay-opacity": 0.18,
+        "overlay-opacity": 0.14,
       },
     },
     // First node picked while drawing a pipe.
@@ -126,7 +121,7 @@ export function buildCyStyle() {
         "border-color": ACCENT,
         "border-width": 4,
         "overlay-color": ACCENT,
-        "overlay-opacity": 0.22,
+        "overlay-opacity": 0.18,
       },
     },
     // ── Pipe / edge ──────────────────────────────────────────────────────
@@ -134,17 +129,17 @@ export function buildCyStyle() {
       selector: "edge",
       style: {
         width: 2.5,
-        "line-color": "#6e96d0",
-        "target-arrow-color": "#6e96d0",
+        "line-color": "#5b7ca3",
+        "target-arrow-color": "#5b7ca3",
         "target-arrow-shape": "triangle",
         "curve-style": "bezier",
         label: "data(displayLabel)",
         "font-size": 9,
-        color: "#aeb6c6",
+        color: "#475569",
         "font-family": '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
         "text-rotation": "autorotate",
-        "text-background-color": "#0f1118",
-        "text-background-opacity": 0.85,
+        "text-background-color": "#ffffff",
+        "text-background-opacity": 0.9,
         "text-background-padding": 2,
       },
     },
@@ -160,17 +155,17 @@ export function buildCyStyle() {
         shape: "round-rectangle",
         width: 200,
         height: 90,
-        "background-color": "#3a3320",
+        "background-color": "#fef9e7",
         "background-opacity": 1,
         "background-image": "none",
         "border-width": 1,
         "border-style": "dashed",
-        "border-color": "#d9a441",
+        "border-color": "#d97706",
         label: "data(displayLabel)",
         "text-valign": "top",
         "text-halign": "center",
         "text-margin-x": 0,
-        color: "#f4e4bf",
+        color: "#78350f",
         "font-size": 11,
         "text-wrap": "wrap",
         "text-max-width": 180,
@@ -195,18 +190,18 @@ export function buildCyStyle() {
         shape: "round-rectangle",
         width: 240,
         height: 160,
-        "background-color": "#567cff",
-        "background-opacity": 0.06,
+        "background-color": ACCENT,
+        "background-opacity": 0.05,
         "background-image": "none",
         "border-width": 1,
         "border-style": "dashed",
-        "border-color": "#567cff",
-        "border-opacity": 0.5,
+        "border-color": ACCENT,
+        "border-opacity": 0.45,
         label: "data(displayLabel)",
         "text-valign": "top",
         "text-halign": "center",
         "text-margin-x": 0,
-        color: "#9db4ff",
+        color: ACCENT,
         "font-size": 11,
         "z-index": 0,
       },
@@ -221,7 +216,7 @@ export function buildCyStyle() {
         width: 3.5,
         "overlay-color": ACCENT,
         "overlay-padding": 4,
-        "overlay-opacity": 0.16,
+        "overlay-opacity": 0.12,
       },
     },
   ];

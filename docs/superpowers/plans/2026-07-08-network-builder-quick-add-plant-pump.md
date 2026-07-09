@@ -59,8 +59,20 @@ const NUMERIC_SPEC_PATTERN = /(_capacity|capex|ccr|_om)$/i;
 to:
 
 ```js
-const NUMERIC_SPEC_PATTERN = /capacity|capex|ccr|_om$/i;
+const NUMERIC_SPEC_PATTERN = /(_capacity|_percentage|_absolute|capex|ccr|_om)$/i;
 ```
+
+This adds `_percentage`/`_absolute` suffixes (for `capacity_limit_percentage`/
+`capacity_limit_absolute`) without matching "capacity" as a bare substring —
+`capacity_limit_mode` must NOT match, since it holds the string enum
+`"none" | "percentage" | "absolute"`, not a number. A pattern like
+`/capacity|capex|ccr|_om$/i` (matching "capacity" anywhere) would wrongly
+coerce `capacity_limit_mode` via `Number("percentage")` → `NaN` → `null`,
+silently corrupting the field. Verify: `capacity_limit_mode` must NOT match
+the pattern; `capacity_limit_percentage`, `capacity_limit_absolute`,
+`design_capacity`, `maximum_capacity`, `contracted_capacity`,
+`expansion_capacity`, `capex`, `ccr`, `fixed_om`, `variable_om` all must
+match it.
 
 - [ ] **Step 3: Start the backend dev server**
 

@@ -1,21 +1,16 @@
-/* Builds on MetricDashboard.css tokens/classes. */
+/* Builds on MetricDashboard.css tokens/classes (already light-themed: white
+   surfaces, #f8fafc page bg, var(--ink)/var(--line) etc.). This file layers
+   a denser, "professional data tool" treatment on top — sharper corners,
+   tighter row padding, solid-fill primary actions, saturated status pills —
+   inspired by a reference asset-tagging/create-asset screen from a sibling
+   app. Everything below is scoped to classes owned by this page (ar-*,
+   adr-*, af-*, st) so it doesn't touch the shared .metric/.sheet/.ledger
+   look used by the other dashboard pages, except via the .ar-page wrapper
+   which explicitly opts this page into a denser table/card density. */
 
 .cat {
   text-transform: capitalize;
   color: var(--ink-dim);
-}
-
-/* Header overview chips */
-.ar-overview {
-  display: flex;
-  gap: 22px;
-  font-size: 0.85rem;
-  color: var(--ink-dim);
-}
-.ar-overview strong {
-  color: #fff;
-  font-family: var(--mono);
-  font-weight: 600;
 }
 
 /* Sub-tabs */
@@ -35,7 +30,7 @@
   border: none;
   background: transparent;
   color: var(--ink-dim);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
   border-bottom: 2px solid transparent;
@@ -43,54 +38,180 @@
 }
 .ar-tab:hover { color: var(--ink); }
 .ar-tab.is-active {
-  color: #fff;
+  color: var(--ink);
+  font-weight: 700;
   border-bottom-color: var(--accent);
 }
 .ar-tab__count {
   font-family: var(--mono);
-  font-size: 0.72rem;
+  font-size: 0.68rem;
+  font-weight: 700;
   padding: 1px 7px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--line-soft);
   color: var(--ink-dim);
 }
 .ar-tab--cta {
   margin-left: auto;
-  color: #aebbff;
+  color: var(--accent);
+  font-weight: 700;
 }
 
-/* Toolbar (view toggle + filters) */
+/* KPI cards — ported as closely as possible from the AssetsTaggingPage
+   reference's "view-kpis" strip: a per-category total + a status-breakdown
+   ribbon with square colored dots. Deliberately kept as the reference's
+   stark black-bordered "boxy" look rather than blended into this page's
+   softer palette, since matching that reference exactly is the point. */
+.ar-page .view-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.ar-page .view-kpis .card {
+  background: #ffffff;
+  border: 2px solid #000000;
+  border-radius: 2px;
+  padding: 9px 11px;
+  min-height: 112px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "title value"
+    "subtitle value"
+    "status status";
+  align-items: start;
+  gap: 3px 8px;
+}
+.ar-page .view-kpis .card-title {
+  grid-area: title;
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #000000;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.ar-page .view-kpis .card-value {
+  grid-area: value;
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #000000;
+  line-height: 1;
+  justify-self: end;
+}
+.ar-page .view-kpis .card-subtitle {
+  grid-area: subtitle;
+  margin: 0;
+  font-size: 0.68rem;
+  color: #374151;
+}
+.ar-page .view-kpis .card-status-breakdown {
+  grid-area: status;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 10px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #000000;
+}
+.ar-page .view-kpis .status-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  font-size: 0.68rem;
+  color: #000000;
+  white-space: nowrap;
+}
+.ar-page .view-kpis .status-item span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ar-page .view-kpis .status-indicator {
+  width: 7px;
+  height: 7px;
+  border-radius: 0;
+  flex-shrink: 0;
+}
+.ar-page .view-kpis .status-indicator.operational { background: #10b981; }
+.ar-page .view-kpis .status-indicator.planned { background: #3b82f6; }
+.ar-page .view-kpis .status-indicator.under-construction { background: #f59e0b; }
+.ar-page .view-kpis .status-indicator.maintenance { background: #f59e0b; }
+.ar-page .view-kpis .status-indicator.decommissioned { background: #ef4444; }
+
+/* Toolbar (status/search filters — the List/Map toggle moved into the
+   sidebar's action toolbar, see AssetRegistrySidebar). */
 .ar-toolbar {
   display: flex;
   align-items: flex-end;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 18px;
   flex-wrap: wrap;
   margin-bottom: 18px;
 }
-.ar-viewtoggle {
-  display: inline-flex;
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  overflow: hidden;
+
+/* ── Sidebar rail (browse tree) + main content pane ──────────────────────
+   Structured exactly like Network Builder's .nb-page/.nb-rail: a full-height
+   flex row sitting directly in .app-content, so the rail is flush against
+   the true left edge of the screen and stays put (its own scroll) while the
+   main pane scrolls independently — instead of both being inset inside the
+   page's own padding and scrolling the whole browser viewport together. */
+.ar-shell {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  /* .ar-rail sits outside .metric now, so it can't inherit that class's
+     --surface/--line/etc. — redeclare the same token block here (same
+     pattern NetworkBuilderPage's .nb-page uses for its own rail). */
+  --line: #e2e8f0;
+  --line-soft: #eef2f6;
+  --ink: #1e293b;
+  --ink-dim: #64748b;
+  --accent: #1a4a8a;
+  --good: #059669;
+  --warn: #d97706;
+  --bad: #dc2626;
+  --surface: #ffffff;
+  --surface-subtle: #f8fafc;
 }
-.ar-viewtoggle button {
-  padding: 8px 18px;
-  border: none;
-  background: transparent;
-  color: var(--ink-dim);
-  font-size: 0.85rem;
-  font-weight: 500;
-  cursor: pointer;
+.ar-rail {
+  width: 190px;
+  flex-shrink: 0;
+  min-height: 0;
+  overflow-y: auto;
+  border-right: 1px solid var(--line);
+  background: var(--surface);
+  padding: 8px;
 }
-.ar-viewtoggle button.is-active {
-  background: rgba(86, 124, 255, 0.18);
-  color: #fff;
+.ar-page {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+  height: 100%;
+  overflow-y: auto;
 }
 
 /* Clickable list rows */
 .ledger--clickable tbody tr {
   cursor: pointer;
+}
+
+/* Denser "professional table" feel for this page's ledger, without touching
+   the shared MetricDashboard.css defaults used by the other dashboards. */
+.ar-page .sheet {
+  border-radius: 4px;
+}
+.ar-page .ledger th,
+.ar-page .ledger td {
+  padding: 6px 10px;
+  font-size: 0.78rem;
+}
+.ar-page .ledger thead th {
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
 }
 
 /* Map */
@@ -100,7 +221,7 @@
 .asset-map__canvas {
   height: 560px;
   width: 100%;
-  border-radius: 12px;
+  border-radius: 4px;
   border: 1px solid var(--line);
 }
 .asset-map__note {
@@ -108,46 +229,15 @@
   font-size: 0.78rem;
   color: var(--ink-dim);
 }
-/* Leaflet popups/tooltips on dark theme */
 .leaflet-container {
-  background: #0a0b0f;
+  background: #f1f5f9;
   font-family: inherit;
 }
 
 /* Detail drawer */
-.adr__overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: flex;
-  justify-content: flex-end;
-  background: rgba(6, 7, 11, 0.6);
-  backdrop-filter: blur(3px);
-}
-.adr {
-  width: 460px;
-  max-width: 92vw;
-  height: 100%;
-  overflow-y: auto;
-  background: #0f1118;
-  border-left: 1px solid var(--line);
-  box-shadow: -24px 0 70px rgba(0, 0, 0, 0.5);
-  animation: adr-in 0.2s ease both;
-}
-@keyframes adr-in {
-  from { transform: translateX(30px); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
-}
-.adr__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 20px 22px;
-  border-bottom: 1px solid var(--line);
-}
 .adr__cat {
   font-size: 0.62rem;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.14em;
   color: var(--accent);
@@ -157,6 +247,7 @@
   font-size: 1.25rem;
   font-weight: 700;
   line-height: 1.2;
+  color: var(--ink);
 }
 .adr__body {
   padding: 4px 22px 28px;
@@ -170,7 +261,7 @@
   gap: 12px;
   padding: 7px 0;
   border-bottom: 1px solid var(--line-soft);
-  font-size: 0.85rem;
+  font-size: 0.82rem;
 }
 .adr__row dt {
   color: var(--ink-dim);
@@ -180,7 +271,6 @@
   color: var(--ink);
   word-break: break-word;
 }
-
 /* Inline create form (in Create sub-tab) */
 .af__body--page {
   padding: 8px 22px 24px;
@@ -188,9 +278,9 @@
 .af__success {
   margin-top: 16px;
   padding: 10px 14px;
-  border-radius: 8px;
-  border: 1px solid rgba(95, 208, 168, 0.4);
-  background: rgba(95, 208, 168, 0.1);
+  border-radius: 6px;
+  border: 1px solid rgba(5, 150, 105, 0.35);
+  background: #ecfdf5;
   color: var(--good);
   font-size: 0.85rem;
 }
@@ -201,74 +291,76 @@
   align-items: center;
   padding: 2px 9px;
   border-radius: 999px;
-  font-size: 0.72rem;
-  font-weight: 600;
+  font-size: 0.7rem;
+  font-weight: 700;
   border: 1px solid var(--line);
   color: var(--ink-dim);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--line-soft);
 }
 
 .st--operational {
-  color: var(--good);
-  border-color: rgba(95, 208, 168, 0.4);
-  background: rgba(95, 208, 168, 0.1);
+  color: #065f46;
+  border-color: rgba(5, 150, 105, 0.3);
+  background: #d1fae5;
 }
 
 .st--maintenance {
-  color: var(--warn);
-  border-color: rgba(255, 176, 86, 0.4);
-  background: rgba(255, 176, 86, 0.1);
+  color: #92400e;
+  border-color: rgba(217, 119, 6, 0.3);
+  background: #fef3c7;
 }
 
 .st--decommissioned {
-  color: var(--bad);
-  border-color: rgba(255, 138, 138, 0.35);
-  background: rgba(255, 138, 138, 0.08);
+  color: #991b1b;
+  border-color: rgba(220, 38, 38, 0.3);
+  background: #fee2e2;
 }
 
 .st--under_construction,
 .st--planned {
-  color: #8fb0ff;
-  border-color: rgba(86, 124, 255, 0.35);
-  background: rgba(86, 124, 255, 0.08);
+  color: #1d4ed8;
+  border-color: rgba(37, 99, 235, 0.3);
+  background: #dbeafe;
 }
 
 .st--inactive {
-  color: #9ca3af;
-  border-color: rgba(156, 163, 175, 0.35);
-  background: rgba(156, 163, 175, 0.08);
+  color: #4b5563;
+  border-color: rgba(107, 114, 128, 0.3);
+  background: #e5e7eb;
 }
 
 /* Buttons */
 .af__btn {
-  height: 36px;
+  height: 34px;
   padding: 0 16px;
-  border-radius: 8px;
+  border-radius: 6px;
   border: 1px solid var(--line);
-  background: transparent;
+  background: var(--surface);
   color: var(--ink);
-  font-size: 0.85rem;
-  font-weight: 500;
+  font-size: 0.82rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .af__btn--ghost:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--surface-subtle);
+  border-color: #cbd5e1;
 }
 
 .af__btn--primary {
-  border-color: rgba(86, 124, 255, 0.5);
-  background: rgba(86, 124, 255, 0.18);
-  color: #cdd8ff;
+  border-color: #111827;
+  background: #111827;
+  color: #ffffff;
 }
 
 .af__btn--primary:hover {
-  background: rgba(86, 124, 255, 0.28);
+  background: #374151;
+  border-color: #374151;
 }
 
 .af__btn--primary:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: default;
 }
 
@@ -285,18 +377,18 @@
   align-items: flex-start;
   justify-content: center;
   padding: 48px 16px;
-  background: rgba(6, 7, 11, 0.7);
-  backdrop-filter: blur(4px);
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(3px);
   overflow-y: auto;
 }
 
 .af__modal {
   width: 100%;
   max-width: 820px;
-  border-radius: 16px;
+  border-radius: 10px;
   border: 1px solid var(--line);
-  background: #0f1118;
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
+  background: var(--surface);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
   animation: af-in 0.18s ease both;
 }
 
@@ -311,19 +403,21 @@
   justify-content: space-between;
   padding: 20px 24px;
   border-bottom: 1px solid var(--line);
+  background: var(--surface-subtle);
 }
 
 .af__title {
   margin: 4px 0 0;
   font-size: 1.3rem;
   font-weight: 700;
+  color: var(--ink);
 }
 
 .af__close {
   width: 34px;
   height: 34px;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   background: transparent;
   color: var(--ink-dim);
   font-size: 1.5rem;
@@ -332,8 +426,8 @@
 }
 
 .af__close:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
+  background: var(--surface-subtle);
+  color: var(--ink);
 }
 
 .af__body {
@@ -343,7 +437,7 @@
 .af__section {
   margin: 20px 0 12px;
   font-size: 0.66rem;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: var(--accent);
@@ -359,7 +453,8 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--ink-dim);
@@ -367,30 +462,37 @@
 
 .af__field input,
 .af__field select {
-  height: 38px;
-  padding: 0 12px;
-  border-radius: 8px;
-  border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.04);
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 2px solid var(--line);
+  background: var(--surface);
   color: var(--ink);
-  font-size: 0.88rem;
+  font-size: 0.85rem;
+  font-weight: 400;
   text-transform: none;
   letter-spacing: 0;
-  color-scheme: dark;
+  color-scheme: light;
+}
+
+.af__field input:disabled {
+  color: var(--ink-dim);
+  background: var(--surface-subtle);
 }
 
 .af__field input:focus-visible,
 .af__field select:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(26, 74, 138, 0.15);
 }
 
 .af__error {
   margin-top: 16px;
   padding: 10px 14px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 138, 138, 0.4);
-  background: rgba(255, 138, 138, 0.08);
+  border-radius: 6px;
+  border: 1px solid rgba(220, 38, 38, 0.35);
+  background: #fef2f2;
   color: var(--bad);
   font-size: 0.85rem;
 }
@@ -408,4 +510,144 @@
   .af__grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Map location picker */
+.af__map {
+  margin: 10px 0 4px;
+}
+.af__map-canvas {
+  height: 260px;
+  width: 100%;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+}
+.af__map-hint {
+  margin: 6px 2px 0;
+  font-size: 0.74rem;
+  color: var(--ink-dim);
+}
+
+/* Active/On-off toggle switch */
+.af__field--toggle {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+.af__toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.af__toggle input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  margin: 0;
+  z-index: 1;
+}
+.af__toggle-track {
+  width: 34px;
+  height: 20px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  border: 1px solid var(--line);
+  position: relative;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  flex-shrink: 0;
+}
+.af__toggle-thumb {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.25);
+  transition: transform 0.15s ease;
+}
+.af__toggle[data-on="true"] .af__toggle-track {
+  background: #059669;
+  border-color: #059669;
+}
+.af__toggle[data-on="true"] .af__toggle-thumb {
+  transform: translateX(14px);
+}
+.af__toggle-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink-dim);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* Pump configuration list */
+.af__pump-list {
+  display: flex;
+  flex-direction: column;
+}
+.af__pump-empty {
+  font-size: 0.8rem;
+  color: var(--ink-dim);
+  padding: 8px 0;
+}
+.af__pump-row {
+  display: grid;
+  grid-template-columns: 1fr 150px 100px auto 28px;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.af__pump-name,
+.af__pump-capacity {
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 2px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.82rem;
+  color-scheme: light;
+}
+.af__pump-role {
+  font-size: 0.64rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+}
+.af__pump-role--functional {
+  color: #065f46;
+  background: #d1fae5;
+}
+.af__pump-role--backup {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+.af__pump-remove {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-dim);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+}
+.af__pump-remove:hover {
+  background: #fef2f2;
+  color: var(--bad);
+  border-color: rgba(220, 38, 38, 0.35);
+}
+.af__pump-add {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
 }

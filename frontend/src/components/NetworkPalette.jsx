@@ -79,11 +79,8 @@ export default function NetworkPalette({ onPick, placedIds, armedId }) {
               {g.items.map((a) => {
                 const placed = placedIds?.has(a.id);
                 const armed = armedId === a.id;
-                const isPipeline = a.category === "pipeline";
                 const metaText = placed
                   ? "on canvas"
-                  : isPipeline
-                  ? "lay between two nodes"
                   : a.region || a.asset_type || a.status || "";
                 return (
                   <li key={`${a.category}-${a.id}`}>
@@ -91,13 +88,7 @@ export default function NetworkPalette({ onPick, placedIds, armedId }) {
                       className={`np__item ${armed ? "is-armed" : ""} ${placed ? "is-placed" : ""}`}
                       onClick={() => !placed && onPick(a)}
                       disabled={placed}
-                      title={
-                        placed
-                          ? "Already on canvas"
-                          : isPipeline
-                          ? "Click, then click two nodes to lay the pipeline"
-                          : "Click, then click the canvas to place"
-                      }
+                      title={placed ? "Already on canvas" : "Click, then click the canvas to place"}
                     >
                       <span className="np__item-name">{a.name || a.id}</span>
                       <span className="np__item-meta">{metaText}</span>

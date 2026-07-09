@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 18.1.1, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 20 20" enable-background="new 0 0 20 20" xml:space="preserve">
+<symbol  id="Main_Icon" viewBox="-16 -16 32 32">
+	<polygon fill="none" points="16,-16 -16,-16 -16,16 16,16 	"/>
+	
+		<polygon fill="none" stroke="#939598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" points="
+		-10,-10 10,-10 10,4 4,10 -10,10 	"/>
+	
+		<polyline fill="none" stroke="#939598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" points="
+		4,-10 4,-2 -4,-2 -4,-10 	"/>
+	
+		<polyline fill="none" stroke="#939598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" points="
+		-4,10 -4,4 2,4 	"/>
+</symbol>
+<g id="Background" display="none">
+	<g display="inline">
+		
+			<image overflow="visible" opacity="0.1" width="33" height="32" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACEAAAAgCAYAAACcuBHKAAAACXBIWXMAAAsSAAALEgHS3X78AAAA
+GXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAaJJREFUeNrsl19PgzAUxQt0I9Et
+Th/U6JPx+38toyZDBmoCAvVec5pckT/tNjMeIDkpK6Pnt9PRXpSawBE4XAuO5GVa7SBEIBRCwQEw
+BmogI9QJYY0jkiYt0UYCxheAjWtSRSrR1gLox6ANEcH8jLRCa2F8ErG/1pp/kt7RljIN3TENGsYb
+0jXpEjBLAPpA1DBk8zfSK67ZdHgs007CpsCmN6RH0h3pinQu0nCF4BQ+SAnpCffKaWlckmCAB9It
+aQ1AHwg2y0nP6NsikUz4maH/xAoJMMA96QL9oSNEA4gdPu/6plX3PB3cH2MK1gDYoM8HosB5hrFi
+jB0OQajW+sDXF6CP94BQuHchzP886npkxZRAUq5H6LLghVPYO2aIGWKGmCHGDu1RljViKXZdtpuO
+ss4JQhrznv+F3bDwTM9uYCXGqFpAvRBGmBcoSHKxHe+7lecYqxAwZghClmSJKEiyA4uaBGOW8OiE
+kIUpF6MpSjJbkByjvEsxdtVX6KpWCi/40vbIha5MYzQJhfP0H0r+X0lM4uVnkq+BJ3khnsTxLcAA
+hnu6LrErEP4AAAAASUVORK5CYII=" transform="matrix(1 0 0 1 -7 -6)">
+		</image>
+		<g>
+			<rect fill="#FFFFFF" width="20" height="20"/>
+		</g>
+	</g>
+</g>
+<g id="Editable">
+</g>
+<g id="Lock">
+	
+		<use xlink:href="#Main_Icon"  width="32" height="32" id="XMLID_2_" x="-16" y="-16" transform="matrix(0.625 0 0 -0.625 10.0004 9.9977)" overflow="visible"/>
+</g>
+<g id="Guide">
+</g>
+</svg>

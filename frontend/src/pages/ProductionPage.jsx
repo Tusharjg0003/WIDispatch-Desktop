@@ -1,10 +1,12 @@
 import React from "react";
 import MetricDashboard, { fmtM3 } from "../components/MetricDashboard";
 import QualitySection from "../components/QualitySection";
+import "./ProductionPage.css";
 
 const config = {
   eyebrow: "Dispatch · Supply",
   title: "Production",
+  pageClassName: "production-page production-page--boxy",
   groupLabel: "Plant",
   valueLabel: "Actual m³",
   showUtilization: true,

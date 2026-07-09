@@ -1,9 +1,11 @@
 import React from "react";
 import MetricDashboard, { fmtM3 } from "../components/MetricDashboard";
+import "./DemandPage.css";
 
 const config = {
   eyebrow: "Dispatch · Demand",
   title: "Demand",
+  pageClassName: "demand-page demand-page--boxy",
   groupLabel: "Delivery point",
   valueLabel: "Required m³",
   showUtilization: false,
