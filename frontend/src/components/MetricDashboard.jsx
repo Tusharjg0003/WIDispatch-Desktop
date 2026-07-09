@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { fetchSummary, fetchRecords } from "../api/metrics";
+import WorkspaceHeader from "./WorkspaceHeader";
 import "./MetricDashboard.css";
 
 const nf = new Intl.NumberFormat("en-US");
@@ -153,39 +154,42 @@ export default function MetricDashboard({ domain, config }) {
 
   return (
     <div className={["metric", "page-transition", config.pageClassName].filter(Boolean).join(" ")}>
-      <header className="metric__head">
-        <div className="metric__title-block">
-          <span className="metric__eyebrow">{config.eyebrow}</span>
-          <h1 className="metric__title">{config.title}</h1>
-        </div>
-        <div className="metric__filters">
-          <label>
-            <span>From</span>
-            <input type="date" value={filters.from}
-              onChange={(e) => setFilters((f) => ({ ...f, from: e.target.value }))} />
-          </label>
-          <label>
-            <span>To</span>
-            <input type="date" value={filters.to}
-              onChange={(e) => setFilters((f) => ({ ...f, to: e.target.value }))} />
-          </label>
-          <label>
-            <span>{config.groupLabel}</span>
-            <select value={filters.plant}
-              onChange={(e) => setFilters((f) => ({ ...f, plant: e.target.value }))}>
-              <option value="">All</option>
-              {plantOptions.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-          </label>
-          {filtered && (
-            <button className="metric__clear" onClick={() => setFilters({ from: "", to: "", plant: "" })}>
-              Clear
-            </button>
-          )}
-        </div>
-      </header>
+      <WorkspaceHeader
+        title={config.title}
+        subtitle={config.eyebrow}
+        icon={config.icon}
+        status={filtered ? "Filtered" : undefined}
+        statusTone="blue"
+        actions={(
+          <div className="metric__filters">
+            <label>
+              <span>From</span>
+              <input type="date" value={filters.from}
+                onChange={(e) => setFilters((f) => ({ ...f, from: e.target.value }))} />
+            </label>
+            <label>
+              <span>To</span>
+              <input type="date" value={filters.to}
+                onChange={(e) => setFilters((f) => ({ ...f, to: e.target.value }))} />
+            </label>
+            <label>
+              <span>{config.groupLabel}</span>
+              <select value={filters.plant}
+                onChange={(e) => setFilters((f) => ({ ...f, plant: e.target.value }))}>
+                <option value="">All</option>
+                {plantOptions.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </label>
+            {filtered && (
+              <button className="metric__clear" onClick={() => setFilters({ from: "", to: "", plant: "" })}>
+                Clear
+              </button>
+            )}
+          </div>
+        )}
+      />
 
       {error && (
         <div className="metric__notice metric__notice--error">

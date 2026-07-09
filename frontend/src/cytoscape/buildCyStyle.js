@@ -117,6 +117,11 @@ export function buildCyStyle() {
         "overlay-opacity": 0.14,
       },
     },
+    // Toolbar isolate mode dims everything outside the current selection.
+    {
+      selector: ".nb-isolate-dim",
+      style: { opacity: 0.14 },
+    },
     // First node picked while drawing a pipe.
     {
       selector: "node.draw-source",

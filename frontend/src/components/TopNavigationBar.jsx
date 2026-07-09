@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { Home } from "lucide-react";
 import "./TopNavigationBar.css";
 
 const iconPath = (path) => encodeURI(`/All Icons Zipped/${path}`);
@@ -173,6 +174,16 @@ const TopNavigationBar = () => {
             tabIndex={searchOpen ? 0 : -1}
           />
         </div>
+
+        <button
+          type="button"
+          className={`top-navigation-bar__icon-btn ${isActive("/") ? "active" : ""}`}
+          title="Home"
+          aria-label="Home"
+          onClick={() => handleNavClick("/")}
+        >
+          <Home size={13} strokeWidth={1.8} aria-hidden="true" />
+        </button>
 
         <button className="top-navigation-bar__icon-btn" title="Help" aria-label="Help">
           <span aria-hidden="true">?</span>

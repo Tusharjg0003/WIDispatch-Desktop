@@ -5,8 +5,16 @@
   padding: 0;
 }
 
-.details-sidebar .sidebar-content {
-  padding: 3px 4px 0;
+.details-sidebar .sidebar-content,
+.ar-rail .sidebar-content,
+.nb-rail .sidebar-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  gap: 0;
+  padding: 0;
+  background: #ffffff;
 }
 
 .sidebar-content__section {
@@ -55,7 +63,9 @@
   margin-top: 0;
 }
 
-.details-sidebar .sidebar-content__section-content {
+.details-sidebar .sidebar-content__section-content,
+.ar-rail .sidebar-content__section-content,
+.nb-rail .sidebar-content__section-content {
   padding-top: 0;
 }
 
@@ -69,24 +79,41 @@
   border-bottom: 0;
 }
 
-.details-sidebar .sidebar-action-toolbar {
+.details-sidebar .sidebar-action-toolbar,
+.ar-rail .sidebar-action-toolbar,
+.nb-rail .sidebar-action-toolbar {
   width: 100%;
   display: block !important;
-  margin: 0 0 5px !important;
-  padding: 0 !important;
+  margin: 0 0 7px !important;
+  padding: 4px 6px 0 !important;
+  border-bottom: 0;
+  background: #ffffff;
 }
 
 .details-sidebar .sidebar-action-toolbar__buttons {
-  width: 100%;
+  width: max-content;
   display: flex !important;
   align-items: center !important;
   gap: 3px !important;
   flex-wrap: nowrap !important;
-  margin: 0 0 5px !important;
+  margin: 0 !important;
+}
+
+.ar-rail .sidebar-action-toolbar__buttons,
+.nb-rail .sidebar-action-toolbar__buttons {
+  width: 100%;
+  display: grid !important;
+  align-items: center !important;
+  gap: 4px !important;
+  margin: 0 !important;
 }
 
 .details-sidebar .sidebar-action-toolbar__button svg,
-.details-sidebar .sidebar-action-toolbar__button img {
+.details-sidebar .sidebar-action-toolbar__button img,
+.ar-rail .sidebar-action-toolbar__button svg,
+.ar-rail .sidebar-action-toolbar__button img,
+.nb-rail .sidebar-action-toolbar__button svg,
+.nb-rail .sidebar-action-toolbar__button img {
   display: block !important;
   width: 12px !important;
   height: 12px !important;
@@ -97,6 +124,21 @@
   opacity: 1 !important;
   visibility: visible !important;
   pointer-events: none !important;
+}
+
+.ar-rail .sidebar-action-toolbar__button svg,
+.ar-rail .sidebar-action-toolbar__button img,
+.ar-rail .sidebar-action-toolbar__select-icon svg,
+.ar-rail .sidebar-action-toolbar__select-icon img,
+.nb-rail .sidebar-action-toolbar__button svg,
+.nb-rail .sidebar-action-toolbar__button img,
+.nb-rail .sidebar-action-toolbar__select-icon svg,
+.nb-rail .sidebar-action-toolbar__select-icon img {
+  width: 13px !important;
+  height: 13px !important;
+  min-width: 13px !important;
+  min-height: 13px !important;
+  opacity: 0.74 !important;
 }
 
 .sidebar-content__stats {
@@ -562,6 +604,57 @@
   width: 100%;
 }
 
+.details-sidebar .sidebar-action-toolbar__buttons--filters .sidebar-action-toolbar__button,
+.details-sidebar .sidebar-action-toolbar__buttons--filters .sidebar-action-toolbar__select-icon {
+  width: 20px !important;
+  min-width: 20px !important;
+  height: 20px !important;
+  min-height: 20px !important;
+  flex: 0 0 20px !important;
+}
+
+.ar-rail .sidebar-action-toolbar__buttons--filters .sidebar-action-toolbar__button,
+.ar-rail .sidebar-action-toolbar__buttons--filters .sidebar-action-toolbar__select-icon,
+.nb-rail .sidebar-action-toolbar__buttons--filters .sidebar-action-toolbar__button,
+.nb-rail .sidebar-action-toolbar__buttons--filters .sidebar-action-toolbar__select-icon {
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 24px !important;
+  min-height: 24px !important;
+  flex: initial !important;
+}
+
+.ar-rail .sidebar-action-toolbar__button,
+.ar-rail .sidebar-action-toolbar__select-icon,
+.nb-rail .sidebar-action-toolbar__button,
+.nb-rail .sidebar-action-toolbar__select-icon {
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 24px !important;
+  min-height: 24px !important;
+  border: 1px solid #c8d2e1 !important;
+  border-radius: 2px !important;
+  background: #ffffff !important;
+  color: #6b7280 !important;
+  box-shadow: none !important;
+}
+
+.ar-rail .sidebar-action-toolbar__button:hover,
+.ar-rail .sidebar-action-toolbar__select-icon:hover,
+.nb-rail .sidebar-action-toolbar__button:hover,
+.nb-rail .sidebar-action-toolbar__select-icon:hover {
+  background: #f8fafc !important;
+  border-color: #94a3b8 !important;
+  color: #1f2937 !important;
+}
+
+.ar-rail .sidebar-action-toolbar__button.active,
+.nb-rail .sidebar-action-toolbar__button.active {
+  background: #f8fafc !important;
+  border-color: #94a3b8 !important;
+  color: #111827 !important;
+}
+
 .sidebar-action-toolbar__button:hover {
   background: #eef3f8;
   border-color: #c7d0dc;
@@ -627,6 +720,89 @@
 .sidebar-action-toolbar__search-input:focus {
   outline: none;
   border-color: #0969da;
+}
+
+.ar-rail .sidebar-action-toolbar__search-input,
+.nb-rail .sidebar-action-toolbar__search-input {
+  width: 100%;
+  height: 22px;
+  margin-top: 5px;
+  border-color: #c8d2e1;
+  border-radius: 2px;
+  font-size: 0.6875rem;
+}
+
+.ar-rail .sidebar-content__tree-list,
+.nb-rail .sidebar-content__tree-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0 8px 16px 12px;
+}
+
+.ar-rail .sidebar-content__tree-group,
+.nb-rail .sidebar-content__tree-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.ar-rail .sidebar-content__tree-type,
+.nb-rail .sidebar-content__tree-type {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  align-items: start;
+  gap: 6px;
+  width: 100%;
+  min-height: 31px;
+  padding: 3px 0 6px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #242933;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ar-rail .sidebar-content__tree-type:hover,
+.nb-rail .sidebar-content__tree-type:hover,
+.nb-rail .sidebar-content__tree-type.is-active {
+  background: transparent;
+  color: #111827;
+}
+
+.ar-rail .sidebar-content__tree-type > img,
+.nb-rail .sidebar-content__tree-type > img {
+  width: 12px;
+  height: 12px;
+  margin-top: 1px;
+  opacity: 0.62;
+  object-fit: contain;
+}
+
+.ar-rail .sidebar-content__tree-type > span,
+.nb-rail .sidebar-content__tree-type > span {
+  min-width: 0;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0;
+  color: inherit;
+  overflow-wrap: anywhere;
+}
+
+.nb-rail .sidebar-content__tree-type > span small {
+  display: none;
+}
+
+.ar-rail .sidebar-content__list--nested {
+  margin: 0 0 8px 20px;
+}
+
+.ar-rail .sidebar-content__list--nested .sidebar-content__list-item {
+  min-height: 30px;
+  padding: 4px 0;
+  border-bottom: 0;
 }
 
 .sidebar-action-toolbar__delete-btn {

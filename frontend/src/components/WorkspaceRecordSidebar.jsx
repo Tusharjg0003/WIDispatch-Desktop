@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
 import SidebarActionToolbar, { applyRangeFilter, applySort } from "./SidebarActionToolbar";
 import "./WorkspaceRecordSidebar.css";
+
+const EXPAND_ICON = "/All Icons Zipped/15 UI Utility Icons (System-Level)/Expand/SVG/Expand_20px.svg";
 
 /* WorkspaceRecordSidebar
    --------------------------------------------------------------------------
@@ -50,7 +51,6 @@ export default function WorkspaceRecordSidebar({
   const [deleteMode, setDeleteMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [deleting, setDeleting] = useState(false);
-  const [expanded, setExpanded] = useState(true);
 
   const load = useCallback(async () => {
     try {
@@ -134,110 +134,75 @@ export default function WorkspaceRecordSidebar({
 
   return (
     <div className="sidebar-content">
-      <div className="sidebar-content__section">
-        <button
-          type="button"
-          className="sidebar-content__section-header"
-          onClick={() => setExpanded((v) => !v)}
-          aria-expanded={expanded}
-        >
-          {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-          <h4 className="sidebar-content__section-title" style={{ margin: 0 }}>
-            {recordLabel}s ({records.length})
-          </h4>
-        </button>
-
-        {expanded && (
-          <div className="sidebar-content__section-content">
-            <SidebarActionToolbar
-              createTitle={newTitle}
-              onCreate={onNew}
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
-              searchOpen={searchOpen}
-              setSearchOpen={setSearchOpen}
-              filterRange={filterRange}
-              setFilterRange={setFilterRange}
-              sortKey={sortKey}
-              sortOrder={sortOrder}
-              setSort={(key, order) => { setSortKey(key); setSortOrder(order); }}
-              inDeleteMode={deleteMode}
-              setInDeleteMode={(next) => { setDeleteMode(next); if (!next) setSelectedIds(new Set()); }}
-              selectedCount={selectedIds.size}
-              deleting={deleting}
-              onConfirmDelete={handleBulkDelete}
-            />
-
-            {loading ? (
-              <div className="sidebar-content__empty-msg">Loading…</div>
-            ) : (
-              <div className="sidebar-content__list">
-                {filtered.length === 0 ? (
-                  <div className="sidebar-content__empty-msg">
-                    {searchTerm ? `No ${recordLabel.toLowerCase()}s found` : `No saved ${recordLabel.toLowerCase()}s`}
-                  </div>
-                ) : (
-                  filtered.map((record, index) => {
-                    const isSelected = selectedIds.has(record.id);
-                    const meta = metaFor(record);
-                    return (
-                      <div
-                        key={record.id}
-                        role="button"
-                        tabIndex={0}
-                        className={`sidebar-content__list-row ${record.id === activeId ? "sidebar-content__list-row--folder" : ""}`}
-                        onClick={() => (deleteMode ? toggleSelection(record.id) : onSelect(record.id))}
-                        onKeyDown={(e) => {
-                          if (e.key !== "Enter" && e.key !== " ") return;
-                          e.preventDefault();
-                          deleteMode ? toggleSelection(record.id) : onSelect(record.id);
-                        }}
-                        title={record.description || record.name}
-                        style={{
-                          backgroundColor: isSelected ? "#fef2f2" : undefined,
-                          gap: deleteMode ? "6px" : undefined,
-                        }}
-                      >
-                        {deleteMode && (
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => toggleSelection(record.id)}
-                            onClick={(e) => e.stopPropagation()}
-                            style={{ width: 11, height: 11, flexShrink: 0 }}
-                          />
-                        )}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-                            <span style={{ fontSize: 9, lineHeight: 1, fontFamily: "var(--mono)", color: "#94a3b8", flexShrink: 0 }}>
-                              #{index + 1}
-                            </span>
-                            <span style={{
-                              fontWeight: 500, fontSize: 11, lineHeight: 1.15, color: "#0f172a",
-                              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                            }}>
-                              {record.name || `Unnamed ${recordLabel}`}
-                            </span>
-                          </div>
-                          {meta && (
-                            <div style={{
-                              marginTop: 2, paddingLeft: 18, fontSize: 9, lineHeight: 1.1, color: "#64748b",
-                              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                            }}>
-                              {meta}
-                            </div>
-                          )}
-                        </div>
-                        <ChevronRight size={14} style={{ color: "#94a3b8", flexShrink: 0 }} />
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            )}
-          </div>
-        )}
+      <div className="sidebar-content__section-content">
+        <SidebarActionToolbar
+          createTitle={newTitle}
+          onCreate={onNew}
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          searchOpen={searchOpen}
+          setSearchOpen={setSearchOpen}
+          filterRange={filterRange}
+          setFilterRange={setFilterRange}
+          sortKey={sortKey}
+          sortOrder={sortOrder}
+          setSort={(key, order) => { setSortKey(key); setSortOrder(order); }}
+          inDeleteMode={deleteMode}
+          setInDeleteMode={(next) => { setDeleteMode(next); if (!next) setSelectedIds(new Set()); }}
+          selectedCount={selectedIds.size}
+          deleting={deleting}
+          onConfirmDelete={handleBulkDelete}
+        />
       </div>
+
+      {loading ? (
+        <div className="sidebar-content__empty-msg">Loading…</div>
+      ) : (
+        <div className="sidebar-content__tree-list">
+          {filtered.length === 0 ? (
+            <div className="sidebar-content__empty-msg">
+              {searchTerm ? `No ${recordLabel.toLowerCase()}s found` : `No saved ${recordLabel.toLowerCase()}s`}
+            </div>
+          ) : (
+            filtered.map((record) => {
+              const isSelected = selectedIds.has(record.id);
+              const meta = metaFor(record);
+              return (
+                <div
+                  key={record.id}
+                  role="button"
+                  tabIndex={0}
+                  className={`sidebar-content__tree-type sidebar-content__tree-type--record ${record.id === activeId ? "is-active" : ""}`}
+                  onClick={() => (deleteMode ? toggleSelection(record.id) : onSelect(record.id))}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter" && e.key !== " ") return;
+                    e.preventDefault();
+                    deleteMode ? toggleSelection(record.id) : onSelect(record.id);
+                  }}
+                  title={record.description || record.name}
+                  style={{ backgroundColor: isSelected ? "#fef2f2" : undefined }}
+                >
+                  {deleteMode ? (
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleSelection(record.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      style={{ width: 14, height: 14, flexShrink: 0 }}
+                    />
+                  ) : (
+                    <img src={EXPAND_ICON} alt="" aria-hidden="true" />
+                  )}
+                  <span>
+                    {record.name || `Unnamed ${recordLabel}`}
+                    {meta && <small>{meta}</small>}
+                  </span>
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
     </div>
   );
 }

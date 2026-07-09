@@ -14,6 +14,7 @@ import {
   StickyNote, Group,
   Bold, Italic, Underline,
   Copy, ClipboardPaste, Pencil, Trash2, PanelRight,
+  AlertTriangle, CheckSquare, FileText,
 } from "lucide-react";
 import { useLayout } from "../contexts/LayoutContext";
 import { buildCyStyle, ENTITY_TYPE_LABELS } from "../cytoscape/buildCyStyle";
@@ -26,6 +27,7 @@ import {
 import NetworkPalette from "../components/NetworkPalette";
 import NetworkNodeDetails from "../components/NetworkNodeDetails";
 import WorkspaceRecordSidebar from "../components/WorkspaceRecordSidebar";
+import WorkspaceHeader, { WorkspaceHeaderChip } from "../components/WorkspaceHeader";
 import NetworkEntityCreateModal from "../components/NetworkEntityCreateModal";
 import PipeVariablesModal from "../components/PipeVariablesModal";
 import "./NetworkBuilderPage.css";
@@ -35,13 +37,27 @@ import "./NetworkBuilderPage.css";
 const NETWORK_SAVED_EVENT = "widispatch:network-saved";
 
 const rid = (p) => `${p}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-const INSERT_ENTITIES = ["plant", "pump", "node"];
+const INSERT_TOOL_LABELS = {
+  plant: "Plant",
+  handover_point: "Handover Point / City Gate",
+  node: "Node",
+  pump: "Pump Station",
+};
+const INSERT_ENTITY_BUTTONS = [
+  { type: "plant", implemented: true },
+  { type: "handover_point", implemented: false },
+  { type: "node", implemented: true },
+  { type: "pump", implemented: true },
+];
 const ENTITY_ICONS = { plant: Factory, pump: Droplet, node: Dot };
 const ANNOTATION_TYPES = ["note", "group-box"];
 const NOTE_SIZES = ["small", "normal", "large", "xlarge"];
+const ACTIVE_STATUSES = new Set(["operational", "maintenance", "under_construction", "planned"]);
+const INACTIVE_STATUSES = new Set(["inactive", "decommissioned"]);
 // Pipe spec keys that must stay strings — everything else handleSpecChange
 // coerces to a number, since most pipe spec fields are numeric.
 const STRING_SPEC_FIELDS = new Set(["pipelineMaterial", "infraSource", "capacityLimitationType", "transmissionSystemId"]);
+const LIBRARY_DRAG_TYPE = "application/x-widispatch-assets";
 
 // Snapshot the asset fields we keep with a placed element so the graph renders
 // offline even if the source asset later changes.
@@ -120,6 +136,24 @@ const csvCell = (v) => {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 };
 
+const toolbarEntityLabel = (type) => INSERT_TOOL_LABELS[type] || ENTITY_TYPE_LABELS[type] || type;
+
+const isInactiveElement = (el) => {
+  const data = el.data();
+  const status = String(data.status || "").toLowerCase();
+  return data.active === false || data.meta?.active === false || INACTIVE_STATUSES.has(status);
+};
+
+const isActiveElement = (el) => {
+  const data = el.data();
+  const status = String(data.status || "").toLowerCase();
+  return !isInactiveElement(el) && (
+    data.active === true ||
+    data.meta?.active === true ||
+    ACTIVE_STATUSES.has(status)
+  );
+};
+
 export default function NetworkBuilderPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -161,6 +195,11 @@ export default function NetworkBuilderPage() {
   const [showLabels, setShowLabels] = useState(true);
   const [showGrid, setShowGrid] = useState(true);
   const [showInspector, setShowInspector] = useState(true);
+  const [isolationActive, setIsolationActive] = useState(false);
+  const [rightPanelTab, setRightPanelTab] = useState("details");
+  const [issuePanelMode, setIssuePanelMode] = useState("issues");
+  const [validationIssues, setValidationIssues] = useState([]);
+  const [panelFindQuery, setPanelFindQuery] = useState("");
   const [findOpen, setFindOpen] = useState(false);
   const [findQuery, setFindQuery] = useState("");
   const [areaBox, setAreaBox] = useState(null); // {x,y,w,h} while area-zoom dragging
@@ -289,6 +328,64 @@ export default function NetworkBuilderPage() {
     edge.select();
   }, []);
 
+  const placeAssetsAt = useCallback(
+    (assetOrAssets, position) => {
+      const cy = cyRef.current;
+      if (!cy || !assetOrAssets) return;
+      const assets = Array.isArray(assetOrAssets) ? assetOrAssets : [assetOrAssets];
+      const unplaced = assets.filter((asset) => !cy.nodes().some((n) => n.data("assetId") === asset.id));
+
+      if (!unplaced.length) {
+        const first = assets[0];
+        setToast(
+          assets.length === 1
+            ? `"${first?.name || first?.id}" is already on the canvas.`
+            : "All selected assets are already on the canvas."
+        );
+        return;
+      }
+
+      const added = [];
+      cy.batch(() => {
+        unplaced.forEach((asset, index) => {
+          const column = index % 3;
+          const row = Math.floor(index / 3);
+          const node = cy.add({
+            group: "nodes",
+            data: {
+              id: rid("n"),
+              assetId: asset.id,
+              category: asset.category,
+              type: asset.category,
+              label: asset.name || asset.id,
+              displayLabel: asset.name || asset.id,
+              status: asset.status || "",
+              meta: assetMeta(asset),
+            },
+            position: {
+              x: position.x + column * 220,
+              y: position.y + row * 84,
+            },
+          });
+          added.push(node);
+        });
+      });
+
+      cy.$(":selected").unselect();
+      if (added.length) cy.collection(added).select();
+      syncSelection();
+      if (assets.length > 1) {
+        const skipped = assets.length - unplaced.length;
+        setToast(
+          skipped
+            ? `Placed ${unplaced.length} assets; skipped ${skipped} already on canvas.`
+            : `Placed ${unplaced.length} assets.`
+        );
+      }
+    },
+    [syncSelection]
+  );
+
   // ── Cytoscape init (mount once) ──────────────────────────────────────────────
   useEffect(() => {
     const cy = cytoscape({
@@ -349,27 +446,7 @@ export default function NetworkBuilderPage() {
       }
 
       if (m === "place-asset" && pendingRef.current) {
-        const asset = pendingRef.current;
-        if (cy.nodes().some((n) => n.data("assetId") === asset.id)) {
-          setToast(`"${asset.name || asset.id}" is already on the canvas.`);
-        } else {
-          const node = cy.add({
-            group: "nodes",
-            data: {
-              id: rid("n"),
-              assetId: asset.id,
-              category: asset.category,
-              type: asset.category,
-              label: asset.name || asset.id,
-              displayLabel: asset.name || asset.id,
-              status: asset.status || "",
-              meta: assetMeta(asset),
-            },
-            position: { x: evt.position.x, y: evt.position.y },
-          });
-          cy.$(":selected").unselect();
-          node.select();
-        }
+        placeAssetsAt(pendingRef.current, { x: evt.position.x, y: evt.position.y });
         pendingRef.current = null;
         setPendingAsset(null);
         backToSelect();
@@ -436,7 +513,7 @@ export default function NetworkBuilderPage() {
       cy.destroy();
       cyRef.current = null;
     };
-  }, [syncGraph, syncSelection, createPipeEdge, scheduleCommit]);
+  }, [syncGraph, syncSelection, createPipeEdge, scheduleCommit, placeAssetsAt]);
 
   // ── Hydrate from a saved network when the route :id changes ──────────────────
   useEffect(() => {
@@ -506,20 +583,62 @@ export default function NetworkBuilderPage() {
       setModeSafe("place-entity");
       pendingEntityRef.current = type;
       setPendingEntity(type);
-      setToast(`Click the canvas to place a ${ENTITY_TYPE_LABELS[type] || type}. Esc to finish.`);
+      setToast(`Click the canvas to place a ${toolbarEntityLabel(type)}. Esc to finish.`);
     },
     [setModeSafe]
   );
 
-  const handlePick = useCallback((asset) => {
+  const handlePick = useCallback((assetOrAssets) => {
+    const assets = Array.isArray(assetOrAssets) ? assetOrAssets : [assetOrAssets];
+    if (!assets.length) return;
     pendingEntityRef.current = null;
     setPendingEntity(null);
-    pendingRef.current = asset;
-    setPendingAsset(asset);
+    pendingRef.current = Array.isArray(assetOrAssets) ? assets : assets[0];
+    setPendingAsset(Array.isArray(assetOrAssets) ? assets : assets[0]);
     modeRef.current = "place-asset";
     setMode("place-asset");
-    setToast(`Click the canvas to place "${asset.name || asset.id}".`);
+    setToast(
+      assets.length === 1
+        ? `Click the canvas to place "${assets[0].name || assets[0].id}".`
+        : `Click the canvas to place ${assets.length} selected assets.`
+    );
   }, []);
+
+  const handleLibraryDragOver = useCallback((event) => {
+    if (Array.from(event.dataTransfer.types).includes(LIBRARY_DRAG_TYPE)) {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "copy";
+    }
+  }, []);
+
+  const handleLibraryDrop = useCallback(
+    (event) => {
+      const payload = event.dataTransfer.getData(LIBRARY_DRAG_TYPE);
+      if (!payload) return;
+      event.preventDefault();
+      const cy = cyRef.current;
+      if (!cy || !containerRef.current) return;
+      let assets;
+      try {
+        assets = JSON.parse(payload);
+      } catch {
+        return;
+      }
+      const rect = containerRef.current.getBoundingClientRect();
+      const rendered = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+      const pan = cy.pan();
+      const zoom = cy.zoom();
+      placeAssetsAt(assets, {
+        x: (rendered.x - pan.x) / zoom,
+        y: (rendered.y - pan.y) / zoom,
+      });
+      pendingRef.current = null;
+      setPendingAsset(null);
+      modeRef.current = "select";
+      setMode("select");
+    },
+    [placeAssetsAt]
+  );
 
   const closeEntityModal = useCallback(() => {
     setEntityModal({ open: false, type: null, position: null });
@@ -724,6 +843,14 @@ export default function NetworkBuilderPage() {
     if (cy && cy.elements().length) cy.fit(undefined, 48);
   }, []);
 
+  const handleResetView = useCallback(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    cy.reset();
+    if (cy.elements().length) cy.fit(undefined, 48);
+    setModeSafe("select");
+  }, [setModeSafe]);
+
   const handleZoomToSelection = useCallback(() => {
     const cy = cyRef.current;
     if (!cy) return;
@@ -735,6 +862,118 @@ export default function NetworkBuilderPage() {
     const cy = cyRef.current;
     if (cy) cy.elements().select();
   }, []);
+
+  const notImplemented = useCallback((label) => {
+    setToast(`${label} is not implemented yet.`);
+  }, []);
+
+  const selectElementsWhere = useCallback(
+    (label, predicate) => {
+      const cy = cyRef.current;
+      if (!cy) return;
+      cy.$(":selected").unselect();
+      const matches = cy.elements().filter((el) => predicate(el));
+      matches.select();
+      if (matches.length) cy.fit(matches, 80);
+      setToast(`Selected ${matches.length} ${label}.`);
+      syncSelection();
+    },
+    [syncSelection]
+  );
+
+  const handleSelectActive = useCallback(() => {
+    selectElementsWhere("active element(s)", isActiveElement);
+  }, [selectElementsWhere]);
+
+  const handleSelectInactive = useCallback(() => {
+    selectElementsWhere("inactive element(s)", isInactiveElement);
+  }, [selectElementsWhere]);
+
+  const handleMakeSelectionActive = useCallback(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    const editable = cy.$(":selected").filter((el) => el.isEdge() || !ANNOTATION_TYPES.includes(el.data("type")));
+    editable.forEach((el) => {
+      if (el.isEdge()) el.data("active", true);
+      if (el.isNode()) {
+        const meta = { ...(el.data("meta") || {}), active: true };
+        el.data("meta", meta);
+      }
+      el.data("status", "operational");
+      if (el.isNode()) applyCardIcon(el);
+    });
+    if (editable.length) scheduleCommit();
+    syncSelection();
+    setToast(editable.length ? `Marked ${editable.length} selected element(s) active.` : "Select an asset or pipe first.");
+  }, [scheduleCommit, syncSelection]);
+
+  const handleMakeSelectionInactive = useCallback(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    const editable = cy.$(":selected").filter((el) => el.isEdge() || !ANNOTATION_TYPES.includes(el.data("type")));
+    editable.forEach((el) => {
+      if (el.isEdge()) el.data("active", false);
+      if (el.isNode()) {
+        const meta = { ...(el.data("meta") || {}), active: false };
+        el.data("meta", meta);
+      }
+      el.data("status", "inactive");
+      if (el.isNode()) applyCardIcon(el);
+    });
+    if (editable.length) scheduleCommit();
+    syncSelection();
+    setToast(editable.length ? `Marked ${editable.length} selected element(s) inactive.` : "Select an asset or pipe first.");
+  }, [scheduleCommit, syncSelection]);
+
+  const handleToggleIsolation = useCallback(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    if (isolationActive || cy.elements(".nb-isolate-dim").length) {
+      cy.elements().removeClass("nb-isolate-dim");
+      setIsolationActive(false);
+      setToast("Cleared isolate.");
+      return;
+    }
+    const selected = cy.$(":selected");
+    if (!selected.length) {
+      setToast("Select something to isolate first.");
+      return;
+    }
+    const keep = selected.union(selected.edges().connectedNodes());
+    const keepIds = new Set(keep.map((el) => el.id()));
+    cy.elements().forEach((el) => {
+      if (!keepIds.has(el.id())) el.addClass("nb-isolate-dim");
+    });
+    setIsolationActive(true);
+    setToast("Isolated current selection.");
+  }, [isolationActive]);
+
+  const handleSelectDisconnected = useCallback(() => {
+    selectElementsWhere(
+      "disconnected node(s)",
+      (el) => el.isNode() && !ANNOTATION_TYPES.includes(el.data("type")) && el.connectedEdges().length === 0
+    );
+  }, [selectElementsWhere]);
+
+  const handleSelectMissingCapacity = useCallback(() => {
+    selectElementsWhere("pipe(s) missing capacity", (el) => {
+      if (!el.isEdge()) return false;
+      const spec = el.data("meta")?.specifications || {};
+      return spec.capacity == null && spec.designCapacity == null && spec.maximumCapacity == null;
+    });
+  }, [selectElementsWhere]);
+
+  const handleClearHighlights = useCallback(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    cy.$(":selected").unselect();
+    cy.elements().removeClass("nb-isolate-dim");
+    setIsolationActive(false);
+    setFindOpen(false);
+    setFindQuery("");
+    syncSelection();
+    setToast("Cleared highlights.");
+  }, [syncSelection]);
 
   // Live find: select matching nodes as the user types.
   const runFind = useCallback((q) => {
@@ -753,6 +992,233 @@ export default function NetworkBuilderPage() {
     matches.select();
     if (matches.length) cy.fit(matches, 80);
   }, []);
+
+  const focusCanvasElement = useCallback(
+    (elementId) => {
+      const cy = cyRef.current;
+      if (!cy || !elementId) return;
+      const el = cy.getElementById(elementId);
+      if (!el.length) return;
+      cy.$(":selected").unselect();
+      el.select();
+      cy.animate({ center: { eles: el }, zoom: Math.max(cy.zoom(), 1.15) }, { duration: 240 });
+      syncSelection();
+    },
+    [syncSelection]
+  );
+
+  const handleValidateNetwork = useCallback(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    const nodes = cy.nodes().filter((n) => !ANNOTATION_TYPES.includes(n.data("type")));
+    const edges = cy.edges();
+    const issues = [];
+
+    if (nodes.length === 0) {
+      issues.push({
+        id: "empty-canvas",
+        severity: "info",
+        title: "Canvas is empty",
+        detail: "Add plants, pump stations, junctions, and pipes to validate a network.",
+      });
+    }
+
+    if (nodes.length > 1 && edges.length === 0) {
+      issues.push({
+        id: "no-pipes",
+        severity: "warning",
+        title: "No pipes connected",
+        detail: "The canvas has multiple nodes but no pipe connections.",
+      });
+    }
+
+    nodes.forEach((node) => {
+      const degree = node.connectedEdges().length;
+      const type = node.data("type");
+      if (degree === 0 && type !== "node") {
+        issues.push({
+          id: `isolated-${node.id()}`,
+          severity: "warning",
+          title: "Isolated asset",
+          detail: `${node.data("label") || node.id()} is not connected to a pipe.`,
+          elementId: node.id(),
+        });
+      }
+      if (type === "node" && degree < 2) {
+        issues.push({
+          id: `loose-junction-${node.id()}`,
+          severity: "info",
+          title: "Loose junction",
+          detail: "Junctions usually connect at least two pipe segments.",
+          elementId: node.id(),
+        });
+      }
+    });
+
+    edges.forEach((edge) => {
+      const data = edge.data();
+      const source = cy.getElementById(data.source);
+      const target = cy.getElementById(data.target);
+      const spec = data.meta?.specifications || {};
+      if (!source.length || !target.length) {
+        issues.push({
+          id: `broken-${edge.id()}`,
+          severity: "error",
+          title: "Pipe endpoint missing",
+          detail: `${data.label || edge.id()} references a missing source or target node.`,
+          elementId: edge.id(),
+        });
+      }
+      if (spec.capacity == null && spec.designCapacity == null && spec.maximumCapacity == null) {
+        issues.push({
+          id: `capacity-${edge.id()}`,
+          severity: "info",
+          title: "Pipe capacity not set",
+          detail: `${data.label || edge.id()} has no capacity, design capacity, or maximum capacity.`,
+          elementId: edge.id(),
+        });
+      }
+      if (data.active === false || data.status === "inactive") {
+        issues.push({
+          id: `inactive-${edge.id()}`,
+          severity: "warning",
+          title: "Inactive pipe",
+          detail: `${data.label || edge.id()} is marked inactive.`,
+          elementId: edge.id(),
+        });
+      }
+    });
+
+    if (issues.length === 0) {
+      issues.push({
+        id: "validation-ok",
+        severity: "success",
+        title: "No issues found",
+        detail: "The current canvas passes the frontend validation checks.",
+      });
+    }
+
+    setValidationIssues(issues);
+    setRightPanelTab("issues");
+    setIssuePanelMode("issues");
+  }, []);
+
+  const issueCounts = useMemo(
+    () =>
+      validationIssues.reduce(
+        (acc, issue) => ({ ...acc, [issue.severity]: (acc[issue.severity] || 0) + 1 }),
+        {}
+      ),
+    [validationIssues]
+  );
+
+  const issueBadgeText = useMemo(() => {
+    const parts = [];
+    if (issueCounts.error) parts.push(`${issueCounts.error} error${issueCounts.error === 1 ? "" : "s"}`);
+    if (issueCounts.warning) parts.push(`${issueCounts.warning} warning${issueCounts.warning === 1 ? "" : "s"}`);
+    if (issueCounts.info) parts.push(`${issueCounts.info} note${issueCounts.info === 1 ? "" : "s"}`);
+    return parts.join(", ");
+  }, [issueCounts]);
+
+  const handleShowIssues = useCallback(() => {
+    setShowInspector(true);
+    setIssuePanelMode("issues");
+    setRightPanelTab("issues");
+    if (!validationIssues.length) setToast("Run validation to populate issues.");
+  }, [validationIssues.length]);
+
+  const handleFocusIssues = useCallback(() => {
+    setShowInspector(true);
+    setIssuePanelMode("issues");
+    setRightPanelTab("issues");
+    const firstFocusableIssue = validationIssues.find((issue) => issue.elementId);
+    if (!firstFocusableIssue) {
+      setToast(validationIssues.length ? "No focusable issues found." : "Run validation before focusing issues.");
+      return;
+    }
+    focusCanvasElement(firstFocusableIssue.elementId);
+  }, [focusCanvasElement, validationIssues]);
+
+  const findAssetResults = useMemo(() => {
+    const cy = cyRef.current;
+    const needle = panelFindQuery.trim().toLowerCase();
+    if (!cy || !needle) return [];
+    return cy
+      .elements()
+      .filter((el) => {
+        const data = el.data();
+        const meta = data.meta || {};
+        const spec = meta.specifications || {};
+        return [
+          data.label,
+          data.displayLabel,
+          data.assetId,
+          data.id,
+          data.type,
+          data.category,
+          meta.region,
+          meta.cluster,
+          spec.water_source,
+          spec.pipelineMaterial,
+        ].some((value) => value && String(value).toLowerCase().includes(needle));
+      })
+      .map((el) => {
+        const data = el.data();
+        const meta = data.meta || {};
+        const isEdge = el.isEdge();
+        return {
+          id: data.id,
+          name: data.label || data.displayLabel || data.assetId || data.id,
+          type: isEdge ? "Pipe" : ENTITY_TYPE_LABELS[data.category] || data.type || "Node",
+          meta: isEdge ? `${data.sourceLabel || data.source} to ${data.targetLabel || data.target}` : meta.region || meta.cluster || data.status,
+        };
+      });
+  }, [panelFindQuery, counts.nodes, counts.edges, selectedEl]);
+
+  const isolationGroups = useMemo(() => {
+    const cy = cyRef.current;
+    const systemsById = new Map(transmissionSystems.map((system) => [system.id, { ...system, lines: [] }]));
+    const linesById = new Map(transmissionLines.map((line) => [line.id, { ...line, pipes: [] }]));
+    const ungroupedPipes = [];
+
+    if (!cy) return { systems: Array.from(systemsById.values()), lines: Array.from(linesById.values()), ungroupedPipes };
+
+    cy.edges().forEach((edge) => {
+      const data = edge.data();
+      const spec = data.meta?.specifications || {};
+      const pipe = {
+        id: edge.id(),
+        name: data.label || data.displayLabel || edge.id(),
+        source: cy.getElementById(data.source).data("label") || data.source,
+        target: cy.getElementById(data.target).data("label") || data.target,
+      };
+      const systemId = spec.transmissionSystemId;
+      const lineIds = Array.isArray(spec.lineGroupIds) ? spec.lineGroupIds : [];
+      if (!lineIds.length) {
+        ungroupedPipes.push(pipe);
+        return;
+      }
+      lineIds.forEach((lineId) => {
+        if (!linesById.has(lineId)) linesById.set(lineId, { id: lineId, name: lineId, pipes: [] });
+        const line = linesById.get(lineId);
+        line.pipes.push(pipe);
+        if (systemId && !line.systemId && !line.transmissionSystemId && !line.parentSystemId) {
+          line.canvasSystemId = systemId;
+        }
+      });
+    });
+
+    linesById.forEach((line) => {
+      const systemId = line.systemId || line.transmissionSystemId || line.parentSystemId || line.canvasSystemId;
+      if (systemId && systemsById.has(systemId)) systemsById.get(systemId).lines.push(line);
+    });
+
+    return {
+      systems: Array.from(systemsById.values()),
+      lines: Array.from(linesById.values()),
+      ungroupedPipes,
+    };
+  }, [transmissionSystems, transmissionLines, counts.edges, selectedEl]);
 
   // ── Arrange (align / distribute selected nodes) ──────────────────────────────
   const arrange = useCallback(
@@ -1120,12 +1586,13 @@ export default function NetworkBuilderPage() {
 
   useEffect(() => {
     const saveLabel = saveStatus === "saving" ? "Saving…" : saveStatus === "saved" ? "Saved ✓" : "Save";
-    const Btn = ({ on, active, disabled, title, children, danger, primary, icon: Icon, iconOnly }) => (
+    const Btn = ({ on, active, disabled, title, children, danger, primary, icon: Icon, iconOnly, dataId }) => (
       <button
-        className={`toolbar-button${iconOnly ? " toolbar-button--icon" : ""}${active ? " active" : ""}${danger ? " toolbar-button--danger" : ""}${primary ? " toolbar-button--primary" : ""}`}
+        className={`toolbar-button${iconOnly ? " toolbar-button--icon toolbar-button--icon-only" : ""}${active ? " active" : ""}${danger ? " toolbar-button--danger" : ""}${primary ? " toolbar-button--primary" : ""}`}
         onClick={on}
         disabled={disabled}
         title={title}
+        data-id={dataId}
       >
         {Icon && <Icon size={15} strokeWidth={1.9} />}
         {(!iconOnly || !Icon) && <span>{children}</span>}
@@ -1133,22 +1600,22 @@ export default function NetworkBuilderPage() {
     );
 
     setToolbar(
-      <div className="contextual-toolbar">
+      <div className="contextual-toolbar contextual-toolbar--compact contextual-toolbar--static-fit">
         <div className="contextual-toolbar__container">
           {/* File */}
-          <div className="toolbar-group">
+          <div className="toolbar-group toolbar-group--cols-2">
             <div className="toolbar-group__buttons">
               <Btn on={handleSave} icon={Save} primary disabled={saveStatus === "saving"} title="Save current canvas">{saveLabel}</Btn>
               <Btn on={handleSaveAs} icon={CopyPlus} title="Save a copy under a new name">Save As</Btn>
               <Btn on={() => fileInputRef.current?.click()} icon={FileUp} title="Import canvas from JSON file">Import</Btn>
-              <Btn on={handleExportJSON} icon={Download} title="Export canvas as JSON">Export JSON</Btn>
-              <Btn on={handleExportCSV} icon={FileSpreadsheet} title="Export nodes & edges as CSV">Export CSV</Btn>
+              <Btn on={handleExportJSON} icon={Download} title="Export canvas as JSON">JSON</Btn>
+              <Btn on={handleExportCSV} icon={FileSpreadsheet} title="Export nodes & edges as CSV">CSV</Btn>
             </div>
             <span className="toolbar-group__label">File</span>
           </div>
 
           {/* History */}
-          <div className="toolbar-group">
+          <div className="toolbar-group toolbar-group--cols-1">
             <div className="toolbar-group__buttons">
               <Btn on={handleUndo} icon={Undo2} disabled={!canUndo} title="Undo (Ctrl/Cmd+Z)">Undo</Btn>
               <Btn on={handleRedo} icon={Redo2} disabled={!canRedo} title="Redo (Ctrl/Cmd+Shift+Z)">Redo</Btn>
@@ -1157,20 +1624,28 @@ export default function NetworkBuilderPage() {
           </div>
 
           {/* Insert */}
-          <div className="toolbar-group">
+          <div className="toolbar-group toolbar-group--cols-3">
             <div className="toolbar-group__buttons">
-              {INSERT_ENTITIES.map((type) => (
+              {INSERT_ENTITY_BUTTONS.map(({ type, implemented }) => {
+                const label = toolbarEntityLabel(type);
+                const Icon = ENTITY_ICONS[type] || Factory;
+                return (
                 <Btn
                   key={type}
-                  icon={ENTITY_ICONS[type]}
-                  on={() => (mode === "place-entity" && pendingEntity === type ? setModeSafe("select") : handleInsertEntity(type))}
+                  icon={Icon}
+                  on={() =>
+                    implemented
+                      ? (mode === "place-entity" && pendingEntity === type ? setModeSafe("select") : handleInsertEntity(type))
+                      : notImplemented(label)
+                  }
                   active={mode === "place-entity" && pendingEntity === type}
-                  title={`Insert ${ENTITY_TYPE_LABELS[type] || type}`}
+                  title={`Insert ${label}`}
                 >
-                  {ENTITY_TYPE_LABELS[type] || type}
+                  {label}
                 </Btn>
-              ))}
-              <Btn on={() => setShowLibrary((v) => !v)} icon={Library} active={showLibrary} title="Toggle the asset library panel">Asset Library</Btn>
+                );
+              })}
+              <Btn on={() => setShowLibrary((v) => !v)} icon={Library} active={showLibrary} title="Toggle the asset library panel">Library</Btn>
               <Btn
                 on={() => setModeSafe(mode === "draw-pipe" ? "select" : "draw-pipe")}
                 icon={Spline}
@@ -1187,50 +1662,72 @@ export default function NetworkBuilderPage() {
                 disabled={counts.edges < 1}
                 title="Insert a junction on a pipe (splits it)"
               >
-                Insert on Pipe
+                On Pipe
               </Btn>
             </div>
             <span className="toolbar-group__label">Insert</span>
           </div>
 
           {/* Select */}
-          <div className="toolbar-group">
+          <div className="toolbar-group toolbar-group--cols-3">
             <div className="toolbar-group__buttons">
-              <Btn on={handleSelectAll} icon={MousePointer2} title="Select all (Ctrl/Cmd+A)">Select All</Btn>
-              <Btn on={() => setFindOpen((v) => !v)} icon={Search} active={findOpen} title="Find assets on the canvas">Find Asset</Btn>
-              <Btn on={handleZoomToSelection} icon={Crosshair} title="Zoom to selection (or fit all)">Zoom to Sel</Btn>
+              <Btn on={handleSelectAll} icon={MousePointer2} title="Select all (Ctrl/Cmd+A)">All</Btn>
+              <Btn on={() => setFindOpen((v) => !v)} icon={Search} active={findOpen} title="Find assets on the canvas">Find</Btn>
+              <Btn on={handleZoomToSelection} icon={Crosshair} title="Zoom to selection (or fit all)">To Sel</Btn>
+              <Btn on={handleToggleIsolation} icon={Frame} active={isolationActive} title="Isolate current selection, or clear isolate">Isolate / Unisolate</Btn>
+              <Btn on={handleSelectActive} icon={CheckSquare} title="Select active assets and pipes">Active</Btn>
+              <Btn on={handleSelectInactive} icon={AlertTriangle} title="Select inactive assets and pipes">Inactive</Btn>
+              <Btn on={handleMakeSelectionActive} icon={CheckSquare} disabled={!hasSelection} title="Mark selected assets and pipes active">Activate</Btn>
+              <Btn on={handleMakeSelectionInactive} icon={AlertTriangle} disabled={!hasSelection} title="Mark selected assets and pipes inactive">Inactive</Btn>
             </div>
             <span className="toolbar-group__label">Select</span>
           </div>
 
           {/* View */}
-          <div className="toolbar-group">
+          <div className="toolbar-group toolbar-group--cols-2">
             <div className="toolbar-group__buttons">
               <Btn on={handleFit} icon={Maximize} title="Fit to screen">Fit</Btn>
-              <Btn on={() => setModeSafe(mode === "area-zoom" ? "select" : "area-zoom")} icon={Frame} active={mode === "area-zoom"} title="Drag a rectangle to zoom">Area Zoom</Btn>
+              <Btn on={() => setModeSafe(mode === "area-zoom" ? "select" : "area-zoom")} icon={Frame} active={mode === "area-zoom"} title="Drag a rectangle to zoom">Area</Btn>
               <Btn on={() => setShowLabels((v) => !v)} icon={Tag} active={showLabels} title="Toggle labels">Labels</Btn>
               <Btn on={() => setShowGrid((v) => !v)} icon={Grid3x3} active={showGrid} title="Toggle grid">Grid</Btn>
+              <Btn on={() => notImplemented("Trace Delivery")} icon={Waypoints} title="Trace delivery paths">Trace HP</Btn>
+              <Btn on={handleResetView} icon={Maximize} title="Reset pan and zoom">Reset</Btn>
             </div>
             <span className="toolbar-group__label">View</span>
           </div>
 
-          {/* Arrange */}
-          <div className="toolbar-group">
+          {/* Review */}
+          <div className="toolbar-group toolbar-group--cols-3">
             <div className="toolbar-group__buttons">
-              <Btn iconOnly icon={AlignStartVertical} on={() => arrange("left")} title="Align left" />
-              <Btn iconOnly icon={AlignCenterVertical} on={() => arrange("centerh")} title="Center horizontally" />
-              <Btn iconOnly icon={AlignEndVertical} on={() => arrange("right")} title="Align right" />
-              <Btn iconOnly icon={AlignStartHorizontal} on={() => arrange("top")} title="Align top" />
-              <Btn iconOnly icon={AlignCenterHorizontal} on={() => arrange("centerv")} title="Center vertically" />
-              <Btn iconOnly icon={AlignEndHorizontal} on={() => arrange("bottom")} title="Align bottom" />
-              <Btn iconOnly icon={AlignHorizontalDistributeCenter} on={() => arrange("disth")} title="Distribute horizontally" />
-              <Btn iconOnly icon={AlignVerticalDistributeCenter} on={() => arrange("distv")} title="Distribute vertically" />
+              <Btn on={() => notImplemented("Group Lines")} icon={Group} title="Group selected pipes into a line">Group Lines</Btn>
+              <Btn on={handleValidateNetwork} icon={CheckSquare} title="Validate the current network">Validate</Btn>
+              <Btn on={handleShowIssues} icon={AlertTriangle} title="Show validation issues">Issues</Btn>
+              <Btn on={handleFocusIssues} icon={Crosshair} title="Focus the first validation issue">Focus</Btn>
+              <Btn on={handleSelectDisconnected} icon={Split} title="Select disconnected assets">Disconnected</Btn>
+              <Btn on={handleSelectMissingCapacity} icon={FileText} title="Select pipes with missing capacity">No Capacity</Btn>
+              <Btn on={handleSelectInactive} icon={AlertTriangle} title="Select inactive assets and pipes">Inactive</Btn>
+              <Btn on={handleClearHighlights} icon={Trash2} title="Clear selection, find results, and isolate dimming">Clear Marks</Btn>
+            </div>
+            <span className="toolbar-group__label">Review</span>
+          </div>
+
+          {/* Arrange */}
+          <div className="toolbar-group toolbar-group--cols-3">
+            <div className="toolbar-group__buttons">
+              <Btn icon={AlignStartVertical} on={() => arrange("left")} title="Align left">Left</Btn>
+              <Btn icon={AlignCenterVertical} on={() => arrange("centerh")} title="Center horizontally">Center H</Btn>
+              <Btn icon={AlignEndVertical} on={() => arrange("right")} title="Align right">Right</Btn>
+              <Btn icon={AlignStartHorizontal} on={() => arrange("top")} title="Align top">Top</Btn>
+              <Btn icon={AlignCenterHorizontal} on={() => arrange("centerv")} title="Center vertically">Center V</Btn>
+              <Btn icon={AlignEndHorizontal} on={() => arrange("bottom")} title="Align bottom">Bottom</Btn>
+              <Btn icon={AlignHorizontalDistributeCenter} on={() => arrange("disth")} title="Distribute horizontally">Dist H</Btn>
+              <Btn icon={AlignVerticalDistributeCenter} on={() => arrange("distv")} title="Distribute vertically">Dist V</Btn>
             </div>
             <span className="toolbar-group__label">Arrange</span>
           </div>
 
           {/* Layout */}
-          <div className="toolbar-group">
+          <div className="toolbar-group toolbar-group--cols-2">
             <div className="toolbar-group__buttons">
               <Btn on={() => runLayout("grid")} icon={LayoutGrid} title="Grid layout">Grid</Btn>
               <Btn on={() => runLayout("circle")} icon={Circle} title="Circle layout">Circle</Btn>
@@ -1241,16 +1738,16 @@ export default function NetworkBuilderPage() {
           </div>
 
           {/* Annotate */}
-          <div className="toolbar-group">
+          <div className="toolbar-group toolbar-group--cols-1">
             <div className="toolbar-group__buttons">
-              <Btn on={() => setModeSafe(mode === "place-note" ? "select" : "place-note")} icon={StickyNote} active={mode === "place-note"} title="Place a sticky note">Add Note</Btn>
-              <Btn on={handleGroupBox} icon={Group} title="Group box around selected nodes">Group Box</Btn>
+              <Btn on={() => setModeSafe(mode === "place-note" ? "select" : "place-note")} icon={StickyNote} active={mode === "place-note"} title="Place a sticky note">Note</Btn>
+              <Btn on={handleGroupBox} icon={Group} title="Group box around selected nodes">Group</Btn>
             </div>
             <span className="toolbar-group__label">Annotate</span>
           </div>
 
           {/* Note Format */}
-          <div className="toolbar-group toolbar-group--note">
+          <div className="toolbar-group toolbar-group--note toolbar-group--cols-3">
             <div className="toolbar-group__buttons toolbar-group__buttons--note">
               <select
                 className="toolbar-select"
@@ -1274,9 +1771,9 @@ export default function NetworkBuilderPage() {
                   <option key={s} value={s}>{s[0].toUpperCase() + s.slice(1)}</option>
                 ))}
               </select>
-              <Btn iconOnly disabled={!isNoteSel} on={() => noteFmt("sizeStep", -1)} title="Decrease size">A↓</Btn>
-              <Btn iconOnly disabled={!isNoteSel} on={() => noteFmt("sizeStep", 1)} title="Increase size">A↑</Btn>
-              <Btn iconOnly icon={Bold} disabled={!isNoteSel} active={selectedEl?.noteBold === "true"} on={() => noteFmt("noteBold")} title="Bold" />
+              <Btn iconOnly dataId="note-size-down" disabled={!isNoteSel} on={() => noteFmt("sizeStep", -1)} title="Decrease Size">A↓</Btn>
+              <Btn iconOnly dataId="note-size-up" disabled={!isNoteSel} on={() => noteFmt("sizeStep", 1)} title="Increase Size">A↑</Btn>
+              <Btn iconOnly dataId="note-bold" icon={Bold} disabled={!isNoteSel} active={selectedEl?.noteBold === "true"} on={() => noteFmt("noteBold")} title="Bold" />
               <Btn iconOnly icon={Italic} disabled={!isNoteSel} active={selectedEl?.noteItalic === "true"} on={() => noteFmt("noteItalic")} title="Italic" />
               <Btn iconOnly icon={Underline} disabled={!isNoteSel} active={selectedEl?.noteUnderline === "true"} on={() => noteFmt("noteUnderline")} title="Underline" />
             </div>
@@ -1284,16 +1781,42 @@ export default function NetworkBuilderPage() {
           </div>
 
           {/* Edit */}
-          <div className="toolbar-group">
+          <div className="toolbar-group toolbar-group--cols-2">
             <div className="toolbar-group__buttons">
               <Btn on={handleCopySelection} icon={Copy} disabled={!hasSelection} title="Copy selection (Ctrl/Cmd+C)">Copy Sel</Btn>
               <Btn on={handleCopyAll} icon={CopyPlus} title="Copy all">Copy All</Btn>
               <Btn on={handlePaste} icon={ClipboardPaste} title="Paste (Ctrl/Cmd+V)">Paste</Btn>
-              <Btn on={() => setShowInspector(true)} icon={Pencil} disabled={!selectedEl} title="Edit selected element">Edit</Btn>
+              <Btn on={() => { setShowInspector(true); setRightPanelTab("details"); }} icon={Pencil} disabled={!selectedEl} title="Edit selected element">Edit</Btn>
               <Btn danger icon={Trash2} on={handleDelete} disabled={!hasSelection} title="Delete selected (Del)">Delete</Btn>
-              <Btn on={() => setShowInspector((v) => !v)} icon={PanelRight} active={showInspector} title="Toggle details panel">Details</Btn>
             </div>
             <span className="toolbar-group__label">Edit</span>
+          </div>
+
+          {/* Run */}
+          <div className="toolbar-group toolbar-group--cols-1">
+            <div className="toolbar-group__buttons">
+              <Btn on={() => notImplemented("Run")} icon={Network} title="Run network analysis">Run</Btn>
+              <Btn on={() => notImplemented("Clear run results")} icon={Trash2} title="Clear run results">Clear</Btn>
+            </div>
+            <span className="toolbar-group__label">Run</span>
+          </div>
+
+          {/* Panel */}
+          <div className="toolbar-group toolbar-group--cols-1">
+            <div className="toolbar-group__buttons">
+              <Btn
+                on={() => {
+                  setShowInspector((v) => !v);
+                  setRightPanelTab("details");
+                }}
+                icon={PanelRight}
+                active={showInspector && rightPanelTab === "details"}
+                title="Toggle details panel"
+              >
+                Details
+              </Btn>
+            </div>
+            <span className="toolbar-group__label">Panel</span>
           </div>
         </div>
       </div>
@@ -1301,8 +1824,12 @@ export default function NetworkBuilderPage() {
   }, [
     mode, pendingEntity, network.name, counts.nodes, counts.edges, realNodeCount, saveStatus,
     selectedEl, hasSelection, isNoteSel, canUndo, canRedo,
-    showLabels, showGrid, showInspector, showLibrary, findOpen,
-    setToolbar, setModeSafe, handleInsertEntity, handleFit, handleZoomToSelection, handleSelectAll,
+    showLabels, showGrid, showInspector, showLibrary, findOpen, isolationActive, rightPanelTab,
+    setToolbar, setModeSafe, notImplemented, handleInsertEntity, handleFit, handleResetView,
+    handleZoomToSelection, handleSelectAll, handleSelectActive, handleSelectInactive,
+    handleMakeSelectionActive, handleMakeSelectionInactive, handleToggleIsolation,
+    handleValidateNetwork, handleShowIssues, handleFocusIssues, handleSelectDisconnected,
+    handleSelectMissingCapacity, handleClearHighlights,
     handleDelete, handleSave, handleSaveAs, handleExportJSON, handleExportCSV, handleUndo, handleRedo,
     handleCopySelection, handleCopyAll, handlePaste, handleGroupBox, arrange, runLayout, noteFmt,
   ]);
@@ -1322,9 +1849,11 @@ export default function NetworkBuilderPage() {
 
   const bannerText =
     mode === "place-asset"
-      ? `Placing "${pendingAsset?.name || pendingAsset?.id}" — click the canvas`
+      ? Array.isArray(pendingAsset)
+        ? `Placing ${pendingAsset.length} selected assets — click the canvas`
+        : `Placing "${pendingAsset?.name || pendingAsset?.id}" — click the canvas`
       : mode === "place-entity"
-      ? `Inserting ${ENTITY_TYPE_LABELS[pendingEntity] || pendingEntity} — click the canvas (Esc to finish)`
+      ? `Inserting ${toolbarEntityLabel(pendingEntity)} — click the canvas (Esc to finish)`
       : mode === "place-note"
       ? "Click the canvas to drop a note"
       : mode === "insert-on-edge"
@@ -1336,6 +1865,8 @@ export default function NetworkBuilderPage() {
         ? "Draw Pipe — click the target node"
         : "Draw Pipe — click the source node"
       : null;
+  const saveStatusLabel = saveStatus === "saving" ? "Saving" : saveStatus === "saved" ? "Saved" : "Unsaved";
+  const saveStatusTone = saveStatus === "saved" ? "green" : saveStatus === "saving" ? "blue" : "amber";
 
   return (
     <div className={`nb-page nb-page--${mode}`}>
@@ -1366,97 +1897,326 @@ export default function NetworkBuilderPage() {
 
       {/* Asset library */}
       {showLibrary && (
-        <aside className="nb-library">
-          <div className="nb-library__head">
-            <span className="nb-library__title">Asset Library</span>
-            <button className="nb-library__close" onClick={() => setShowLibrary(false)} aria-label="Hide library">×</button>
+        <aside className="nb-library ns2-library">
+          <div className="ns2-library-header">
+            <span className="ns2-library-title">Asset Library</span>
+            <button className="nb-library__close ns2-btn ns2-btn--sm" onClick={() => setShowLibrary(false)} aria-label="Hide library">×</button>
           </div>
-          <NetworkPalette onPick={handlePick} placedIds={placedIds} armedId={pendingAsset?.id} />
+          <NetworkPalette
+            onPick={handlePick}
+            placedIds={placedIds}
+            armedId={Array.isArray(pendingAsset) ? pendingAsset.map((asset) => asset.id) : pendingAsset?.id}
+          />
         </aside>
       )}
 
-      <div className="nb-canvas-wrap">
-        <div ref={containerRef} className={`nb-canvas ${showGrid ? "nb-canvas--grid" : ""}`} />
+      <div className="nb-workspace">
+        <WorkspaceHeader
+          title="Network Builder"
+          subtitle={network.name || "Untitled network"}
+          icon={Network}
+          status={saveStatusLabel}
+          statusTone={saveStatusTone}
+          className="workspace-header--network-builder"
+          actions={[
+            <WorkspaceHeaderChip key="nodes" tone={realNodeCount > 0 ? "blue" : "default"}>
+              {realNodeCount} nodes
+            </WorkspaceHeaderChip>,
+            <WorkspaceHeaderChip key="pipes" tone={counts.edges > 0 ? "blue" : "default"}>
+              {counts.edges} pipes
+            </WorkspaceHeaderChip>,
+          ]}
+        />
 
-        {mode === "area-zoom" && (
-          <div
-            className="nb-area-capture"
-            onMouseDown={areaDown}
-            onMouseMove={(e) => {
-              areaMove(e);
-              // stash current box on the ref for mouseup
-              if (areaRef.current) {
-                const rect = containerRef.current.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                const { x0, y0 } = areaRef.current;
-                areaRef.current.cur = { x: Math.min(x0, x), y: Math.min(y0, y), w: Math.abs(x - x0), h: Math.abs(y - y0) };
-              }
-            }}
-            onMouseUp={areaUp}
-            onMouseLeave={areaUp}
-          >
-            {areaBox && (
-              <div
-                className="nb-area-rect"
-                style={{ left: areaBox.x, top: areaBox.y, width: areaBox.w, height: areaBox.h }}
+        <div
+          className="nb-canvas-wrap"
+          onDragOver={handleLibraryDragOver}
+          onDrop={handleLibraryDrop}
+        >
+          <div ref={containerRef} className={`nb-canvas ${showGrid ? "nb-canvas--grid" : ""}`} />
+
+          {mode === "area-zoom" && (
+            <div
+              className="nb-area-capture"
+              onMouseDown={areaDown}
+              onMouseMove={(e) => {
+                areaMove(e);
+                // stash current box on the ref for mouseup
+                if (areaRef.current) {
+                  const rect = containerRef.current.getBoundingClientRect();
+                  const x = e.clientX - rect.left;
+                  const y = e.clientY - rect.top;
+                  const { x0, y0 } = areaRef.current;
+                  areaRef.current.cur = { x: Math.min(x0, x), y: Math.min(y0, y), w: Math.abs(x - x0), h: Math.abs(y - y0) };
+                }
+              }}
+              onMouseUp={areaUp}
+              onMouseLeave={areaUp}
+            >
+              {areaBox && (
+                <div
+                  className="nb-area-rect"
+                  style={{ left: areaBox.x, top: areaBox.y, width: areaBox.w, height: areaBox.h }}
+                />
+              )}
+            </div>
+          )}
+
+          {bannerText && (
+            <div className={`nb-mode-banner nb-mode-banner--${mode}`}>
+              <span>{bannerText}</span>
+              <button className="nb-mode-banner__cancel" onClick={() => setModeSafe("select")}>
+                <span aria-hidden="true">×</span> Cancel
+              </button>
+            </div>
+          )}
+
+          {findOpen && (
+            <div className="nb-find">
+              <input
+                autoFocus
+                type="search"
+                placeholder="Find by name, ID, type, region…"
+                value={findQuery}
+                onChange={(e) => {
+                  setFindQuery(e.target.value);
+                  runFind(e.target.value);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") { setFindOpen(false); setFindQuery(""); }
+                }}
               />
-            )}
-          </div>
-        )}
+              <button onClick={() => { setFindOpen(false); setFindQuery(""); }} aria-label="Close find">×</button>
+            </div>
+          )}
 
-        {bannerText && (
-          <div className={`nb-mode-banner nb-mode-banner--${mode}`}>
-            <span>{bannerText}</span>
-            <button className="nb-mode-banner__cancel" onClick={() => setModeSafe("select")}>
-              <span aria-hidden="true">×</span> Cancel
-            </button>
-          </div>
-        )}
-
-        {findOpen && (
-          <div className="nb-find">
-            <input
-              autoFocus
-              type="search"
-              placeholder="Find by name, ID, type, region…"
-              value={findQuery}
-              onChange={(e) => {
-                setFindQuery(e.target.value);
-                runFind(e.target.value);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") { setFindOpen(false); setFindQuery(""); }
-              }}
-            />
-            <button onClick={() => { setFindOpen(false); setFindQuery(""); }} aria-label="Close find">×</button>
-          </div>
-        )}
-
-        {realNodeCount === 0 && (
-          <div className="nb-canvas__empty">
-            <h3>Build a network</h3>
-            <p>Insert assets from the toolbar or pick from the library, then connect them with pipes.</p>
-          </div>
-        )}
-        {toast && <div className="nb-toast">{toast}</div>}
+          {realNodeCount === 0 && (
+            <div className="nb-canvas__empty">
+              <h3>Build a network</h3>
+              <p>Insert assets from the toolbar or pick from the library, then connect them with pipes.</p>
+            </div>
+          )}
+          {toast && <div className="nb-toast">{toast}</div>}
+        </div>
       </div>
 
       {showInspector && (
         <aside className="nb-inspector">
-          <NetworkNodeDetails
-            selected={selectedEl}
-            systems={transmissionSystems}
-            lines={transmissionLines}
-            onLabelChange={handleLabelChange}
-            onStatusChange={handleStatusChange}
-            onSpecChange={handleSpecChange}
-            onSpecBooleanChange={handleSpecBooleanChange}
-            onSpecArrayChange={handleSpecArrayChange}
-            onEdgeFieldChange={handleEdgeFieldChange}
-            onActiveChange={handleEdgeActiveChange}
-            onDelete={handleDelete}
-          />
+          <div className="ns2-right-panel">
+            <div className="ns2-panel-tabs">
+              <button
+                className={`ns2-panel-tab${rightPanelTab === "details" ? " ns2-panel-tab--active" : ""}`}
+                onClick={() => setRightPanelTab("details")}
+              >
+                Details
+              </button>
+              <button
+                className={`ns2-panel-tab${rightPanelTab === "issues" && issuePanelMode === "issues" ? " ns2-panel-tab--active" : ""}${validationIssues.length ? " ns2-panel-tab--has-data" : ""}`}
+                onClick={() => { setIssuePanelMode("issues"); setRightPanelTab("issues"); }}
+                title={issueBadgeText ? `Errors / warnings: ${issueBadgeText}` : "Advisory network validation"}
+              >
+                Validation
+              </button>
+              <button
+                className={`ns2-panel-tab${rightPanelTab === "issues" && issuePanelMode === "find" ? " ns2-panel-tab--active" : ""}`}
+                onClick={() => { setIssuePanelMode("find"); setRightPanelTab("issues"); }}
+              >
+                Find
+              </button>
+              <button
+                className={`ns2-panel-tab${rightPanelTab === "isolation" ? " ns2-panel-tab--active" : ""}`}
+                onClick={() => setRightPanelTab("isolation")}
+              >
+                Isolation
+              </button>
+            </div>
+
+            {rightPanelTab === "details" && (
+              <div className="ns2-panel-body ns2-panel-body--details">
+                <NetworkNodeDetails
+                  selected={selectedEl}
+                  systems={transmissionSystems}
+                  lines={transmissionLines}
+                  onLabelChange={handleLabelChange}
+                  onStatusChange={handleStatusChange}
+                  onSpecChange={handleSpecChange}
+                  onSpecBooleanChange={handleSpecBooleanChange}
+                  onSpecArrayChange={handleSpecArrayChange}
+                  onEdgeFieldChange={handleEdgeFieldChange}
+                  onActiveChange={handleEdgeActiveChange}
+                  onDelete={handleDelete}
+                />
+              </div>
+            )}
+
+            {rightPanelTab === "issues" && (
+              <div className="ns2-panel-body ns2-panel-body--issues">
+                <div className="ns2-adv-toggle">
+                  <button
+                    className={`ns2-adv-toggle-btn${issuePanelMode === "issues" ? " ns2-adv-toggle-btn--active" : ""}`}
+                    onClick={() => setIssuePanelMode("issues")}
+                  >
+                    <AlertTriangle size={12} /> Issues
+                  </button>
+                  <button
+                    className={`ns2-adv-toggle-btn${issuePanelMode === "find" ? " ns2-adv-toggle-btn--active" : ""}`}
+                    onClick={() => setIssuePanelMode("find")}
+                  >
+                    <Search size={12} /> Find
+                  </button>
+                </div>
+
+                {issuePanelMode === "issues" ? (
+                  <div className="ns2-issues-panel">
+                    <div className="ns2-issues-summary">
+                      <div>
+                        <div className="ns2-issues-title">Network Validation</div>
+                        <div className="ns2-issues-subtitle">
+                          {validationIssues.length
+                            ? `${issueCounts.error || 0} errors, ${issueCounts.warning || 0} warnings, ${issueCounts.info || 0} notes`
+                            : "Run validation to check the current canvas."}
+                        </div>
+                      </div>
+                      <button className="ns2-btn ns2-btn--sm" onClick={handleValidateNetwork}>
+                        <CheckSquare size={12} /> Validate
+                      </button>
+                    </div>
+
+                    {validationIssues.length === 0 ? (
+                      <div className="ns2-panel-hint">No validation results yet.</div>
+                    ) : (
+                      <div className="ns2-issue-list">
+                        {validationIssues.map((issue) => {
+                          const IssueIcon =
+                            issue.severity === "error"
+                              ? AlertTriangle
+                              : issue.severity === "success"
+                              ? CheckSquare
+                              : issue.severity === "info"
+                              ? FileText
+                              : AlertTriangle;
+                          return (
+                            <button
+                              key={issue.id}
+                              type="button"
+                              className={`ns2-issue-row ns2-issue-row--${issue.severity}`}
+                              onClick={() => issue.elementId && focusCanvasElement(issue.elementId)}
+                              disabled={!issue.elementId}
+                              title={issue.elementId ? "Focus on canvas" : undefined}
+                            >
+                              <span className="ns2-issue-icon"><IssueIcon size={14} /></span>
+                              <span className="ns2-issue-copy">
+                                <span className="ns2-issue-title">{issue.title}</span>
+                                <span className="ns2-issue-detail">{issue.detail}</span>
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="ns2-find-panel">
+                    <label className="ns2-label">Find Asset</label>
+                    <input
+                      className="ns2-input"
+                      value={panelFindQuery}
+                      onChange={(e) => setPanelFindQuery(e.target.value)}
+                      placeholder="Search name, ID, type, region..."
+                    />
+                    <div className="ns2-find-meta">
+                      {panelFindQuery.trim()
+                        ? `${findAssetResults.length} result${findAssetResults.length === 1 ? "" : "s"}`
+                        : "Search the current canvas."}
+                    </div>
+                    <div className="ns2-find-results">
+                      {findAssetResults.map((result) => (
+                        <button
+                          key={result.id}
+                          type="button"
+                          className="ns2-find-row"
+                          onClick={() => focusCanvasElement(result.id)}
+                        >
+                          <span className="ns2-find-name">{result.name}</span>
+                          <span className="ns2-find-detail">{result.type}{result.meta ? ` - ${result.meta}` : ""}</span>
+                        </button>
+                      ))}
+                      {panelFindQuery.trim() && findAssetResults.length === 0 && (
+                        <div className="ns2-panel-hint">No matching canvas assets.</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {rightPanelTab === "isolation" && (
+              <div className="ns2-panel-body ns2-panel-body--issues">
+                <div className="ns2-isolation-tree">
+                  <div className="ns2-isolation-tree__title">Transmission Systems</div>
+                  {isolationGroups.systems.length === 0 ? (
+                    <div className="ns2-panel-hint">No transmission systems loaded yet.</div>
+                  ) : (
+                    isolationGroups.systems.map((system) => (
+                      <div className="ns2-isolation-tree__system" key={system.id}>
+                        <div className="ns2-isolation-tree__row ns2-isolation-tree__row--system">
+                          <button type="button" className="ns2-isolation-tree__focus" disabled>
+                            <span className="ns2-isolation-tree__level">SYSTEM</span>
+                            <strong>{system.name}</strong>
+                            <small>{system.lines.length} lines</small>
+                          </button>
+                        </div>
+                        <div className="ns2-isolation-tree__children">
+                          {system.lines.length === 0 ? (
+                            <div className="ns2-isolation-tree__empty">No canvas pipes assigned to this system.</div>
+                          ) : (
+                            system.lines.map((line) => (
+                              <div className="ns2-isolation-tree__line" key={line.id}>
+                                <div className="ns2-isolation-tree__row ns2-isolation-tree__row--line">
+                                  <button type="button" className="ns2-isolation-tree__focus" disabled>
+                                    <span className="ns2-isolation-tree__level">LINE</span>
+                                    <strong>{line.name}</strong>
+                                    <small>{line.pipes.length} segment{line.pipes.length === 1 ? "" : "s"}</small>
+                                  </button>
+                                </div>
+                                {line.pipes.map((pipe) => (
+                                  <div className="ns2-isolation-tree__row ns2-isolation-tree__row--segment" key={`${line.id}-${pipe.id}`}>
+                                    <span className="ns2-isolation-tree__branch-mark">-</span>
+                                    <button type="button" className="ns2-isolation-tree__focus" onClick={() => focusCanvasElement(pipe.id)}>
+                                      <span className="ns2-isolation-tree__level">PIPE</span>
+                                      <strong>{pipe.name}</strong>
+                                      <small>{pipe.source} to {pipe.target}</small>
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+
+                  <div className="ns2-isolation-tree__ungrouped">
+                    <div className="ns2-isolation-tree__title">Ungrouped Pipes</div>
+                    {isolationGroups.ungroupedPipes.length === 0 ? (
+                      <div className="ns2-isolation-tree__empty">Every canvas pipe is assigned to a line.</div>
+                    ) : (
+                      isolationGroups.ungroupedPipes.map((pipe) => (
+                        <div className="ns2-isolation-tree__row ns2-isolation-tree__row--segment" key={pipe.id}>
+                          <button type="button" className="ns2-isolation-tree__focus" onClick={() => focusCanvasElement(pipe.id)}>
+                            <span className="ns2-isolation-tree__level">PIPE</span>
+                            <strong>{pipe.name}</strong>
+                            <small>{pipe.source} to {pipe.target}</small>
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </aside>
       )}
 

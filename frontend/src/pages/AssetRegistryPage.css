@@ -159,6 +159,7 @@
    main pane scrolls independently — instead of both being inset inside the
    page's own padding and scrolling the whole browser viewport together. */
 .ar-shell {
+  --left-sidebar-width: 190px;
   display: flex;
   height: 100%;
   min-height: 0;
@@ -177,13 +178,21 @@
   --surface-subtle: #f8fafc;
 }
 .ar-rail {
-  width: 190px;
-  flex-shrink: 0;
+  --sidebar-border-color: #0f172a;
+  width: var(--left-sidebar-width);
+  flex: 0 0 var(--left-sidebar-width);
+  display: flex;
+  flex-direction: column;
   min-height: 0;
-  overflow-y: auto;
-  border-right: 1px solid var(--line);
-  background: var(--surface);
-  padding: 8px;
+  height: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--sidebar-border-color);
+  background: #ffffff;
+  box-shadow: none;
+  z-index: 1;
 }
 .ar-page {
   flex: 1;

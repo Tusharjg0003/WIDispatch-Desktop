@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
+import { CircleDollarSign } from "lucide-react";
 import { fetchEconomics } from "../api/metrics";
+import WorkspaceHeader from "../components/WorkspaceHeader";
 import "../components/MetricDashboard.css";
 import "./EconomicsPage.css";
 
@@ -40,29 +42,32 @@ export default function EconomicsPage() {
 
   return (
     <div className="metric page-transition economics-page economics-page--boxy">
-      <header className="metric__head">
-        <div className="metric__title-block">
-          <span className="metric__eyebrow">Dispatch · Economics</span>
-          <h1 className="metric__title">Economics</h1>
-        </div>
-        <div className="metric__filters">
-          <label>
-            <span>From</span>
-            <input type="date" value={filters.from}
-              onChange={(e) => setFilters((f) => ({ ...f, from: e.target.value }))} />
-          </label>
-          <label>
-            <span>To</span>
-            <input type="date" value={filters.to}
-              onChange={(e) => setFilters((f) => ({ ...f, to: e.target.value }))} />
-          </label>
-          {filtered && (
-            <button className="metric__clear" onClick={() => setFilters({ from: "", to: "" })}>
-              Clear
-            </button>
-          )}
-        </div>
-      </header>
+      <WorkspaceHeader
+        title="Economics"
+        subtitle="Dispatch · Economics"
+        icon={CircleDollarSign}
+        status={filtered ? "Filtered" : undefined}
+        statusTone="blue"
+        actions={(
+          <div className="metric__filters">
+            <label>
+              <span>From</span>
+              <input type="date" value={filters.from}
+                onChange={(e) => setFilters((f) => ({ ...f, from: e.target.value }))} />
+            </label>
+            <label>
+              <span>To</span>
+              <input type="date" value={filters.to}
+                onChange={(e) => setFilters((f) => ({ ...f, to: e.target.value }))} />
+            </label>
+            {filtered && (
+              <button className="metric__clear" onClick={() => setFilters({ from: "", to: "" })}>
+                Clear
+              </button>
+            )}
+          </div>
+        )}
+      />
 
       {error && (
         <div className="metric__notice metric__notice--error">

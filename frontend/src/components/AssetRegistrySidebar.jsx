@@ -1,11 +1,15 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronDown, ChevronRight, Map as MapIcon, List as ListIcon } from "lucide-react";
 import { fetchAssets } from "../api/metrics";
 import SidebarActionToolbar from "./SidebarActionToolbar";
+import "./WorkspaceRecordSidebar.css";
 
-const CATEGORY_LABEL = { plant: "Plants", pump: "Pump Stations", handover_point: "Handover Points" };
-const CATEGORY_ORDER = ["plant", "pump", "handover_point"];
+const ICON_ROOT = "/All Icons Zipped";
+const EXPAND_ICON = `${ICON_ROOT}/15 UI Utility Icons (System-Level)/Expand/SVG/Expand_20px.svg`;
+const MAP_ICON = `${ICON_ROOT}/11 Map & Location (GIS)/Map/SVG/Map_20px.svg`;
+const LIST_ICON = `${ICON_ROOT}/01 Core Navigation-System/Overview/SVG/Overview_20px.svg`;
+const DOCUMENT_ICON = `${ICON_ROOT}/12 File & Document Management/Document/SVG/Document_20px.svg`;
+const HELP_ICON = `${ICON_ROOT}/01 Core Navigation-System/Help - Support/SVG/Help - Support_20px.svg`;
 
 const STATUS_DOT = {
   operational: "#10b981",
@@ -14,6 +18,13 @@ const STATUS_DOT = {
   planned: "#3b82f6",
   decommissioned: "#ef4444",
 };
+
+const formatTypeLabel = (type) =>
+  String(type || "Uncategorized")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 
 // Left-rail browse tree for the Asset Registry: Category > Asset Type >
 // individual assets, with its own search + a Map/List view toggle (adapted
@@ -26,7 +37,6 @@ export default function AssetRegistrySidebar({ view, onShowMap, onShowList, onCr
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
-  const [expandedCategories, setExpandedCategories] = useState({ plant: true, pump: true, handover_point: true });
   const [expandedTypes, setExpandedTypes] = useState({});
 
   useEffect(() => {
@@ -38,52 +48,41 @@ export default function AssetRegistrySidebar({ view, onShowMap, onShowList, onCr
     return () => { cancelled = true; };
   }, []);
 
-  // category -> asset_type -> assets[]
-  const tree = useMemo(() => {
-    const byCategory = {};
+  const assetsByType = useMemo(() => {
+    const grouped = {};
     for (const a of assets) {
-      const cat = byCategory[a.category] || (byCategory[a.category] = {});
       const type = a.asset_type || "Uncategorized";
-      (cat[type] || (cat[type] = [])).push(a);
+      (grouped[type] || (grouped[type] = [])).push(a);
     }
-    return byCategory;
+    return grouped;
   }, [assets]);
 
-  const filteredTree = useMemo(() => {
-    if (!searchTerm.trim()) return tree;
+  const filteredAssetsByType = useMemo(() => {
+    if (!searchTerm.trim()) return assetsByType;
     const term = searchTerm.toLowerCase();
     const out = {};
-    for (const cat of Object.keys(tree)) {
-      const types = {};
-      for (const type of Object.keys(tree[cat])) {
-        const matches = tree[cat][type].filter(
+    for (const type of Object.keys(assetsByType)) {
+      const labelMatches = formatTypeLabel(type).toLowerCase().includes(term);
+      const matches = labelMatches
+        ? assetsByType[type]
+        : assetsByType[type].filter(
           (a) => (a.name || "").toLowerCase().includes(term) || (a.id || "").toLowerCase().includes(term)
         );
-        if (matches.length) types[type] = matches;
-      }
-      if (Object.keys(types).length) out[cat] = types;
+      if (matches.length) out[type] = matches;
     }
     return out;
-  }, [tree, searchTerm]);
+  }, [assetsByType, searchTerm]);
 
   // Auto-expand everything that matches while actively searching.
   useEffect(() => {
     if (!searchTerm.trim()) return;
-    setExpandedCategories((prev) => {
-      const next = { ...prev };
-      Object.keys(filteredTree).forEach((c) => { next[c] = true; });
-      return next;
-    });
     setExpandedTypes((prev) => {
       const next = { ...prev };
-      Object.entries(filteredTree).forEach(([cat, types]) => {
-        Object.keys(types).forEach((t) => { next[`${cat}:${t}`] = true; });
-      });
+      Object.keys(filteredAssetsByType).forEach((type) => { next[type] = true; });
       return next;
     });
-  }, [searchTerm, filteredTree]);
+  }, [searchTerm, filteredAssetsByType]);
 
-  const toggleCategory = (cat) => setExpandedCategories((p) => ({ ...p, [cat]: !p[cat] }));
   const toggleType = (key) => setExpandedTypes((p) => ({ ...p, [key]: !p[key] }));
 
   return (
@@ -100,87 +99,75 @@ export default function AssetRegistrySidebar({ view, onShowMap, onShowList, onCr
           showSort={false}
           showDelete={false}
           extraActions={[
-            { title: view === "map" ? "Map View (active)" : "Map View", icon: MapIcon, active: view === "map", onClick: onShowMap },
-            { title: view === "list" ? "List View (active)" : "List View", icon: ListIcon, active: view === "list", onClick: onShowList },
+            { title: view === "list" ? "List View (active)" : "List View", iconSrc: LIST_ICON, active: view === "list", onClick: onShowList },
+            { title: view === "map" ? "Map View (active)" : "Map View", iconSrc: MAP_ICON, active: view === "map", onClick: onShowMap },
+            { title: "Asset Documents", iconSrc: DOCUMENT_ICON, onClick: onShowList },
+            { title: "Help", iconSrc: HELP_ICON, onClick: () => {} },
           ]}
         />
       </div>
 
       {loading && <div className="sidebar-content__empty-msg">Loading assets…</div>}
 
-      {!loading && CATEGORY_ORDER.map((cat) => {
-        const types = filteredTree[cat] || {};
-        const total = Object.values(tree[cat] || {}).reduce((n, list) => n + list.length, 0);
-        return (
-          <div className="sidebar-content__section" key={cat}>
-            <button className="sidebar-content__section-header" onClick={() => toggleCategory(cat)}>
-              {expandedCategories[cat] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-              <h4 className="sidebar-content__section-title">{CATEGORY_LABEL[cat]} ({total})</h4>
-            </button>
+      {!loading && (
+        <div className="sidebar-content__tree-list">
+          {Object.keys(filteredAssetsByType).length === 0 ? (
+            <div className="sidebar-content__empty-msg">
+              {searchTerm ? "No assets found" : "No assets available"}
+            </div>
+          ) : (
+            Object.keys(filteredAssetsByType).sort((a, b) => formatTypeLabel(a).localeCompare(formatTypeLabel(b))).map((type) => {
+              const isExpanded = expandedTypes[type];
+              const list = filteredAssetsByType[type];
+              return (
+                <div key={type} className="sidebar-content__tree-group">
+                  <button
+                    type="button"
+                    className={`sidebar-content__tree-type${isExpanded ? " is-expanded" : ""}`}
+                    onClick={() => toggleType(type)}
+                  >
+                    <img src={EXPAND_ICON} alt="" aria-hidden="true" />
+                    <span>{formatTypeLabel(type)} ({list.length})</span>
+                  </button>
 
-            {expandedCategories[cat] && (
-              <div className="sidebar-content__section-content">
-                {Object.keys(types).length === 0 ? (
-                  <div className="sidebar-content__empty-msg">
-                    {searchTerm ? "No assets found" : "No assets available"}
-                  </div>
-                ) : (
-                  Object.keys(types).sort().map((type) => {
-                    const key = `${cat}:${type}`;
-                    const isExpanded = expandedTypes[key];
-                    const list = types[type];
-                    return (
-                      <div key={key} style={{ marginBottom: 4 }}>
-                        <button
-                          className="sidebar-content__section-header"
-                          onClick={() => toggleType(key)}
-                          style={{ padding: "4px 8px", fontSize: "0.75rem", fontWeight: 500 }}
+                  {isExpanded && (
+                    <div className="sidebar-content__list sidebar-content__list--nested">
+                      {list.map((asset, index) => (
+                        <div
+                          key={asset.id}
+                          className="sidebar-content__list-item"
+                          onClick={() => navigate(`/asset-registry/view/${encodeURIComponent(asset.id)}`)}
                         >
-                          {isExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-                          <span>{type} ({list.length})</span>
-                        </button>
-
-                        {isExpanded && (
-                          <div className="sidebar-content__list" style={{ marginLeft: 12 }}>
-                            {list.map((asset, index) => (
-                              <div
-                                key={asset.id}
-                                className="sidebar-content__list-item"
-                                onClick={() => navigate(`/asset-registry/view/${encodeURIComponent(asset.id)}`)}
-                              >
-                                <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-                                  <span style={{ fontSize: 9, lineHeight: 1, fontFamily: "var(--mono)", color: "#94a3b8", flexShrink: 0 }}>
-                                    #{index + 1}
-                                  </span>
-                                  <span style={{
-                                    fontWeight: 500, fontSize: 11, lineHeight: 1.15, color: "#0f172a",
-                                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                                  }}>
-                                    {asset.name || asset.id}
-                                  </span>
-                                </div>
-                                <div className="sidebar-content__list-item-meta" style={{ display: "flex", alignItems: "center", gap: 6, paddingLeft: 18 }}>
-                                  <span style={{
-                                    width: 6, height: 6, borderRadius: 999, flexShrink: 0,
-                                    background: STATUS_DOT[asset.status] || "#94a3b8",
-                                  }} />
-                                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                    ID: {asset.id}
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                            <span style={{ fontSize: 9, lineHeight: 1, fontFamily: "var(--mono)", color: "#94a3b8", flexShrink: 0 }}>
+                              #{index + 1}
+                            </span>
+                            <span style={{
+                              fontWeight: 500, fontSize: 11, lineHeight: 1.15, color: "#0f172a",
+                              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                            }}>
+                              {asset.name || asset.id}
+                            </span>
                           </div>
-                        )}
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            )}
-          </div>
-        );
-      })}
+                          <div className="sidebar-content__list-item-meta" style={{ display: "flex", alignItems: "center", gap: 6, paddingLeft: 18 }}>
+                            <span style={{
+                              width: 6, height: 6, borderRadius: 999, flexShrink: 0,
+                              background: STATUS_DOT[asset.status] || "#94a3b8",
+                            }} />
+                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              ID: {asset.id}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
     </div>
   );
 }

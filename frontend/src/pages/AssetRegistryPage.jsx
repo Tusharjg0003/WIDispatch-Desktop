@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { Archive } from "lucide-react";
 import { fetchAssets } from "../api/metrics";
 import AssetListView from "../components/AssetListView";
 import AssetMapView from "../components/AssetMapView";
 import AssetKpiCards from "../components/AssetKpiCards";
 import AssetRegistrySidebar from "../components/AssetRegistrySidebar";
 import CreateAssetForm from "../components/CreateAssetForm";
+import WorkspaceHeader from "../components/WorkspaceHeader";
 import "../components/MetricDashboard.css";
 import "./AssetRegistryPage.css";
 
@@ -60,12 +62,13 @@ export default function AssetRegistryPage() {
       </aside>
 
       <div className="metric ar-page page-transition">
-        <header className="metric__head">
-          <div className="metric__title-block">
-            <span className="metric__eyebrow">Dispatch · Registry</span>
-            <h1 className="metric__title">Asset Registry</h1>
-          </div>
-        </header>
+        <WorkspaceHeader
+          title="Asset Registry"
+          subtitle="Dispatch · Registry"
+          icon={Archive}
+          status={tab === "create" ? "Create" : ASSET_TABS.find((t) => t.key === tab)?.label}
+          statusTone={tab === "create" ? "blue" : "green"}
+        />
 
         {/* Sub-tabs */}
         <div className="ar-tabs">

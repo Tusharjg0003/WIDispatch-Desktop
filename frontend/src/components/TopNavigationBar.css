@@ -195,6 +195,16 @@
   background: rgba(255, 255, 255, 0.08);
 }
 
+.top-navigation-bar__icon-btn.active {
+  color: #ffffff;
+  background: rgba(59, 130, 246, 0.18);
+}
+
+.top-navigation-bar__icon-btn svg {
+  display: block;
+  color: currentColor;
+}
+
 .top-navigation-bar__divider {
   flex-shrink: 0;
   width: 1px;

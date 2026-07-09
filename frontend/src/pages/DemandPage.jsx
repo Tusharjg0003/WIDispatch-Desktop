@@ -1,10 +1,12 @@
 import React from "react";
+import { Droplets } from "lucide-react";
 import MetricDashboard, { fmtM3 } from "../components/MetricDashboard";
 import "./DemandPage.css";
 
 const config = {
   eyebrow: "Dispatch · Demand",
   title: "Demand",
+  icon: Droplets,
   pageClassName: "demand-page demand-page--boxy",
   groupLabel: "Delivery point",
   valueLabel: "Required m³",

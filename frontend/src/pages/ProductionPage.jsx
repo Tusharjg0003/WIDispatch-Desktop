@@ -1,4 +1,5 @@
 import React from "react";
+import { Factory } from "lucide-react";
 import MetricDashboard, { fmtM3 } from "../components/MetricDashboard";
 import QualitySection from "../components/QualitySection";
 import "./ProductionPage.css";
@@ -6,6 +7,7 @@ import "./ProductionPage.css";
 const config = {
   eyebrow: "Dispatch · Supply",
   title: "Production",
+  icon: Factory,
   pageClassName: "production-page production-page--boxy",
   groupLabel: "Plant",
   valueLabel: "Actual m³",
