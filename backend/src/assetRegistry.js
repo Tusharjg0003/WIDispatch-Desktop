@@ -5,6 +5,7 @@ import { finite } from "./assets.js";
 export const ASSET_CATEGORIES = {
   plant: "plants",
   pump: "pumps",
+  handover_point: "handover-points",
 };
 
 const LIST_PROJECTION = {
