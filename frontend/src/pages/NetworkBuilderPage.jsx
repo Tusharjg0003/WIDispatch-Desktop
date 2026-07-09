@@ -39,6 +39,9 @@ const INSERT_ENTITIES = ["plant", "pump", "node"];
 const ENTITY_ICONS = { plant: Factory, pump: Droplet, node: Dot };
 const ANNOTATION_TYPES = ["note", "group-box"];
 const NOTE_SIZES = ["small", "normal", "large", "xlarge"];
+// Pipe spec keys that must stay strings — everything else handleSpecChange
+// coerces to a number, since most pipe spec fields are numeric.
+const STRING_SPEC_FIELDS = new Set(["pipelineMaterial", "infraSource", "capacityLimitationType", "transmissionSystemId"]);
 
 // Snapshot the asset fields we keep with a placed element so the graph renders
 // offline even if the source asset later changes.
@@ -578,9 +581,73 @@ export default function NetworkBuilderPage() {
       const meta = { ...(el.data("meta") || {}) };
       const specs = { ...(meta.specifications || {}) };
       if (value === "" || value == null) delete specs[field];
-      else specs[field] = field === "material" ? value : Number(value);
+      else specs[field] = STRING_SPEC_FIELDS.has(field) ? value : Number(value);
       meta.specifications = specs;
       el.data("meta", meta);
+      syncSelection();
+    },
+    [selectedEl, syncSelection]
+  );
+
+  // Boolean spec fields (e.g. pipe `bidirectional`) always store an explicit
+  // true/false — never deleted, unlike handleSpecChange's delete-on-empty.
+  const handleSpecBooleanChange = useCallback(
+    (field, checked) => {
+      const cy = cyRef.current;
+      if (!cy || !selectedEl) return;
+      const el = cy.getElementById(selectedEl.id);
+      const meta = { ...(el.data("meta") || {}) };
+      const specs = { ...(meta.specifications || {}), [field]: !!checked };
+      meta.specifications = specs;
+      el.data("meta", meta);
+      syncSelection();
+    },
+    [selectedEl, syncSelection]
+  );
+
+  // Array spec fields (e.g. pipe `lineGroupIds` multi-select) replace the
+  // whole array; an empty selection deletes the key.
+  const handleSpecArrayChange = useCallback(
+    (field, values) => {
+      const cy = cyRef.current;
+      if (!cy || !selectedEl) return;
+      const el = cy.getElementById(selectedEl.id);
+      const meta = { ...(el.data("meta") || {}) };
+      const specs = { ...(meta.specifications || {}) };
+      if (!values.length) delete specs[field];
+      else specs[field] = values;
+      meta.specifications = specs;
+      el.data("meta", meta);
+      syncSelection();
+    },
+    [selectedEl, syncSelection]
+  );
+
+  // Generic top-level edge field setter (e.g. pipe commissioningDate/
+  // decommissioningDate) — distinct from handleLabelChange/handleStatusChange
+  // since those two are shared across node/edge/note branches with their
+  // own specific semantics.
+  const handleEdgeFieldChange = useCallback(
+    (field, value) => {
+      const cy = cyRef.current;
+      if (!cy || !selectedEl) return;
+      const el = cy.getElementById(selectedEl.id);
+      el.data(field, value);
+      syncSelection();
+    },
+    [selectedEl, syncSelection]
+  );
+
+  // Pipe's Active toggle: sets the top-level `active` flag and derives the
+  // `status` used for the canvas status color band, mirroring how
+  // createPipeEdge derives status from active at creation time.
+  const handleEdgeActiveChange = useCallback(
+    (checked) => {
+      const cy = cyRef.current;
+      if (!cy || !selectedEl) return;
+      const el = cy.getElementById(selectedEl.id);
+      el.data("active", checked);
+      el.data("status", checked ? "operational" : "inactive");
       syncSelection();
     },
     [selectedEl, syncSelection]
@@ -1379,9 +1446,15 @@ export default function NetworkBuilderPage() {
         <aside className="nb-inspector">
           <NetworkNodeDetails
             selected={selectedEl}
+            systems={transmissionSystems}
+            lines={transmissionLines}
             onLabelChange={handleLabelChange}
             onStatusChange={handleStatusChange}
             onSpecChange={handleSpecChange}
+            onSpecBooleanChange={handleSpecBooleanChange}
+            onSpecArrayChange={handleSpecArrayChange}
+            onEdgeFieldChange={handleEdgeFieldChange}
+            onActiveChange={handleEdgeActiveChange}
             onDelete={handleDelete}
           />
         </aside>

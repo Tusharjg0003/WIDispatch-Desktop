@@ -1,5 +1,14 @@
 import React from "react";
 import { ENTITY_TYPE_LABELS } from "../cytoscape/buildCyStyle";
+import { Switch } from "./AssetFormControls";
+
+const MATERIALS = [
+  { value: "steel", label: "Steel" },
+  { value: "ductile_iron", label: "Ductile Iron" },
+  { value: "hdpe", label: "HDPE" },
+  { value: "concrete", label: "Concrete" },
+  { value: "pvc", label: "PVC" },
+];
 
 const STATUSES = [
   "operational",
@@ -45,7 +54,11 @@ function Row({ label, value }) {
 
 // Right-panel inspector for the selected canvas element. `selected` is a plain
 // object of the element's cytoscape data plus `_group` ("node" | "edge").
-export default function NetworkNodeDetails({ selected, onLabelChange, onStatusChange, onSpecChange, onDelete }) {
+export default function NetworkNodeDetails({
+  selected, systems, lines,
+  onLabelChange, onStatusChange, onSpecChange, onSpecBooleanChange, onSpecArrayChange,
+  onEdgeFieldChange, onActiveChange, onDelete,
+}) {
   if (!selected) {
     return (
       <div className="nnd nnd--empty">
@@ -70,32 +83,52 @@ export default function NetworkNodeDetails({ selected, onLabelChange, onStatusCh
         </header>
         <div className="adr__body nnd__body">
           <label className="af__field nnd__field">
-            Label
+            Pipe Name
             <input
               type="text"
               value={selected.label || ""}
-              placeholder="Optional pipe label"
+              placeholder="Pipe name"
               onChange={(e) => onLabelChange(e.target.value)}
             />
           </label>
           <label className="af__field nnd__field">
-            Status
-            <select value={selected.status || ""} onChange={(e) => onStatusChange(e.target.value)}>
-              <option value="">—</option>
-              {STATUSES.map((s) => (
-                <option key={s} value={s}>{statusLabel(s)}</option>
-              ))}
-            </select>
+            Active
+            <Switch checked={!!selected.active} onChange={onActiveChange} />
+          </label>
+          <label className="af__field nnd__field">
+            Commissioning Date
+            <input
+              type="date"
+              value={selected.commissioningDate || ""}
+              onChange={(e) => onEdgeFieldChange("commissioningDate", e.target.value)}
+            />
+          </label>
+          <label className="af__field nnd__field">
+            Decommissioning Date
+            <input
+              type="date"
+              value={selected.decommissioningDate || ""}
+              onChange={(e) => onEdgeFieldChange("decommissioningDate", e.target.value)}
+            />
           </label>
 
           <div className="af__section">Pipeline variables</div>
+          <label className="af__field nnd__field">
+            Capacity (m³/day)
+            <input
+              type="number"
+              step="any"
+              value={pipeSpec.capacity ?? ""}
+              onChange={(e) => onSpecChange("capacity", e.target.value)}
+            />
+          </label>
           <label className="af__field nnd__field">
             Length (km)
             <input
               type="number"
               step="any"
-              value={pipeSpec.length_km ?? ""}
-              onChange={(e) => onSpecChange("length_km", e.target.value)}
+              value={pipeSpec.pipelineLength ?? ""}
+              onChange={(e) => onSpecChange("pipelineLength", e.target.value)}
             />
           </label>
           <label className="af__field nnd__field">
@@ -103,18 +136,107 @@ export default function NetworkNodeDetails({ selected, onLabelChange, onStatusCh
             <input
               type="number"
               step="any"
-              value={pipeSpec.diameter_mm ?? ""}
-              onChange={(e) => onSpecChange("diameter_mm", e.target.value)}
+              value={pipeSpec.pipelineDiameter ?? ""}
+              onChange={(e) => onSpecChange("pipelineDiameter", e.target.value)}
             />
           </label>
           <label className="af__field nnd__field">
             Material
+            <select
+              value={pipeSpec.pipelineMaterial || ""}
+              onChange={(e) => onSpecChange("pipelineMaterial", e.target.value)}
+            >
+              <option value="">—</option>
+              {MATERIALS.map((m) => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </select>
+          </label>
+          <label className="af__field nnd__field">
+            Design Capacity (m³/day)
             <input
-              type="text"
-              value={pipeSpec.material ?? ""}
-              onChange={(e) => onSpecChange("material", e.target.value)}
+              type="number"
+              step="any"
+              value={pipeSpec.designCapacity ?? ""}
+              onChange={(e) => onSpecChange("designCapacity", e.target.value)}
             />
           </label>
+          <label className="af__field nnd__field">
+            Max Capacity (m³/day)
+            <input
+              type="number"
+              step="any"
+              value={pipeSpec.maximumCapacity ?? ""}
+              onChange={(e) => onSpecChange("maximumCapacity", e.target.value)}
+            />
+          </label>
+          <label className="af__field nnd__field">
+            Source
+            <input
+              type="text"
+              value={pipeSpec.infraSource || ""}
+              onChange={(e) => onSpecChange("infraSource", e.target.value)}
+            />
+          </label>
+          <label className="af__field nnd__field">
+            Bidirectional
+            <Switch
+              checked={!!pipeSpec.bidirectional}
+              onChange={(v) => onSpecBooleanChange("bidirectional", v)}
+            />
+          </label>
+
+          <div className="af__section">Transmission</div>
+          <label className="af__field nnd__field">
+            Transmission System
+            <select
+              value={pipeSpec.transmissionSystemId || ""}
+              onChange={(e) => onSpecChange("transmissionSystemId", e.target.value)}
+            >
+              <option value="">—</option>
+              {systems.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </label>
+          <label className="af__field nnd__field">
+            Transmission Lines
+            <select
+              multiple
+              value={pipeSpec.lineGroupIds || []}
+              onChange={(e) =>
+                onSpecArrayChange("lineGroupIds", Array.from(e.target.selectedOptions, (o) => o.value))
+              }
+            >
+              {lines.map((l) => (
+                <option key={l.id} value={l.id}>{l.name}</option>
+              ))}
+            </select>
+          </label>
+
+          <div className="af__section">Capacity Limitation</div>
+          <label className="af__field nnd__field">
+            Capacity Limitation
+            <select
+              value={pipeSpec.capacityLimitationType || "none"}
+              onChange={(e) => onSpecChange("capacityLimitationType", e.target.value)}
+            >
+              <option value="none">None</option>
+              <option value="percentage">Percentage (%)</option>
+              <option value="absolute">Absolute (m³/day)</option>
+            </select>
+          </label>
+          {pipeSpec.capacityLimitationType && pipeSpec.capacityLimitationType !== "none" && (
+            <label className="af__field nnd__field">
+              Capacity Limitation Value
+              <input
+                type="number"
+                step="any"
+                value={pipeSpec.capacityLimitationValue ?? ""}
+                onChange={(e) => onSpecChange("capacityLimitationValue", e.target.value)}
+              />
+            </label>
+          )}
 
           <div className="af__section">Connection</div>
           <dl className="adr__list">
