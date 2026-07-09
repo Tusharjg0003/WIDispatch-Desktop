@@ -102,7 +102,14 @@ export default function CreateAssetForm({ defaultCategory = "plant", onCreated }
     try {
       const created = await createAsset(payload);
       setSuccess(`Created “${created.name}” (${created.id}).`);
-      setForm({ ...EMPTY_FORM, category });
+      setForm({
+        ...EMPTY_FORM,
+        category,
+        ...(category === "handover_point" && {
+          activity: DEFAULT_ACTIVITY,
+          asset_type: ACTIVITY_ASSET_TYPES[DEFAULT_ACTIVITY][0],
+        }),
+      });
       setSpec({});
       setPumps([]);
       onCreated?.(created);

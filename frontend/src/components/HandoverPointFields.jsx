@@ -37,7 +37,10 @@ export default function HandoverPointFields({ spec, set }) {
                   name="capacity_limitation_type"
                   value={t.value}
                   checked={limitationType === t.value}
-                  onChange={set("capacity_limitation_type")}
+                  onChange={(e) => {
+                    set("capacity_limitation_type")(e);
+                    if (e.target.value === "none") set("capacity_limitation_value")({ target: { value: "" } });
+                  }}
                 />
                 {t.label}
               </label>
