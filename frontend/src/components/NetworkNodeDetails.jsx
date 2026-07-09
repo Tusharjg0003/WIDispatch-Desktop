@@ -361,6 +361,25 @@ export default function NetworkNodeDetails({
           </>
         )}
 
+        {selected.category === "handover_point" && Object.keys(spec).length > 0 && (
+          <>
+            <div className="af__section">Specifications</div>
+            <dl className="adr__list">
+              <Row label="Capacity (m³/day)" value={spec.design_capacity} />
+              <Row
+                label="Capacity limitation"
+                value={
+                  spec.capacity_limitation_type && spec.capacity_limitation_type !== "none"
+                    ? `${spec.capacity_limitation_value ?? "—"}${spec.capacity_limitation_type === "percentage" ? "%" : " m³/day"}`
+                    : spec.capacity_limitation_type === "none"
+                    ? "None"
+                    : null
+                }
+              />
+            </dl>
+          </>
+        )}
+
         <button className="af__btn nnd__delete" onClick={onDelete}>Delete node</button>
       </div>
     </div>

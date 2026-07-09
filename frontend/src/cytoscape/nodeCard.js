@@ -4,7 +4,7 @@
 // body + border) and the label; this only supplies the band via background-image.
 
 // Node types rendered as cards (junctions/notes/group-boxes are not).
-export const CARD_TYPES = new Set(["plant", "pump"]);
+export const CARD_TYPES = new Set(["plant", "pump", "handover_point"]);
 
 // Lifecycle band colour by status (falls back to slate when unknown).
 const STATUS_BAND = {
@@ -24,6 +24,8 @@ const ICON = {
     '<path d="M12 16h.01"/><path d="M16 16h.01"/><path d="M3 19a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.5a.5.5 0 0 0-.769-.422l-4.462 2.844A.5.5 0 0 1 15 10.5v-2a.5.5 0 0 0-.769-.422L9.77 10.922A.5.5 0 0 1 9 10.5V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2z"/><path d="M8 16h.01"/>',
   pump:
     '<path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/>',
+  handover_point:
+    '<path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/>',
 };
 
 const DEFAULT_ICON = '<rect x="4" y="4" width="16" height="16" rx="2"/>';
