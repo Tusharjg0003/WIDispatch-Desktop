@@ -24,7 +24,6 @@ export default function AssetRegistryPage({ mode = "list" }) {
   const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [reloadKey, setReloadKey] = useState(0);
   const [showHelp, setShowHelp] = useState(false);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
 
@@ -42,7 +41,7 @@ export default function AssetRegistryPage({ mode = "list" }) {
       .catch((e) => !cancelled && setError(e.message || "Couldn't load assets"))
       .finally(() => !cancelled && setLoading(false));
     return () => { cancelled = true; };
-  }, [mode, reloadKey]);
+  }, [mode]);
 
   // Edit mode: fetch the single asset to seed the form.
   useEffect(() => {
