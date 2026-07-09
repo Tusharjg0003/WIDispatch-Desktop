@@ -60,6 +60,17 @@ export async function createAsset(payload) {
   return data;
 }
 
+export async function updateAsset(id, payload) {
+  const res = await fetch(`${API_BASE}/api/assets/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+  return data;
+}
+
 async function postJson(path, payload) {
   const res = await fetch(`${API_BASE}${path}`, {
     method: "POST",

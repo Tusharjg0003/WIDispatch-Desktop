@@ -138,3 +138,46 @@ export async function createAsset(category, body = {}) {
   await db.collection(collection).insertOne(doc);
   return { category, ...doc };
 }
+
+// Build the $set payload for an update: only allowed top-level fields present
+// in the patch, coerced coordinates and specifications, plus updated_at.
+// id and category are immutable, so they are never emitted.
+export function buildAssetUpdate(patch = {}) {
+  const update = {};
+  for (const f of TOP_LEVEL_FIELDS) {
+    if (patch[f] !== undefined) update[f] = patch[f];
+  }
+  if (patch.latitude !== undefined) {
+    update.latitude = patch.latitude === "" || patch.latitude == null ? null : finite(Number(patch.latitude));
+  }
+  if (patch.longitude !== undefined) {
+    update.longitude = patch.longitude === "" || patch.longitude == null ? null : finite(Number(patch.longitude));
+  }
+  if (patch.specifications && typeof patch.specifications === "object") {
+    const spec = {};
+    for (const [f, v] of Object.entries(patch.specifications)) {
+      if (v == null || v === "") continue;
+      spec[f] = NUMERIC_SPEC_PATTERN.test(f) ? finite(Number(v)) : v;
+    }
+    update.specifications = spec;
+  }
+  update.updated_at = new Date().toISOString();
+  return update;
+}
+
+export async function updateAsset(id, patch = {}) {
+  const db = await getDb();
+  let found = null;
+  for (const [cat, collection] of Object.entries(ASSET_CATEGORIES)) {
+    const doc = await db.collection(collection).findOne({ id }, { projection: { _id: 0, id: 1 } });
+    if (doc) {
+      found = { category: cat, collection };
+      break;
+    }
+  }
+  if (!found) return null;
+
+  await db.collection(found.collection).updateOne({ id }, { $set: buildAssetUpdate(patch) });
+  const updated = await db.collection(found.collection).findOne({ id }, { projection: { _id: 0 } });
+  return { category: found.category, ...updated };
+}
