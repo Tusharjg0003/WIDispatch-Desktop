@@ -233,6 +233,12 @@
   background: rgba(86, 124, 255, 0.08);
 }
 
+.st--inactive {
+  color: #9ca3af;
+  border-color: rgba(156, 163, 175, 0.35);
+  background: rgba(156, 163, 175, 0.08);
+}
+
 /* Buttons */
 .af__btn {
   height: 36px;

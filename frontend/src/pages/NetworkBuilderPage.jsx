@@ -971,7 +971,7 @@ export default function NetworkBuilderPage() {
   const handleExportCSV = useCallback(() => {
     const cy = cyRef.current;
     if (!cy) return;
-    const header = ["element", "id", "label", "type", "category", "status", "source", "target", "assetId", "x", "y", "length_km", "diameter_mm", "material"];
+    const header = ["element", "id", "label", "type", "category", "status", "source", "target", "assetId", "x", "y", "pipelineLength", "pipelineDiameter", "pipelineMaterial"];
     const rows = [header.join(",")];
     cy.nodes().forEach((n) => {
       const d = n.data();
@@ -979,7 +979,7 @@ export default function NetworkBuilderPage() {
       const s = (d.meta || {}).specifications || {};
       rows.push([
         "node", d.id, d.label, d.type, d.category, d.status, "", "", d.assetId,
-        Math.round(p.x), Math.round(p.y), s.length_km, s.diameter_mm, s.material,
+        Math.round(p.x), Math.round(p.y), s.pipelineLength, s.pipelineDiameter, s.pipelineMaterial,
       ].map(csvCell).join(","));
     });
     cy.edges().forEach((e) => {
@@ -987,7 +987,7 @@ export default function NetworkBuilderPage() {
       const s = (d.meta || {}).specifications || {};
       rows.push([
         "edge", d.id, d.label, d.kind || "pipe", "", d.status, d.source, d.target, d.assetId,
-        "", "", s.length_km, s.diameter_mm, s.material,
+        "", "", s.pipelineLength, s.pipelineDiameter, s.pipelineMaterial,
       ].map(csvCell).join(","));
     });
     download(`${(network.name || "network").replace(/\s+/g, "_")}.csv`, rows.join("\n"), "text/csv");

@@ -219,7 +219,10 @@ export default function NetworkNodeDetails({
             Capacity Limitation
             <select
               value={pipeSpec.capacityLimitationType || "none"}
-              onChange={(e) => onSpecChange("capacityLimitationType", e.target.value)}
+              onChange={(e) => {
+                onSpecChange("capacityLimitationType", e.target.value);
+                if (e.target.value === "none") onSpecChange("capacityLimitationValue", "");
+              }}
             >
               <option value="none">None</option>
               <option value="percentage">Percentage (%)</option>
