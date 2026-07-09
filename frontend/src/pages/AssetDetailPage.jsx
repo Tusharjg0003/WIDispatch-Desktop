@@ -7,7 +7,7 @@ import { fetchAsset } from "../api/metrics";
 import AssetDetailFields from "../components/AssetDetailFields";
 import "./AssetDetailPage.css";
 
-const CATEGORY_LABEL = { plant: "Plants", pump: "Pump Stations" };
+const CATEGORY_LABEL = { plant: "Plants", pump: "Pump Stations", handover_point: "Handover Points" };
 
 const validCoord = (lat, lng) =>
   Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;

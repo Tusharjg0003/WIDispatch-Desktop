@@ -4,8 +4,8 @@ import { ChevronDown, ChevronRight, Map as MapIcon, List as ListIcon } from "luc
 import { fetchAssets } from "../api/metrics";
 import SidebarActionToolbar from "./SidebarActionToolbar";
 
-const CATEGORY_LABEL = { plant: "Plants", pump: "Pump Stations" };
-const CATEGORY_ORDER = ["plant", "pump"];
+const CATEGORY_LABEL = { plant: "Plants", pump: "Pump Stations", handover_point: "Handover Points" };
+const CATEGORY_ORDER = ["plant", "pump", "handover_point"];
 
 const STATUS_DOT = {
   operational: "#10b981",
@@ -26,7 +26,7 @@ export default function AssetRegistrySidebar({ view, onShowMap, onShowList, onCr
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
-  const [expandedCategories, setExpandedCategories] = useState({ plant: true, pump: true });
+  const [expandedCategories, setExpandedCategories] = useState({ plant: true, pump: true, handover_point: true });
   const [expandedTypes, setExpandedTypes] = useState({});
 
   useEffect(() => {

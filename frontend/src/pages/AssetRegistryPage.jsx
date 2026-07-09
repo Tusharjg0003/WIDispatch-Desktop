@@ -12,6 +12,7 @@ import "./AssetRegistryPage.css";
 const ASSET_TABS = [
   { key: "plant", label: "Plants" },
   { key: "pump", label: "Pump Stations" },
+  { key: "handover_point", label: "Handover Points" },
 ];
 const STATUSES = ["operational", "maintenance", "under_construction", "planned", "decommissioned"];
 const statusLabel = (s) => s.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());

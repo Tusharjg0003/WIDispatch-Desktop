@@ -142,6 +142,25 @@ export default function AssetDetailFields({ asset }) {
           </table>
         </div>
       )}
+
+      {asset.category === "handover_point" && (
+        <div className="form-section">
+          <h3>Asset Specifications</h3>
+          <div className="form-grid">
+            <Field label="Capacity (m³/day)" value={spec.design_capacity} />
+            <Field
+              label="Capacity Limitation"
+              value={
+                spec.capacity_limitation_type && spec.capacity_limitation_type !== "none"
+                  ? `${spec.capacity_limitation_value ?? "—"}${spec.capacity_limitation_type === "percentage" ? "%" : " m³/day"}`
+                  : spec.capacity_limitation_type === "none"
+                  ? "None"
+                  : null
+              }
+            />
+          </div>
+        </div>
+      )}
     </>
   );
 }
