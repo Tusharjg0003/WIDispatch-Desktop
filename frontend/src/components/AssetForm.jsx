@@ -69,7 +69,11 @@ export default function AssetForm({ mode = "create", defaultCategory = "plant", 
     isEdit && initialAsset && initialAsset.category !== "pump" ? { ...(initialAsset.specifications || {}) } : {}
   );
   const [pumps, setPumps] = useState(
-    isEdit && initialAsset && initialAsset.category === "pump" ? [...(initialAsset.specifications?.pumps || [])] : []
+    isEdit && initialAsset && initialAsset.category === "pump"
+      // Normalize null capacities to "" so the controlled number input in
+      // PumpStationFields stays controlled when seeding a saved pump.
+      ? (initialAsset.specifications?.pumps || []).map((p) => ({ ...p, capacity_m3_day: p.capacity_m3_day ?? "" }))
+      : []
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
