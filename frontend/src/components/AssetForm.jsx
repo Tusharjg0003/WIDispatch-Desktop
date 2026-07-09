@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { createAsset } from "../api/metrics";
+import { createAsset, updateAsset } from "../api/metrics";
 import { Field, Toggle } from "./AssetFormControls";
 import MapLocationPicker from "./MapLocationPicker";
 import PlantFields from "./PlantFields";
@@ -11,13 +11,12 @@ const CATEGORIES = [
   { value: "pump", label: "Pump Station" },
   { value: "handover_point", label: "Handover Point" },
 ];
+const CATEGORY_LABEL = Object.fromEntries(CATEGORIES.map((c) => [c.value, c.label]));
 
 const STATUSES = ["operational", "maintenance", "under_construction", "planned", "decommissioned"];
 const HANDOVER_STATUSES = ["planned", "under_construction", "operational", "decommissioned", "inactive"];
 const statusLabel = (s) => s.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
 
-// Activity -> allowed Asset Type options, for Handover Point's dependent
-// dropdowns (freeform text for Plant/Pump, unchanged).
 const ACTIVITY_ASSET_TYPES = {
   "Water distribution": ["Handover point / city gate", "Distribution network", "Filling station"],
   "Wastewater collection": ["Collection network"],
@@ -37,10 +36,41 @@ const EMPTY_FORM = {
   status: "planned", commissioning_date: "", decommissioning_date: "", active: true,
 };
 
-export default function CreateAssetForm({ defaultCategory = "plant", onCreated }) {
-  const [form, setForm] = useState({ ...EMPTY_FORM, category: defaultCategory });
-  const [spec, setSpec] = useState({});
-  const [pumps, setPumps] = useState([]);
+// Map a fetched asset document back into the flat form shape.
+function formFromAsset(asset) {
+  return {
+    category: asset.category || "plant",
+    name: asset.name || "",
+    external_id: asset.external_id || "",
+    asset_name_ar: asset.asset_name_ar || "",
+    entity: asset.entity || "",
+    entity_type: asset.entity_type || "",
+    activity: asset.activity || "",
+    asset_type: asset.asset_type || "",
+    region: asset.region || "",
+    cluster: asset.cluster || "",
+    governorate: asset.governorate && asset.governorate !== "NULL" ? asset.governorate : "",
+    city: asset.city || "",
+    latitude: asset.latitude ?? "",
+    longitude: asset.longitude ?? "",
+    status: asset.status || "planned",
+    commissioning_date: asset.commissioning_date || "",
+    decommissioning_date: asset.decommissioning_date || "",
+    active: asset.active ?? true,
+  };
+}
+
+export default function AssetForm({ mode = "create", defaultCategory = "plant", initialAsset = null, onSaved }) {
+  const isEdit = mode === "edit";
+  const [form, setForm] = useState(
+    isEdit && initialAsset ? formFromAsset(initialAsset) : { ...EMPTY_FORM, category: defaultCategory }
+  );
+  const [spec, setSpec] = useState(
+    isEdit && initialAsset && initialAsset.category !== "pump" ? { ...(initialAsset.specifications || {}) } : {}
+  );
+  const [pumps, setPumps] = useState(
+    isEdit && initialAsset && initialAsset.category === "pump" ? [...(initialAsset.specifications?.pumps || [])] : []
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -56,10 +86,6 @@ export default function CreateAssetForm({ defaultCategory = "plant", onCreated }
       ...f,
       category,
       status: category === "pump" ? "inactive" : "planned",
-      // Activity/Asset Type/Region switch input widget (freeform text/select)
-      // when entering or leaving Handover Point, so reset them then. Plant
-      // <-> Pump switches leave these fields untouched, matching existing
-      // behavior.
       ...(isHandover && {
         activity: DEFAULT_ACTIVITY,
         asset_type: ACTIVITY_ASSET_TYPES[DEFAULT_ACTIVITY][0],
@@ -71,8 +97,6 @@ export default function CreateAssetForm({ defaultCategory = "plant", onCreated }
     setPumps([]);
   };
 
-  // Handover Point's Activity dropdown: changing it resets Asset Type to
-  // the first option of the newly-selected activity's list.
   const changeActivity = (e) => {
     const activity = e.target.value;
     const types = ACTIVITY_ASSET_TYPES[activity] || [];
@@ -100,21 +124,27 @@ export default function CreateAssetForm({ defaultCategory = "plant", onCreated }
       : spec;
     const payload = { category, ...top, latitude, longitude, specifications };
     try {
-      const created = await createAsset(payload);
-      setSuccess(`Created “${created.name}” (${created.id}).`);
-      setForm({
-        ...EMPTY_FORM,
-        category,
-        ...(category === "handover_point" && {
-          activity: DEFAULT_ACTIVITY,
-          asset_type: ACTIVITY_ASSET_TYPES[DEFAULT_ACTIVITY][0],
-        }),
-      });
-      setSpec({});
-      setPumps([]);
-      onCreated?.(created);
+      if (isEdit) {
+        const updated = await updateAsset(initialAsset.id, payload);
+        setSuccess(`Updated “${updated.name}” (${updated.id}).`);
+        onSaved?.(updated);
+      } else {
+        const created = await createAsset(payload);
+        setSuccess(`Created “${created.name}” (${created.id}).`);
+        setForm({
+          ...EMPTY_FORM,
+          category,
+          ...(category === "handover_point" && {
+            activity: DEFAULT_ACTIVITY,
+            asset_type: ACTIVITY_ASSET_TYPES[DEFAULT_ACTIVITY][0],
+          }),
+        });
+        setSpec({});
+        setPumps([]);
+        onSaved?.(created);
+      }
     } catch (err) {
-      setError(err.message || "Failed to create asset");
+      setError(err.message || (isEdit ? "Failed to update asset" : "Failed to create asset"));
     } finally {
       setSaving(false);
     }
@@ -128,9 +158,13 @@ export default function CreateAssetForm({ defaultCategory = "plant", onCreated }
       <div className="af__section">Classification</div>
       <div className="af__grid">
         <Field label="Category *">
-          <select value={form.category} onChange={changeCategory} required>
-            {CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-          </select>
+          {isEdit ? (
+            <input value={CATEGORY_LABEL[form.category] || form.category} readOnly disabled />
+          ) : (
+            <select value={form.category} onChange={changeCategory} required>
+              {CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+            </select>
+          )}
         </Field>
         {isHandover ? (
           <>
@@ -228,7 +262,7 @@ export default function CreateAssetForm({ defaultCategory = "plant", onCreated }
 
       <footer className="af__footer">
         <button type="submit" className="af__btn af__btn--primary" disabled={saving}>
-          {saving ? "Saving…" : "Create asset"}
+          {saving ? "Saving…" : isEdit ? "Save changes" : "Create asset"}
         </button>
       </footer>
     </form>

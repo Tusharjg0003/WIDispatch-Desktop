@@ -6,7 +6,7 @@ import AssetListView from "../components/AssetListView";
 import AssetMapView from "../components/AssetMapView";
 import AssetKpiCards from "../components/AssetKpiCards";
 import AssetRegistrySidebar from "../components/AssetRegistrySidebar";
-import CreateAssetForm from "../components/CreateAssetForm";
+import AssetForm from "../components/AssetForm";
 import WorkspaceHeader from "../components/WorkspaceHeader";
 import "../components/MetricDashboard.css";
 import "./AssetRegistryPage.css";
@@ -96,7 +96,7 @@ export default function AssetRegistryPage() {
             <header className="sheet__head sheet__head--simple">
               <h2 className="sheet__name sheet__name--sm">New Asset</h2>
             </header>
-            <CreateAssetForm onCreated={() => setReloadKey((n) => n + 1)} />
+            <AssetForm mode="create" onSaved={() => setReloadKey((n) => n + 1)} />
           </section>
         )}
 
