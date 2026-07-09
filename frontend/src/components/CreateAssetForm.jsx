@@ -4,20 +4,37 @@ import { Field, Toggle } from "./AssetFormControls";
 import MapLocationPicker from "./MapLocationPicker";
 import PlantFields from "./PlantFields";
 import PumpStationFields from "./PumpStationFields";
+import HandoverPointFields from "./HandoverPointFields";
 
 const CATEGORIES = [
   { value: "plant", label: "Plant" },
   { value: "pump", label: "Pump Station" },
+  { value: "handover_point", label: "Handover Point" },
 ];
 
 const STATUSES = ["operational", "maintenance", "under_construction", "planned", "decommissioned"];
+const HANDOVER_STATUSES = ["planned", "under_construction", "operational", "decommissioned", "inactive"];
 const statusLabel = (s) => s.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+
+// Activity -> allowed Asset Type options, for Handover Point's dependent
+// dropdowns (freeform text for Plant/Pump, unchanged).
+const ACTIVITY_ASSET_TYPES = {
+  "Water distribution": ["Handover point / city gate", "Distribution network", "Filling station"],
+  "Wastewater collection": ["Collection network"],
+  "TSE reuse": ["Filling station"],
+};
+const DEFAULT_ACTIVITY = "Water distribution";
+
+const REGIONS = [
+  "Riyadh", "Makkah", "Madinah", "Eastern Province", "Asir", "Tabuk", "Qassim",
+  "Hail", "Northern Borders", "Jazan", "Najran", "Al Bahah", "Al Jouf",
+];
 
 const EMPTY_FORM = {
   category: "plant", name: "", external_id: "", asset_name_ar: "",
   entity: "", entity_type: "", activity: "", asset_type: "", region: "",
   cluster: "", governorate: "", city: "", latitude: "", longitude: "",
-  status: "planned", commissioning_date: "", decommissioning_date: "",
+  status: "planned", commissioning_date: "", decommissioning_date: "", active: true,
 };
 
 export default function CreateAssetForm({ defaultCategory = "plant", onCreated }) {
@@ -33,9 +50,33 @@ export default function CreateAssetForm({ defaultCategory = "plant", onCreated }
 
   const changeCategory = (e) => {
     const category = e.target.value;
-    setForm((f) => ({ ...f, category, status: category === "pump" ? "inactive" : "planned" }));
+    const wasHandover = form.category === "handover_point";
+    const isHandover = category === "handover_point";
+    setForm((f) => ({
+      ...f,
+      category,
+      status: category === "pump" ? "inactive" : "planned",
+      // Activity/Asset Type/Region switch input widget (freeform text/select)
+      // when entering or leaving Handover Point, so reset them then. Plant
+      // <-> Pump switches leave these fields untouched, matching existing
+      // behavior.
+      ...(isHandover && {
+        activity: DEFAULT_ACTIVITY,
+        asset_type: ACTIVITY_ASSET_TYPES[DEFAULT_ACTIVITY][0],
+        region: "",
+      }),
+      ...(wasHandover && !isHandover && { activity: "", asset_type: "", region: "" }),
+    }));
     setSpec({});
     setPumps([]);
+  };
+
+  // Handover Point's Activity dropdown: changing it resets Asset Type to
+  // the first option of the newly-selected activity's list.
+  const changeActivity = (e) => {
+    const activity = e.target.value;
+    const types = ACTIVITY_ASSET_TYPES[activity] || [];
+    setForm((f) => ({ ...f, activity, asset_type: types[0] || "" }));
   };
 
   const setCoords = (lat, lng) => setForm((f) => ({ ...f, latitude: lat, longitude: lng }));
@@ -48,6 +89,14 @@ export default function CreateAssetForm({ defaultCategory = "plant", onCreated }
     const { category, latitude, longitude, ...top } = form;
     const specifications = category === "pump"
       ? { pumps: pumps.map((p) => ({ ...p, capacity_m3_day: p.capacity_m3_day === "" ? null : Number(p.capacity_m3_day) })) }
+      : category === "handover_point"
+      ? {
+          ...spec,
+          capacity_limitation_value:
+            spec.capacity_limitation_value === "" || spec.capacity_limitation_value == null
+              ? null
+              : Number(spec.capacity_limitation_value),
+        }
       : spec;
     const payload = { category, ...top, latitude, longitude, specifications };
     try {
@@ -65,6 +114,7 @@ export default function CreateAssetForm({ defaultCategory = "plant", onCreated }
   };
 
   const isPump = form.category === "pump";
+  const isHandover = form.category === "handover_point";
 
   return (
     <form className="af__body af__body--page" onSubmit={submit}>
@@ -75,12 +125,29 @@ export default function CreateAssetForm({ defaultCategory = "plant", onCreated }
             {CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
           </select>
         </Field>
-        <Field label="Asset Type *">
-          <input value={form.asset_type} onChange={set("asset_type")} required placeholder="e.g. Seawater desalination" />
-        </Field>
-        <Field label="Activity *">
-          <input value={form.activity} onChange={set("activity")} required placeholder="e.g. Water production" />
-        </Field>
+        {isHandover ? (
+          <>
+            <Field label="Activity *">
+              <select value={form.activity} onChange={changeActivity} required>
+                {Object.keys(ACTIVITY_ASSET_TYPES).map((a) => <option key={a} value={a}>{a}</option>)}
+              </select>
+            </Field>
+            <Field label="Asset Type *">
+              <select value={form.asset_type} onChange={set("asset_type")} required>
+                {(ACTIVITY_ASSET_TYPES[form.activity] || []).map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </Field>
+          </>
+        ) : (
+          <>
+            <Field label="Asset Type *">
+              <input value={form.asset_type} onChange={set("asset_type")} required placeholder="e.g. Seawater desalination" />
+            </Field>
+            <Field label="Activity *">
+              <input value={form.activity} onChange={set("activity")} required placeholder="e.g. Water production" />
+            </Field>
+          </>
+        )}
       </div>
 
       <div className="af__section">Identity</div>
@@ -94,7 +161,16 @@ export default function CreateAssetForm({ defaultCategory = "plant", onCreated }
 
       <div className="af__section">Location</div>
       <div className="af__grid">
-        <Field label="Region *"><input value={form.region} onChange={set("region")} required /></Field>
+        <Field label="Region *">
+          {isHandover ? (
+            <select value={form.region} onChange={set("region")} required>
+              <option value="" disabled>Select region</option>
+              {REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
+            </select>
+          ) : (
+            <input value={form.region} onChange={set("region")} required />
+          )}
+        </Field>
         <Field label="Cluster"><input value={form.cluster} onChange={set("cluster")} /></Field>
         <Field label="Governorate"><input value={form.governorate} onChange={set("governorate")} /></Field>
         <Field label="City"><input value={form.city} onChange={set("city")} /></Field>
@@ -114,9 +190,16 @@ export default function CreateAssetForm({ defaultCategory = "plant", onCreated }
         ) : (
           <Field label="Operational Status">
             <select value={form.status} onChange={set("status")}>
-              {STATUSES.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}
+              {(isHandover ? HANDOVER_STATUSES : STATUSES).map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}
             </select>
           </Field>
+        )}
+        {isHandover && (
+          <Toggle
+            label="Active"
+            checked={form.active}
+            onChange={(v) => setForm((f) => ({ ...f, active: v }))}
+          />
         )}
         <Field label="Commissioning Date"><input type="date" value={form.commissioning_date} onChange={set("commissioning_date")} /></Field>
         <Field label="Decommissioning Date"><input type="date" value={form.decommissioning_date} onChange={set("decommissioning_date")} /></Field>
@@ -131,6 +214,7 @@ export default function CreateAssetForm({ defaultCategory = "plant", onCreated }
         />
       )}
       {isPump && <PumpStationFields pumps={pumps} setPumps={setPumps} />}
+      {isHandover && <HandoverPointFields spec={spec} set={setSpecField} />}
 
       {error && <div className="af__error">{error}</div>}
       {success && <div className="af__success">{success}</div>}

@@ -584,6 +584,29 @@
   letter-spacing: 0;
 }
 
+/* Handover Point capacity-limitation radio group */
+.af__radio-group {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 32px;
+}
+.af__radio {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--ink);
+  cursor: pointer;
+}
+.af__radio input[type="radio"] {
+  margin: 0;
+  accent-color: var(--accent);
+}
+
 /* Pump configuration list */
 .af__pump-list {
   display: flex;
