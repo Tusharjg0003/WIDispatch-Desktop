@@ -6,6 +6,12 @@ const plantTypeLabel = (t) => (t === "water_purification" ? "Water Purification"
 const statusLabel = (s) => (s ? s.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase()) : "N/A");
 const statusBadgeClass = (s) => (s === "operational" ? "in-operation" : s || "unknown");
 const statusBadgeText = (s) => (s === "operational" ? "In Operation" : statusLabel(s));
+const formatDateTime = (value) => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString();
+};
 
 // Field: label + value cell, inline (label left, value right), matching the
 // reference form-group/form-display layout.
@@ -48,6 +54,9 @@ export default function AssetDetailFields({ asset }) {
       <div className="form-content">
         <h3>General Information</h3>
         <div className="form-grid">
+          <Field label="Generated ID" value={asset.generated_id || asset.id} />
+          <Field label="Created" value={formatDateTime(asset.created_at)} />
+          <Field label="Last Updated" value={formatDateTime(asset.updated_at)} />
           <Field label="External ID" value={asset.external_id} />
           <Field label="Asset Name (EN)" value={asset.name} />
           <Field label="Asset Name (AR)" value={asset.asset_name_ar} />

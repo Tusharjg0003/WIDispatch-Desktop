@@ -1,5 +1,6 @@
 import { getDb } from "./db.js";
 import { finite } from "./assets.js";
+import { assertAllowedAssetType, normalizeAllowedAsset } from "./assetTypes.js";
 
 // Maps the singular category used by the UI/API to its MongoDB collection.
 export const ASSET_CATEGORIES = {
@@ -53,7 +54,7 @@ export async function listAssets(filters = {}) {
       .collection(ASSET_CATEGORIES[cat])
       .find(match, { projection: LIST_PROJECTION })
       .toArray();
-    assets.push(...rows.map((r) => ({ category: cat, ...r })));
+    assets.push(...rows.map((r) => normalizeAllowedAsset({ category: cat, ...r })).filter(Boolean));
   }
   assets.sort((a, b) => (a.name || a.id || "").localeCompare(b.name || b.id || ""));
   const total = assets.length;
@@ -63,16 +64,13 @@ export async function listAssets(filters = {}) {
   // per-category status breakdown for the registry's KPI cards.
   const kpis = { total: 0, byCategory: {}, operational: 0, statusByCategory: {} };
   for (const [cat, coll] of Object.entries(ASSET_CATEGORIES)) {
-    const rows = await db.collection(coll).aggregate([
-      { $group: { _id: "$status", n: { $sum: 1 } } },
-    ]).toArray();
+    const rows = await db.collection(coll).find({}, { projection: { _id: 0, asset_type: 1, status: 1 } }).toArray();
     const statuses = {};
-    let n = 0;
-    for (const r of rows) {
-      const status = r._id || "unknown";
-      statuses[status] = r.n;
-      n += r.n;
+    for (const r of rows.map((row) => normalizeAllowedAsset({ category: cat, ...row })).filter(Boolean)) {
+      const status = r.status || "unknown";
+      statuses[status] = (statuses[status] || 0) + 1;
     }
+    const n = Object.values(statuses).reduce((sum, count) => sum + count, 0);
     kpis.byCategory[cat] = n;
     kpis.statusByCategory[cat] = statuses;
     kpis.total += n;
@@ -86,7 +84,7 @@ export async function getAssetById(id) {
   const db = await getDb();
   for (const [cat, collection] of Object.entries(ASSET_CATEGORIES)) {
     const doc = await db.collection(collection).findOne({ id }, { projection: { _id: 0 } });
-    if (doc) return { category: cat, ...doc };
+    if (doc) return normalizeAllowedAsset({ category: cat, ...doc });
   }
   return null;
 }
@@ -103,6 +101,7 @@ export async function createAsset(category, body = {}) {
     err.statusCode = 400;
     throw err;
   }
+  const assetType = assertAllowedAssetType(body.asset_type, category);
 
   const db = await getDb();
   const now = new Date().toISOString();
@@ -111,8 +110,11 @@ export async function createAsset(category, body = {}) {
   for (const f of TOP_LEVEL_FIELDS) {
     if (body[f] != null && body[f] !== "") doc[f] = body[f];
   }
+  doc.asset_type = assetType;
   if (body.latitude != null && body.latitude !== "") doc.latitude = finite(Number(body.latitude));
   if (body.longitude != null && body.longitude !== "") doc.longitude = finite(Number(body.longitude));
+  if (body.end_latitude != null && body.end_latitude !== "") doc.end_latitude = finite(Number(body.end_latitude));
+  if (body.end_longitude != null && body.end_longitude !== "") doc.end_longitude = finite(Number(body.end_longitude));
 
   const spec = {};
   const inSpec = body.specifications || {};
@@ -142,16 +144,25 @@ export async function createAsset(category, body = {}) {
 // Build the $set payload for an update: only allowed top-level fields present
 // in the patch, coerced coordinates and specifications, plus updated_at.
 // id and category are immutable, so they are never emitted.
-export function buildAssetUpdate(patch = {}) {
+export function buildAssetUpdate(patch = {}, category = null) {
   const update = {};
   for (const f of TOP_LEVEL_FIELDS) {
     if (patch[f] !== undefined) update[f] = patch[f];
+  }
+  if (patch.asset_type !== undefined) {
+    update.asset_type = assertAllowedAssetType(patch.asset_type, category);
   }
   if (patch.latitude !== undefined) {
     update.latitude = patch.latitude === "" || patch.latitude == null ? null : finite(Number(patch.latitude));
   }
   if (patch.longitude !== undefined) {
     update.longitude = patch.longitude === "" || patch.longitude == null ? null : finite(Number(patch.longitude));
+  }
+  if (patch.end_latitude !== undefined) {
+    update.end_latitude = patch.end_latitude === "" || patch.end_latitude == null ? null : finite(Number(patch.end_latitude));
+  }
+  if (patch.end_longitude !== undefined) {
+    update.end_longitude = patch.end_longitude === "" || patch.end_longitude == null ? null : finite(Number(patch.end_longitude));
   }
   if (patch.specifications && typeof patch.specifications === "object") {
     const spec = {};
@@ -177,7 +188,7 @@ export async function updateAsset(id, patch = {}) {
   }
   if (!found) return null;
 
-  await db.collection(found.collection).updateOne({ id }, { $set: buildAssetUpdate(patch) });
+  await db.collection(found.collection).updateOne({ id }, { $set: buildAssetUpdate(patch, found.category) });
   const updated = await db.collection(found.collection).findOne({ id }, { projection: { _id: 0 } });
   return { category: found.category, ...updated };
 }

@@ -27,7 +27,9 @@ const isProductionAsset = (asset) => {
   const plantCategory = String(spec.plant_category || "").toLowerCase();
   const plantType = String(spec.plant_type || "").toLowerCase();
   const assetType = String(asset.asset_type || "").toLowerCase();
-  return plantCategory !== "treatment" || /desalination|purification|production/.test(`${plantType} ${assetType}`);
+  if (plantCategory === "treatment" || assetType.includes("treatment")) return false;
+  if (plantCategory) return true;
+  return /desalination|purification|production/.test(`${plantType} ${assetType}`);
 };
 
 function ProductionPlaceholder({ bars }) {
@@ -90,7 +92,9 @@ export default function AssetDetailPage() {
   }
 
   const backTo = "/asset-registry";
-  const hasLocation = validCoord(asset.latitude, asset.longitude);
+  const latitude = Number(asset.latitude);
+  const longitude = Number(asset.longitude);
+  const hasLocation = validCoord(latitude, longitude);
   const categoryLabel = CATEGORY_LABEL[asset.category] || asset.category;
   const showProduction = isProductionAsset(asset);
   const showTopRow = showProduction || hasLocation;
@@ -111,24 +115,6 @@ export default function AssetDetailPage() {
       />
 
       <div className="form-container">
-        <div className="view-asset-meta">
-          <h3>System Information</h3>
-          <div className="view-asset-meta__row">
-            <div className="view-asset-meta__field">
-              <label>Generated ID</label>
-              <code className="generated-id-code">{asset.id}</code>
-            </div>
-            <div className="view-asset-meta__field">
-              <label>Created</label>
-              <div className="form-display">{asset.created_at ? new Date(asset.created_at).toLocaleString() : "N/A"}</div>
-            </div>
-            <div className="view-asset-meta__field">
-              <label>Last Updated</label>
-              <div className="form-display">{asset.updated_at ? new Date(asset.updated_at).toLocaleString() : "N/A"}</div>
-            </div>
-          </div>
-        </div>
-
         {showTopRow && (
           <div className={`view-asset-top-row${showProduction && hasLocation ? "" : " view-asset-top-row--single"}`}>
             {showProduction && (
@@ -141,24 +127,24 @@ export default function AssetDetailPage() {
             )}
 
             {hasLocation && (
-            <aside className="form-section view-asset-top-row__map">
-              <h3>Geographic Location</h3>
-              <div className="map-section">
-                <MapContainer
-                  center={[asset.latitude, asset.longitude]}
-                  zoom={10}
-                  className="view-asset-top-row__map-canvas"
-                >
-                  <TileLayer
-                    url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-                    maxZoom={18}
-                  />
-                  <Marker position={[asset.latitude, asset.longitude]}>
-                    <Popup>Asset Location<br />{asset.latitude.toFixed(6)}, {asset.longitude.toFixed(6)}</Popup>
-                  </Marker>
-                </MapContainer>
-              </div>
-            </aside>
+              <aside className="form-section view-asset-top-row__map">
+                <h3>Geographic Location</h3>
+                <div className="map-section">
+                  <MapContainer
+                    center={[latitude, longitude]}
+                    zoom={10}
+                    className="view-asset-top-row__map-canvas"
+                  >
+                    <TileLayer
+                      url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                      maxZoom={18}
+                    />
+                    <Marker position={[latitude, longitude]}>
+                      <Popup>Asset Location<br />{latitude.toFixed(6)}, {longitude.toFixed(6)}</Popup>
+                    </Marker>
+                  </MapContainer>
+                </div>
+              </aside>
             )}
           </div>
         )}

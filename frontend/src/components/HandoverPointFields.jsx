@@ -16,46 +16,50 @@ export default function HandoverPointFields({ spec, set }) {
 
   return (
     <>
-      <div className="af__section">Capacity</div>
-      <div className="af__grid">
-        <Field label="Capacity (m³/day)">
-          <input
-            type="number" min="0" step="any" placeholder="e.g. 50000"
-            value={spec.design_capacity ?? ""} onChange={set("design_capacity")}
-          />
-        </Field>
-      </div>
-
-      <div className="af__section">Capacity Limitation</div>
-      <div className="af__grid">
-        <Field label="Capacity Limitation">
-          <div className="af__radio-group">
-            {LIMITATION_TYPES.map((t) => (
-              <label key={t.value} className="af__radio">
-                <input
-                  type="radio"
-                  name="capacity_limitation_type"
-                  value={t.value}
-                  checked={limitationType === t.value}
-                  onChange={(e) => {
-                    set("capacity_limitation_type")(e);
-                    if (e.target.value === "none") set("capacity_limitation_value")({ target: { value: "" } });
-                  }}
-                />
-                {t.label}
-              </label>
-            ))}
-          </div>
-        </Field>
-        {limitationType !== "none" && (
-          <Field label="Capacity Limitation Value">
+      <div className="form-section">
+        <h3>Asset Specifications</h3>
+        <div className="form-grid af__grid">
+          <Field label="Capacity (m³/day)">
             <input
-              type="number" step="any"
-              value={spec.capacity_limitation_value ?? ""}
-              onChange={set("capacity_limitation_value")}
+              type="number" min="0" step="any" placeholder="e.g. 50000"
+              value={spec.design_capacity ?? ""} onChange={set("design_capacity")}
             />
           </Field>
-        )}
+        </div>
+      </div>
+
+      <div className="form-section">
+        <h3>Capacity Limitation</h3>
+        <div className="form-grid af__grid">
+          <Field label="Capacity Limitation">
+            <div className="af__radio-group">
+              {LIMITATION_TYPES.map((t) => (
+                <label key={t.value} className="af__radio">
+                  <input
+                    type="radio"
+                    name="capacity_limitation_type"
+                    value={t.value}
+                    checked={limitationType === t.value}
+                    onChange={(e) => {
+                      set("capacity_limitation_type")(e);
+                      if (e.target.value === "none") set("capacity_limitation_value")({ target: { value: "" } });
+                    }}
+                  />
+                  {t.label}
+                </label>
+              ))}
+            </div>
+          </Field>
+          {limitationType !== "none" && (
+            <Field label="Capacity Limitation Value">
+              <input
+                type="number" step="any"
+                value={spec.capacity_limitation_value ?? ""}
+                onChange={set("capacity_limitation_value")}
+              />
+            </Field>
+          )}
+        </div>
       </div>
     </>
   );

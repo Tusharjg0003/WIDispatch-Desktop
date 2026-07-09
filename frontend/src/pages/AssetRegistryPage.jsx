@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Archive } from "lucide-react";
 import { fetchAssets, fetchAsset } from "../api/metrics";
-import { deriveFilterOptions, applyAssetFilters, computeCategoryKpis } from "../lib/assetFilters";
+import { computeCategoryKpis } from "../lib/assetFilters";
+import { filterAllowedAssets } from "../lib/assetTypes";
 import { assetsToCsv, downloadCsv } from "../lib/exportCsv";
 import AssetListView from "../components/AssetListView";
 import AssetMapView from "../components/AssetMapView";
@@ -14,8 +15,6 @@ import WorkspaceHeader from "../components/WorkspaceHeader";
 import "../components/MetricDashboard.css";
 import "./AssetRegistryPage.css";
 
-const EMPTY_FILTERS = { activity: "", assetType: "", region: "", governorate: "", q: "" };
-
 export default function AssetRegistryPage({ mode = "list" }) {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -25,7 +24,6 @@ export default function AssetRegistryPage({ mode = "list" }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showHelp, setShowHelp] = useState(false);
-  const [filters, setFilters] = useState(EMPTY_FILTERS);
 
   const [editAsset, setEditAsset] = useState(null);
   const [editError, setEditError] = useState(null);
@@ -55,22 +53,14 @@ export default function AssetRegistryPage({ mode = "list" }) {
     return () => { cancelled = true; };
   }, [mode, id]);
 
-  // Cascade resets: changing a filter clears everything downstream of it.
-  const onActivity = (v) => setFilters((f) => ({ ...f, activity: v, assetType: "", region: "", governorate: "" }));
-  const onAssetType = (v) => setFilters((f) => ({ ...f, assetType: v, region: "", governorate: "" }));
-  const onRegion = (v) => setFilters((f) => ({ ...f, region: v, governorate: "" }));
-  const onGovernorate = (v) => setFilters((f) => ({ ...f, governorate: v }));
-  const onSearch = (v) => setFilters((f) => ({ ...f, q: v }));
-
-  const options = useMemo(() => deriveFilterOptions(assets, filters), [assets, filters]);
-  const filtered = useMemo(() => applyAssetFilters(assets, filters), [assets, filters]);
-  const kpis = useMemo(() => computeCategoryKpis(filtered), [filtered]);
+  const visibleAssets = useMemo(() => filterAllowedAssets(assets), [assets]);
+  const kpis = useMemo(() => computeCategoryKpis(visibleAssets), [visibleAssets]);
 
   const openView = (a) => navigate(`/asset-registry/view/${encodeURIComponent(a.id)}`);
   const openEdit = (a) => navigate(`/asset-registry/edit/${encodeURIComponent(a.id)}`);
-  const exportCsv = () => downloadCsv("asset-registry-filtered.csv", assetsToCsv(filtered));
+  const exportCsv = () => downloadCsv("asset-registry.csv", assetsToCsv(visibleAssets));
 
-  const statusText = mode === "create" ? "Create" : mode === "edit" ? "Edit" : `${filtered.length} assets`;
+  const statusText = mode === "create" ? "Create" : mode === "edit" ? "Edit" : `${visibleAssets.length} assets`;
 
   return (
     <div className="ar-shell">
@@ -118,50 +108,13 @@ export default function AssetRegistryPage({ mode = "list" }) {
           <>
             <AssetKpiCards kpis={kpis} />
 
-            <div className="ar-toolbar">
-              <div className="metric__filters">
-                <label>
-                  <span>Activity</span>
-                  <select value={filters.activity} onChange={(e) => onActivity(e.target.value)}>
-                    <option value="">All</option>
-                    {options.activities.map((a) => <option key={a} value={a}>{a}</option>)}
-                  </select>
-                </label>
-                <label>
-                  <span>Asset Type</span>
-                  <select value={filters.assetType} onChange={(e) => onAssetType(e.target.value)}>
-                    <option value="">All</option>
-                    {options.assetTypes.map((t) => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </label>
-                <label>
-                  <span>Region</span>
-                  <select value={filters.region} onChange={(e) => onRegion(e.target.value)}>
-                    <option value="">All</option>
-                    {options.regions.map((r) => <option key={r} value={r}>{r}</option>)}
-                  </select>
-                </label>
-                <label>
-                  <span>Governorate</span>
-                  <select value={filters.governorate} onChange={(e) => onGovernorate(e.target.value)} disabled={!filters.region}>
-                    <option value="">All</option>
-                    {options.governorates.map((g) => <option key={g} value={g}>{g}</option>)}
-                  </select>
-                </label>
-                <label>
-                  <span>Search</span>
-                  <input type="search" value={filters.q} placeholder="Name or ID" onChange={(e) => onSearch(e.target.value)} />
-                </label>
-              </div>
-            </div>
-
             {error && <div className="metric__notice metric__notice--error">{error}</div>}
             {loading && <div className="metric__notice">Loading assets…</div>}
 
             {!loading && !error && (
               view === "list"
-                ? <AssetListView assets={filtered} onView={openView} onEdit={openEdit} />
-                : <AssetMapView assets={filtered} onView={openView} onEdit={openEdit} />
+                ? <AssetListView assets={visibleAssets} onView={openView} onEdit={openEdit} />
+                : <AssetMapView assets={visibleAssets} onView={openView} onEdit={openEdit} />
             )}
           </>
         )}

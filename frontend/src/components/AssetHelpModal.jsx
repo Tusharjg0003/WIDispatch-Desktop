@@ -12,10 +12,10 @@ const ACTIVITY_CODES = {
   "Wastewater treatment": "ST", "TSE reuse": "TR",
 };
 const ASSET_TYPE_CODES = {
-  "Groundwater wells": "GW", "Surface water dams": "SW", "Seawater desalination": "DS",
-  "Water Purification": "PR", "Transmission pipeline": "TP", "Operational storage": "OS",
-  "Strategic storage": "SS", "Handover point / city gate": "HP", "Distribution network": "DR",
-  "Filling station": "FS", "Collection network": "CL", "Treatment plant": "TR",
+  "Seawater desalination": "DS",
+  "Pumping station": "PS",
+  "Handover point/city gate": "HP",
+  "Water purification": "PR",
 };
 
 function CodeSection({ title, codes }) {

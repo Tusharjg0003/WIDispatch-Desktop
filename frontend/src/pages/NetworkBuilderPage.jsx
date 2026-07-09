@@ -17,7 +17,7 @@ import {
   AlertTriangle, CheckSquare, FileText,
 } from "lucide-react";
 import { useLayout } from "../contexts/LayoutContext";
-import { buildCyStyle, ENTITY_TYPE_LABELS } from "../cytoscape/buildCyStyle";
+import { buildCyStyle, ENTITY_TYPE_COLORS, ENTITY_TYPE_LABELS } from "../cytoscape/buildCyStyle";
 import { applyCardIcon } from "../cytoscape/nodeCard";
 import { fetchNetwork, fetchNetworks, saveNetwork, updateNetwork, deleteNetwork } from "../api/networks";
 import {
@@ -45,11 +45,16 @@ const INSERT_TOOL_LABELS = {
 };
 const INSERT_ENTITY_BUTTONS = [
   { type: "plant", implemented: true },
-  { type: "handover_point", implemented: false },
+  { type: "handover_point", implemented: true },
   { type: "node", implemented: true },
   { type: "pump", implemented: true },
 ];
-const ENTITY_ICONS = { plant: Factory, pump: Droplet, node: Dot };
+const ENTITY_TYPES_LIST = [
+  { type: "plant", label: "Plant", description: "Production asset" },
+  { type: "pump", label: "Pump Station", description: "Pumping asset" },
+  { type: "handover_point", label: "Handover Point", description: "City gate / HP" },
+];
+const ENTITY_ICONS = { plant: Factory, pump: Droplet, handover_point: Crosshair, node: Dot };
 const ANNOTATION_TYPES = ["note", "group-box"];
 const NOTE_SIZES = ["small", "normal", "large", "xlarge"];
 const ACTIVE_STATUSES = new Set(["operational", "maintenance", "under_construction", "planned"]);
@@ -58,6 +63,38 @@ const INACTIVE_STATUSES = new Set(["inactive", "decommissioned"]);
 // coerces to a number, since most pipe spec fields are numeric.
 const STRING_SPEC_FIELDS = new Set(["pipelineMaterial", "infraSource", "capacityLimitationType", "transmissionSystemId"]);
 const LIBRARY_DRAG_TYPE = "application/x-widispatch-assets";
+
+const emptyEntityForm = (entityType) => ({
+  category: entityType,
+  name: "",
+  status: entityType === "pump" ? "inactive" : "planned",
+  commissioning_date: "",
+  decommissioning_date: "",
+  active: true,
+});
+
+const cloneData = (value) => {
+  if (!value || typeof value !== "object") return value;
+  return JSON.parse(JSON.stringify(value));
+};
+
+const halveLengthValue = (value) => {
+  if (value === "" || value == null) return value;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric / 2 : value;
+};
+
+const withHalvedPipeLength = (data) => {
+  const next = cloneData(data);
+  const specs = next.meta?.specifications;
+  if (specs && Object.prototype.hasOwnProperty.call(specs, "pipelineLength")) {
+    specs.pipelineLength = halveLengthValue(specs.pipelineLength);
+  }
+  if (specs && Object.prototype.hasOwnProperty.call(specs, "length_km")) {
+    specs.length_km = halveLengthValue(specs.length_km);
+  }
+  return next;
+};
 
 // Snapshot the asset fields we keep with a placed element so the graph renders
 // offline even if the source asset later changes.
@@ -160,11 +197,14 @@ export default function NetworkBuilderPage() {
   const { setToolbar, setSidebar } = useLayout();
 
   const containerRef = useRef(null);
+  const canvasWrapRef = useRef(null);
   const cyRef = useRef(null);
   const modeRef = useRef("select");
   const lineSourceRef = useRef(null);
-  const pendingRef = useRef(null); // asset armed for placement
+  const pendingPlacementRef = useRef(null); // asset armed for placement
   const pendingEntityRef = useRef(null); // blank entity type being inserted
+  const insertEdgeRef = useRef(null);
+  const insertPositionRef = useRef(null);
   const loadedIdRef = useRef(null);
   const saveTimerRef = useRef(null);
   const showLabelsRef = useRef(true);
@@ -189,9 +229,10 @@ export default function NetworkBuilderPage() {
   const [showLibrary, setShowLibrary] = useState(true);
   const [toast, setToast] = useState(null);
   const [pipeModal, setPipeModal] = useState({ open: false, source: null, target: null });
+  const [insertModal, setInsertModal] = useState({ open: false });
   const [transmissionSystems, setTransmissionSystems] = useState([]);
   const [transmissionLines, setTransmissionLines] = useState([]);
-  const [entityModal, setEntityModal] = useState({ open: false, type: null, position: null });
+  const [entityModal, setEntityModal] = useState({ open: false, type: null, position: null, mode: null, form: null, editId: null });
   const [showLabels, setShowLabels] = useState(true);
   const [showGrid, setShowGrid] = useState(true);
   const [showInspector, setShowInspector] = useState(true);
@@ -328,6 +369,39 @@ export default function NetworkBuilderPage() {
     edge.select();
   }, []);
 
+  const clearInsertTarget = useCallback(() => {
+    const cy = cyRef.current;
+    if (cy) cy.edges().removeClass("insert-target");
+    insertEdgeRef.current = null;
+    insertPositionRef.current = null;
+  }, []);
+
+  const splitPipeWithNode = useCallback(
+    (node) => {
+      const cy = cyRef.current;
+      const edgeId = insertEdgeRef.current;
+      if (!cy || !node || !edgeId) return false;
+      const edge = cy.getElementById(edgeId);
+      if (!edge.length) {
+        clearInsertTarget();
+        return false;
+      }
+
+      const base = withHalvedPipeLength(edge.data());
+      cy.batch(() => {
+        edge.remove();
+        cy.add({ group: "edges", data: { ...cloneData(base), id: rid("e"), source: base.source, target: node.id() } });
+        cy.add({ group: "edges", data: { ...cloneData(base), id: rid("e"), source: node.id(), target: base.target } });
+      });
+      cy.$(":selected").unselect();
+      node.select();
+      clearInsertTarget();
+      syncSelection();
+      return true;
+    },
+    [clearInsertTarget, syncSelection]
+  );
+
   const placeAssetsAt = useCallback(
     (assetOrAssets, position) => {
       const cy = cyRef.current;
@@ -342,7 +416,7 @@ export default function NetworkBuilderPage() {
             ? `"${first?.name || first?.id}" is already on the canvas.`
             : "All selected assets are already on the canvas."
         );
-        return;
+        return [];
       }
 
       const added = [];
@@ -382,6 +456,7 @@ export default function NetworkBuilderPage() {
             : `Placed ${unplaced.length} assets.`
         );
       }
+      return added;
     },
     [syncSelection]
   );
@@ -398,6 +473,19 @@ export default function NetworkBuilderPage() {
       wheelSensitivity: 0.2,
     });
     cyRef.current = cy;
+
+    const updateGridBackground = () => {
+      const wrap = canvasWrapRef.current;
+      if (!wrap) return;
+      const pan = cy.pan();
+      const size = 24 * cy.zoom();
+      const offsetX = ((pan.x % size) + size) % size;
+      const offsetY = ((pan.y % size) + size) % size;
+
+      wrap.style.setProperty("--grid-size", `${size}px`);
+      wrap.style.setProperty("--grid-offset-x", `${offsetX}px`);
+      wrap.style.setProperty("--grid-offset-y", `${offsetY}px`);
+    };
 
     const clearDrawSource = () => {
       cy.$(".draw-source").removeClass("draw-source");
@@ -416,10 +504,17 @@ export default function NetworkBuilderPage() {
 
       if (m === "place-entity" && pendingEntityRef.current) {
         const type = pendingEntityRef.current;
-        if (type === "plant" || type === "pump") {
+        if (type === "plant" || type === "pump" || type === "handover_point") {
           pendingEntityRef.current = null;
           setPendingEntity(null);
-          setEntityModal({ open: true, type, position: { x: evt.position.x, y: evt.position.y } });
+          setEntityModal({
+            open: true,
+            type,
+            position: { x: evt.position.x, y: evt.position.y },
+            mode: "create",
+            form: emptyEntityForm(type),
+            editId: null,
+          });
           backToSelect();
           return;
         }
@@ -445,9 +540,20 @@ export default function NetworkBuilderPage() {
         return;
       }
 
-      if (m === "place-asset" && pendingRef.current) {
-        placeAssetsAt(pendingRef.current, { x: evt.position.x, y: evt.position.y });
-        pendingRef.current = null;
+      if (m === "place-asset" && pendingPlacementRef.current) {
+        const pending = pendingPlacementRef.current;
+        const insertMode = pending?._insertMode === true;
+        const assetPayload = insertMode ? pending.asset || pending.assets?.[0] : pending;
+        if (insertMode && !assetPayload) {
+          setToast("Choose an asset from the library, then click the canvas to place it on the selected pipe.");
+          return;
+        }
+        const added = placeAssetsAt(assetPayload, { x: evt.position.x, y: evt.position.y });
+        if (insertMode) {
+          const placedNode = added?.[0];
+          if (placedNode) splitPipeWithNode(placedNode);
+        }
+        pendingPlacementRef.current = null;
         setPendingAsset(null);
         backToSelect();
         return;
@@ -477,22 +583,15 @@ export default function NetworkBuilderPage() {
       backToSelect();
     });
 
-    // Edge tap: insert a junction that splits the pipe.
+    // Edge tap: choose an entity/asset to insert on the selected pipe.
     cy.on("tap", "edge", (evt) => {
       if (modeRef.current !== "insert-on-edge") return;
       const edge = evt.target;
-      const base = { ...edge.data() };
-      const jid = rid("n");
-      cy.batch(() => {
-        cy.add({
-          group: "nodes",
-          data: { id: jid, type: "node", category: "node", label: "", displayLabel: "", status: "", meta: {} },
-          position: { x: evt.position.x, y: evt.position.y },
-        });
-        edge.remove();
-        cy.add({ group: "edges", data: { ...base, id: rid("e"), source: base.source, target: jid } });
-        cy.add({ group: "edges", data: { ...base, id: rid("e"), source: jid, target: base.target } });
-      });
+      cy.edges().removeClass("insert-target");
+      edge.addClass("insert-target");
+      insertEdgeRef.current = edge.id();
+      insertPositionRef.current = { x: evt.position.x, y: evt.position.y };
+      setInsertModal({ open: true });
       backToSelect();
     });
 
@@ -506,6 +605,8 @@ export default function NetworkBuilderPage() {
       syncSelection();
     });
     cy.on("add remove dragfree", scheduleCommit);
+    cy.on("pan zoom resize", updateGridBackground);
+    updateGridBackground();
 
     historyRef.current = { past: [], present: cy.elements().jsons(), future: [] };
     setCyReady(true);
@@ -513,7 +614,7 @@ export default function NetworkBuilderPage() {
       cy.destroy();
       cyRef.current = null;
     };
-  }, [syncGraph, syncSelection, createPipeEdge, scheduleCommit, placeAssetsAt]);
+  }, [syncGraph, syncSelection, createPipeEdge, scheduleCommit, placeAssetsAt, splitPipeWithNode]);
 
   // ── Hydrate from a saved network when the route :id changes ──────────────────
   useEffect(() => {
@@ -566,10 +667,14 @@ export default function NetworkBuilderPage() {
     const cy = cyRef.current;
     if (cy) {
       cy.$(".draw-source").removeClass("draw-source");
+      cy.edges().removeClass("insert-target");
       lineSourceRef.current = null;
       setLineSource(null);
     }
-    pendingRef.current = null;
+    insertEdgeRef.current = null;
+    insertPositionRef.current = null;
+    setInsertModal({ open: false });
+    pendingPlacementRef.current = null;
     setPendingAsset(null);
     pendingEntityRef.current = null;
     setPendingEntity(null);
@@ -591,14 +696,27 @@ export default function NetworkBuilderPage() {
   const handlePick = useCallback((assetOrAssets) => {
     const assets = Array.isArray(assetOrAssets) ? assetOrAssets : [assetOrAssets];
     if (!assets.length) return;
+    const insertMode = pendingPlacementRef.current?._insertMode === true;
     pendingEntityRef.current = null;
     setPendingEntity(null);
-    pendingRef.current = Array.isArray(assetOrAssets) ? assets : assets[0];
-    setPendingAsset(Array.isArray(assetOrAssets) ? assets : assets[0]);
+    pendingPlacementRef.current = insertMode
+      ? {
+          _insertMode: true,
+          entityType: null,
+          ...(Array.isArray(assetOrAssets) ? { assets } : { asset: assets[0] }),
+        }
+      : Array.isArray(assetOrAssets)
+      ? assets
+      : assets[0];
+    setPendingAsset(insertMode ? assets[0] : Array.isArray(assetOrAssets) ? assets : assets[0]);
     modeRef.current = "place-asset";
     setMode("place-asset");
     setToast(
-      assets.length === 1
+      insertMode
+        ? assets.length === 1
+          ? `Click the canvas to place "${assets[0].name || assets[0].id}" on the selected pipe.`
+          : `Click the canvas to place the first of ${assets.length} selected assets on the selected pipe.`
+        : assets.length === 1
         ? `Click the canvas to place "${assets[0].name || assets[0].id}".`
         : `Click the canvas to place ${assets.length} selected assets.`
     );
@@ -628,20 +746,51 @@ export default function NetworkBuilderPage() {
       const rendered = { x: event.clientX - rect.left, y: event.clientY - rect.top };
       const pan = cy.pan();
       const zoom = cy.zoom();
-      placeAssetsAt(assets, {
+      const position = {
         x: (rendered.x - pan.x) / zoom,
         y: (rendered.y - pan.y) / zoom,
-      });
-      pendingRef.current = null;
+      };
+      const insertMode = pendingPlacementRef.current?._insertMode === true;
+      const added = placeAssetsAt(insertMode ? assets.slice(0, 1) : assets, position);
+      if (insertMode && added?.[0]) splitPipeWithNode(added[0]);
+      pendingPlacementRef.current = null;
       setPendingAsset(null);
       modeRef.current = "select";
       setMode("select");
     },
-    [placeAssetsAt]
+    [placeAssetsAt, splitPipeWithNode]
   );
 
   const closeEntityModal = useCallback(() => {
-    setEntityModal({ open: false, type: null, position: null });
+    setEntityModal({ open: false, type: null, position: null, mode: null, form: null, editId: null });
+    if (entityModal.mode === "insert-on-edge") clearInsertTarget();
+  }, [clearInsertTarget, entityModal.mode]);
+
+  const closeInsertModal = useCallback(() => {
+    setInsertModal({ open: false });
+    clearInsertTarget();
+  }, [clearInsertTarget]);
+
+  const handleInsertTypeChoice = useCallback((entityType) => {
+    setInsertModal({ open: false });
+    setEntityModal({
+      open: true,
+      mode: "insert-on-edge",
+      form: emptyEntityForm(entityType),
+      editId: null,
+      type: entityType,
+      position: insertPositionRef.current || { x: 0, y: 0 },
+    });
+  }, []);
+
+  const handleInsertFromLibrary = useCallback(() => {
+    setInsertModal({ open: false });
+    setShowLibrary(true);
+    pendingPlacementRef.current = { entityType: null, _insertMode: true };
+    setPendingAsset(null);
+    modeRef.current = "place-asset";
+    setMode("place-asset");
+    setToast("Choose an asset from the library, then click the canvas to place it on the selected pipe.");
   }, []);
 
   const handleEntityCreated = useCallback((asset) => {
@@ -663,9 +812,10 @@ export default function NetworkBuilderPage() {
       });
       cy.$(":selected").unselect();
       node.select();
+      if (entityModal.mode === "insert-on-edge") splitPipeWithNode(node);
     }
-    setEntityModal({ open: false, type: null, position: null });
-  }, [entityModal.position]);
+    setEntityModal({ open: false, type: null, position: null, mode: null, form: null, editId: null });
+  }, [entityModal.position, entityModal.mode, splitPipeWithNode]);
 
   // ── Inspector edits ────────────────────────────────────────────────────────
   const handleLabelChange = useCallback(
@@ -1660,9 +1810,9 @@ export default function NetworkBuilderPage() {
                 icon={Split}
                 active={mode === "insert-on-edge"}
                 disabled={counts.edges < 1}
-                title="Insert a junction on a pipe (splits it)"
+                title="Insert an entity on a pipe"
               >
-                On Pipe
+                Insert on Pipe
               </Btn>
             </div>
             <span className="toolbar-group__label">Insert</span>
@@ -1849,7 +1999,9 @@ export default function NetworkBuilderPage() {
 
   const bannerText =
     mode === "place-asset"
-      ? Array.isArray(pendingAsset)
+      ? !pendingAsset
+        ? "Select an asset from the library for the selected pipe"
+        : Array.isArray(pendingAsset)
         ? `Placing ${pendingAsset.length} selected assets — click the canvas`
         : `Placing "${pendingAsset?.name || pendingAsset?.id}" — click the canvas`
       : mode === "place-entity"
@@ -1857,7 +2009,7 @@ export default function NetworkBuilderPage() {
       : mode === "place-note"
       ? "Click the canvas to drop a note"
       : mode === "insert-on-edge"
-      ? "Click a pipe to insert a junction that splits it"
+      ? "Click a pipe to insert an entity on it"
       : mode === "area-zoom"
       ? "Drag a rectangle to zoom into that region"
       : mode === "draw-pipe"
@@ -1929,11 +2081,12 @@ export default function NetworkBuilderPage() {
         />
 
         <div
-          className="nb-canvas-wrap"
+          ref={canvasWrapRef}
+          className={`nb-canvas-wrap ${showGrid ? "nb-canvas-wrap--grid" : ""}`}
           onDragOver={handleLibraryDragOver}
           onDrop={handleLibraryDrop}
         >
-          <div ref={containerRef} className={`nb-canvas ${showGrid ? "nb-canvas--grid" : ""}`} />
+          <div ref={containerRef} className="nb-canvas" />
 
           {mode === "area-zoom" && (
             <div
@@ -2220,9 +2373,52 @@ export default function NetworkBuilderPage() {
         </aside>
       )}
 
+      {insertModal.open && (
+        <div className="ns2-modal-overlay" onMouseDown={closeInsertModal}>
+          <div className="ns2-modal ns2-modal--sm" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="ns2-modal-header">
+              <h2>Insert Entity on Pipe</h2>
+              <button type="button" className="ns2-modal-close" onClick={closeInsertModal} aria-label="Close">×</button>
+            </div>
+            <div className="ns2-insert-grid">
+              {ENTITY_TYPES_LIST.map((entityType) => {
+                const Icon = ENTITY_ICONS[entityType.type] || Dot;
+                return (
+                  <button
+                    key={entityType.type}
+                    type="button"
+                    className="ns2-insert-card"
+                    onClick={() => handleInsertTypeChoice(entityType.type)}
+                  >
+                    <span
+                      className="ns2-entity-badge"
+                      style={{ backgroundColor: ENTITY_TYPE_COLORS[entityType.type] }}
+                    >
+                      <Icon size={16} />
+                    </span>
+                    <span className="ns2-insert-card__copy">
+                      <strong>{entityType.label}</strong>
+                      <small>{entityType.description}</small>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="ns2-modal-footer">
+              <button type="button" className="ns2-btn" onClick={handleInsertFromLibrary}>
+                <Library size={13} /> Select From Asset Library
+              </button>
+              <button type="button" className="ns2-btn" onClick={closeInsertModal}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {entityModal.open && (
         <NetworkEntityCreateModal
           type={entityModal.type}
+          mode={entityModal.mode}
+          initialForm={entityModal.form}
           onCancel={closeEntityModal}
           onCreated={handleEntityCreated}
         />

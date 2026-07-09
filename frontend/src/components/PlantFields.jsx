@@ -32,57 +32,63 @@ export default function PlantFields({ spec, set, commissioningDate, decommission
 
   return (
     <>
-      <div className="af__section">Plant Category</div>
-      <div className="af__grid">
-        <Field label="Plant Category *">
-          <select value={category} onChange={set("plant_category")} required>
-            <option value="" disabled>Select category</option>
-            {PLANT_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-          </select>
-        </Field>
+      <div className="form-section">
+        <h3>Plant Category</h3>
+        <div className="form-grid af__grid">
+          <Field label="Plant Category *">
+            <select value={category} onChange={set("plant_category")} required>
+              <option value="" disabled>Select category</option>
+              {PLANT_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+            </select>
+          </Field>
+        </div>
       </div>
 
       {category === "production" && (
         <>
-          <div className="af__section">Production Plant</div>
-          <div className="af__grid">
-            <Field label="Plant Type *">
-              <select value={spec.plant_type || ""} onChange={set("plant_type")} required>
-                <option value="" disabled>Select plant type</option>
-                {PLANT_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-              </select>
-            </Field>
-            <Field label="PSID"><input value={spec.psid || ""} onChange={set("psid")} /></Field>
-            <Field label="Dispatch ID"><input value={spec.dispatch_id || ""} onChange={set("dispatch_id")} /></Field>
-            <Field label="Production System"><input value={spec.production_system || ""} onChange={set("production_system")} /></Field>
-            <Field label="Water Source"><input value={spec.water_source || ""} onChange={set("water_source")} placeholder="e.g. Seawater" /></Field>
-            <Field label="Technology"><input value={spec.technology || ""} onChange={set("technology")} placeholder="e.g. RO" /></Field>
-            <Field label="Design Capacity (m³/day)"><input type="number" step="any" value={spec.design_capacity ?? ""} onChange={set("design_capacity")} /></Field>
-            <Field label="Maximum Capacity (m³/day)"><input type="number" step="any" value={spec.maximum_capacity ?? ""} onChange={set("maximum_capacity")} /></Field>
-            <Field label="Contracted Capacity (m³/day)"><input type="number" step="any" value={spec.contracted_capacity ?? ""} onChange={set("contracted_capacity")} /></Field>
-            <Field label="Fund Status"><input value={spec.fund_status || ""} onChange={set("fund_status")} /></Field>
-            <Field label="Plant Manager Name"><input value={spec.plant_manager_name || ""} onChange={set("plant_manager_name")} /></Field>
-            <Field label="Phone Number"><input type="tel" value={spec.phone_number || ""} onChange={set("phone_number")} /></Field>
-            <Field label="Source"><input value={spec.source || ""} onChange={set("source")} /></Field>
+          <div className="form-section">
+            <h3>Asset Specifications</h3>
+            <div className="form-grid af__grid">
+              <Field label="Plant Type *">
+                <select value={spec.plant_type || ""} onChange={set("plant_type")} required>
+                  <option value="" disabled>Select plant type</option>
+                  {PLANT_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </select>
+              </Field>
+              <Field label="PSID"><input value={spec.psid || ""} onChange={set("psid")} /></Field>
+              <Field label="Dispatch ID"><input value={spec.dispatch_id || ""} onChange={set("dispatch_id")} /></Field>
+              <Field label="Production System"><input value={spec.production_system || ""} onChange={set("production_system")} /></Field>
+              <Field label="Water Source"><input value={spec.water_source || ""} onChange={set("water_source")} placeholder="e.g. Seawater" /></Field>
+              <Field label="Technology"><input value={spec.technology || ""} onChange={set("technology")} placeholder="e.g. RO" /></Field>
+              <Field label="Design Capacity (m³/day)"><input type="number" step="any" value={spec.design_capacity ?? ""} onChange={set("design_capacity")} /></Field>
+              <Field label="Maximum Capacity (m³/day)"><input type="number" step="any" value={spec.maximum_capacity ?? ""} onChange={set("maximum_capacity")} /></Field>
+              <Field label="Contracted Capacity (m³/day)"><input type="number" step="any" value={spec.contracted_capacity ?? ""} onChange={set("contracted_capacity")} /></Field>
+              <Field label="Fund Status"><input value={spec.fund_status || ""} onChange={set("fund_status")} /></Field>
+              <Field label="Plant Manager Name"><input value={spec.plant_manager_name || ""} onChange={set("plant_manager_name")} /></Field>
+              <Field label="Phone Number"><input type="tel" value={spec.phone_number || ""} onChange={set("phone_number")} /></Field>
+              <Field label="Source"><input value={spec.source || ""} onChange={set("source")} /></Field>
+            </div>
           </div>
 
-          <div className="af__section">Financial</div>
-          <div className="af__grid">
-            <Field label="CCR (SAR/month)"><input type="number" step="any" value={spec.ccr ?? ""} onChange={set("ccr")} /></Field>
-            <Field label="Fixed O&M (SAR/month)"><input type="number" step="any" value={spec.fixed_om ?? ""} onChange={set("fixed_om")} /></Field>
-            <Field label="Variable O&M (SAR/m³)"><input type="number" step="any" value={spec.variable_om ?? ""} onChange={set("variable_om")} /></Field>
-            <Field label="CAPEX (SAR)"><input type="number" step="any" value={spec.capex ?? ""} onChange={set("capex")} /></Field>
-            <Field label="Project Lifetime (years)">
-              <input type="text" value={lifetime != null ? lifetime : "—"} disabled />
-            </Field>
+          <div className="form-section">
+            <h3>Financial Breakdown</h3>
+            <div className="form-grid af__grid">
+              <Field label="CCR (SAR/month)"><input type="number" step="any" value={spec.ccr ?? ""} onChange={set("ccr")} /></Field>
+              <Field label="Fixed O&M (SAR/month)"><input type="number" step="any" value={spec.fixed_om ?? ""} onChange={set("fixed_om")} /></Field>
+              <Field label="Variable O&M (SAR/m³)"><input type="number" step="any" value={spec.variable_om ?? ""} onChange={set("variable_om")} /></Field>
+              <Field label="CAPEX (SAR)"><input type="number" step="any" value={spec.capex ?? ""} onChange={set("capex")} /></Field>
+              <Field label="Project Lifetime (years)">
+                <input type="text" value={lifetime != null ? lifetime : "—"} disabled />
+              </Field>
+            </div>
           </div>
         </>
       )}
 
       {category === "treatment" && (
-        <>
-          <div className="af__section">Treatment Plant</div>
-          <div className="af__grid">
+        <div className="form-section">
+          <h3>Asset Specifications</h3>
+          <div className="form-grid af__grid">
             <Field label="Maximum Capacity (m³/day)"><input type="number" step="any" value={spec.maximum_capacity ?? ""} onChange={set("maximum_capacity")} /></Field>
             <Field label="Expansion Date"><input type="date" value={spec.expansion_date || ""} onChange={set("expansion_date")} /></Field>
             <Field label="Treatment Level"><input value={spec.treatment_level || ""} onChange={set("treatment_level")} /></Field>
@@ -90,7 +96,7 @@ export default function PlantFields({ spec, set, commissioningDate, decommission
             <Field label="Expansion Capacity (m³/day)"><input type="number" step="any" value={spec.expansion_capacity ?? ""} onChange={set("expansion_capacity")} /></Field>
             <Field label="Source"><input value={spec.source || ""} onChange={set("source")} /></Field>
           </div>
-        </>
+        </div>
       )}
     </>
   );

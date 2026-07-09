@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchAssets } from "../api/metrics";
+import { filterAllowedAssets } from "../lib/assetTypes";
 import SidebarActionToolbar from "./SidebarActionToolbar";
 import "./WorkspaceRecordSidebar.css";
 
@@ -50,7 +51,7 @@ export default function AssetRegistrySidebar({ view, onShowMap, onShowList, onCr
 
   const assetsByType = useMemo(() => {
     const grouped = {};
-    for (const a of assets) {
+    for (const a of filterAllowedAssets(assets)) {
       const type = a.asset_type || "Uncategorized";
       (grouped[type] || (grouped[type] = [])).push(a);
     }

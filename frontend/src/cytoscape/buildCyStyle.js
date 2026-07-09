@@ -227,5 +227,16 @@ export function buildCyStyle() {
         "overlay-opacity": 0.12,
       },
     },
+    {
+      selector: "edge.insert-target",
+      style: {
+        "line-color": "#f59e0b",
+        "target-arrow-color": "#f59e0b",
+        width: 4,
+        "overlay-color": "#f59e0b",
+        "overlay-padding": 6,
+        "overlay-opacity": 0.18,
+      },
+    },
   ];
 }

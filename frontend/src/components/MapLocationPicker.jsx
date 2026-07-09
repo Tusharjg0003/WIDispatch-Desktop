@@ -36,17 +36,32 @@ function Recenter({ lat, lng }) {
 // Click-to-place coordinate picker. `latitude`/`longitude` are the current
 // (possibly empty-string) form values; `onChange(lat, lng)` fires with plain
 // numbers whenever the map is clicked.
-export default function MapLocationPicker({ latitude, longitude, onChange }) {
+export default function MapLocationPicker({
+  latitude,
+  longitude,
+  onChange,
+  className = "af__map",
+  canvasClassName = "af__map-canvas",
+  showInstructionHeader = false,
+  instructionTitle = "Select Location on Map",
+  instructionText = "Click on the map to select the exact location of your asset, or enter coordinates manually above.",
+}) {
   const lat = toCoord(latitude);
   const lng = toCoord(longitude);
   const hasPoint = validCoord(lat, lng);
 
   return (
-    <div className="af__map">
+    <div className={className}>
+      {showInstructionHeader && (
+        <div className="map-header">
+          <h4>{instructionTitle}</h4>
+          <p>{instructionText}</p>
+        </div>
+      )}
       <MapContainer
         center={hasPoint ? [lat, lng] : DEFAULT_CENTER}
         zoom={hasPoint ? POINT_ZOOM : DEFAULT_ZOOM}
-        className="af__map-canvas"
+        className={canvasClassName}
         scrollWheelZoom
       >
         <TileLayer

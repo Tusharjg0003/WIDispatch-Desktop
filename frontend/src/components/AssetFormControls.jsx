@@ -4,10 +4,10 @@ import React from "react";
 
 export function Field({ label, children }) {
   return (
-    <label className="af__field">
-      <span>{label}</span>
+    <div className="form-group af__field">
+      <label>{label}</label>
       {children}
-    </label>
+    </div>
   );
 }
 
@@ -26,9 +26,9 @@ export function Switch({ checked, onChange, onLabel = "Active", offLabel = "Inac
 
 export function Toggle({ label, checked, onChange, onLabel, offLabel }) {
   return (
-    <label className="af__field af__field--toggle">
-      <span>{label}</span>
+    <div className="form-group af__field af__field--toggle">
+      <label>{label}</label>
       <Switch checked={checked} onChange={onChange} onLabel={onLabel} offLabel={offLabel} />
-    </label>
+    </div>
   );
 }

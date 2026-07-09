@@ -141,17 +141,6 @@
 .ar-page .view-kpis .status-indicator.maintenance { background: #f59e0b; }
 .ar-page .view-kpis .status-indicator.decommissioned { background: #ef4444; }
 
-/* Toolbar (status/search filters — the List/Map toggle moved into the
-   sidebar's action toolbar, see AssetRegistrySidebar). */
-.ar-toolbar {
-  display: flex;
-  align-items: flex-end;
-  justify-content: flex-end;
-  gap: 18px;
-  flex-wrap: wrap;
-  margin-bottom: 18px;
-}
-
 /* ── Sidebar rail (browse tree) + main content pane ──────────────────────
    Structured exactly like Network Builder's .nb-page/.nb-rail: a full-height
    flex row sitting directly in .app-content, so the rail is flush against
@@ -224,23 +213,45 @@
 }
 
 /* Map */
-.asset-map {
+.map-view-container {
   padding: 16px;
 }
-.asset-map__canvas {
+.map-header {
+  margin: 0 2px 10px;
+}
+.map-header h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.map-header p {
+  margin: 2px 0 0;
+  font-size: 0.78rem;
+  color: var(--ink-dim);
+}
+.map-container {
   height: 560px;
   width: 100%;
   border-radius: 4px;
   border: 1px solid var(--line);
+  overflow: hidden;
 }
-.asset-map__note {
-  margin: 10px 2px 0;
-  font-size: 0.78rem;
+.map-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 0.85rem;
   color: var(--ink-dim);
 }
 .leaflet-container {
   background: #f1f5f9;
   font-family: inherit;
+}
+/* Pump-station triangle markers: drop Leaflet's default divIcon box/border. */
+.leaflet-div-icon.asset-triangle-marker {
+  background: transparent;
+  border: none;
 }
 
 /* Detail drawer */

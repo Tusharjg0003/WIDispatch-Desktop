@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { fetchAssets } from "../api/metrics";
+import { filterAllowedAssets } from "../lib/assetTypes";
 import {
   CATEGORY_ORDER,
   ENTITY_TYPE_ABBREVIATIONS,
@@ -66,7 +67,7 @@ export default function NetworkPalette({ onPick, placedIds, armedId }) {
 
   const regions = useMemo(() => {
     if (!assets) return [];
-    return Array.from(new Set(assets.map((a) => a.region).filter(Boolean))).sort((a, b) =>
+    return Array.from(new Set(filterAllowedAssets(assets).map((a) => a.region).filter(Boolean))).sort((a, b) =>
       a.localeCompare(b)
     );
   }, [assets]);
@@ -74,7 +75,7 @@ export default function NetworkPalette({ onPick, placedIds, armedId }) {
   const items = useMemo(() => {
     if (!assets) return [];
     const needle = q.trim().toLowerCase();
-    const filtered = assets.filter((a) => {
+    const filtered = filterAllowedAssets(assets).filter((a) => {
       if (category !== "all" && a.category !== category) return false;
       if (region !== "all" && a.region !== region) return false;
       if (!needle) return true;
@@ -101,7 +102,7 @@ export default function NetworkPalette({ onPick, placedIds, armedId }) {
 
   const selectedAssets = useMemo(() => {
     if (!assets) return [];
-    return assets.filter((a) => selectedIds.has(a.id) && !placedIds?.has(a.id));
+    return filterAllowedAssets(assets).filter((a) => selectedIds.has(a.id) && !placedIds?.has(a.id));
   }, [assets, selectedIds, placedIds]);
 
   const selectedCount = selectedAssets.length;

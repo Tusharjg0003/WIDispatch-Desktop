@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo } from "react";
-import { MapContainer, TileLayer, CircleMarker, Tooltip, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, CircleMarker, Marker, Tooltip, Popup, useMap } from "react-leaflet";
+import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 const STATUS_COLOR = {
@@ -11,6 +12,16 @@ const STATUS_COLOR = {
 };
 const statusLabel = (s) => (s ? s.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase()) : "Unknown");
 const gov = (a) => (a.governorate && a.governorate !== "NULL" ? a.governorate : "Unknown");
+
+// Pump stations render as a status-colored triangle to set them apart from
+// the circular plant/handover markers.
+const triangleIcon = (color) =>
+  L.divIcon({
+    className: "asset-triangle-marker",
+    html: `<svg width="18" height="18" viewBox="0 0 18 18"><polygon points="9,1 17,16 1,16" fill="${color}" stroke="#ffffff" stroke-width="1.5" /></svg>`,
+    iconSize: [18, 18],
+    iconAnchor: [9, 11],
+  });
 
 const validCoord = (lat, lng) =>
   Number.isFinite(lat) && Number.isFinite(lng) &&
@@ -49,13 +60,8 @@ export default function AssetMapView({ assets, onView, onEdit }) {
             <FitBounds points={points} />
             {located.map((a) => {
               const color = STATUS_COLOR[a.status] || "#3b82f6";
-              return (
-                <CircleMarker
-                  key={`${a.category}-${a.id}`}
-                  center={[a.latitude, a.longitude]}
-                  radius={6}
-                  pathOptions={{ color, fillColor: color, fillOpacity: 0.8, weight: 1.5 }}
-                >
+              const body = (
+                <>
                   <Tooltip direction="top" offset={[0, -6]} sticky>
                     <div className="asset-tooltip">
                       <strong>{a.name || a.id}</strong><br />
@@ -77,6 +83,21 @@ export default function AssetMapView({ assets, onView, onEdit }) {
                       </div>
                     </div>
                   </Popup>
+                </>
+              );
+              const key = `${a.category}-${a.id}`;
+              return a.category === "pump" ? (
+                <Marker key={key} position={[a.latitude, a.longitude]} icon={triangleIcon(color)}>
+                  {body}
+                </Marker>
+              ) : (
+                <CircleMarker
+                  key={key}
+                  center={[a.latitude, a.longitude]}
+                  radius={6}
+                  pathOptions={{ color, fillColor: color, fillOpacity: 0.8, weight: 1.5 }}
+                >
+                  {body}
                 </CircleMarker>
               );
             })}

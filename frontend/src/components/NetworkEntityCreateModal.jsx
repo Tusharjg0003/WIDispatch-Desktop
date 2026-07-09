@@ -3,10 +3,18 @@ import { createAsset } from "../api/metrics";
 import { Field, Toggle } from "./AssetFormControls";
 import PlantQuickFields from "./PlantQuickFields";
 import PumpStationFields from "./PumpStationFields";
+import HandoverPointFields from "./HandoverPointFields";
+import { allowedAssetTypesForCategory } from "../lib/assetTypes";
 
 const STATUSES = ["operational", "maintenance", "under_construction", "planned", "decommissioned"];
+const HANDOVER_STATUSES = ["planned", "under_construction", "operational", "decommissioned", "inactive"];
 const statusLabel = (s) => s.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
-const TITLES = { plant: "Add Plant", pump: "Add Pump Station" };
+const TITLES = { plant: "Add Plant", pump: "Add Pump Station", handover_point: "Add Handover Point" };
+const DEFAULT_ACTIVITY_BY_CATEGORY = {
+  plant: "Water production",
+  pump: "Water transmission",
+  handover_point: "Water distribution",
+};
 
 const EMPTY_FORM = {
   name: "", status: "planned", commissioning_date: "", decommissioning_date: "", active: true,
@@ -14,14 +22,22 @@ const EMPTY_FORM = {
   design_capacity: "", capacity_limit_mode: "none", capacity_limit_percentage: "", capacity_limit_absolute: "",
 };
 
+function defaultsForType(type) {
+  const assetTypes = allowedAssetTypesForCategory(type);
+  return {
+    activity: DEFAULT_ACTIVITY_BY_CATEGORY[type] || "",
+    asset_type: assetTypes.length === 1 ? assetTypes[0] : "",
+  };
+}
+
 // Quick-add modal for the Network Builder's "Plant"/"Pump" insert-toolbar
 // flow. Unlike CreateAssetForm (the Asset Registry page's full form), this
 // asks a deliberately short field set. Always creates a real Asset
 // Registry record via the same createAsset API the registry form uses;
 // `onCreated` hands the created asset back to the caller, which is
 // responsible for placing a canvas node for it.
-export default function NetworkEntityCreateModal({ type, onCancel, onCreated }) {
-  const [form, setForm] = useState(EMPTY_FORM);
+export default function NetworkEntityCreateModal({ type, initialForm = null, onCancel, onCreated }) {
+  const [form, setForm] = useState(() => ({ ...EMPTY_FORM, ...defaultsForType(type), ...(initialForm || {}) }));
   const [spec, setSpec] = useState({});
   const [pumps, setPumps] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -30,6 +46,9 @@ export default function NetworkEntityCreateModal({ type, onCancel, onCreated }) 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
   const setSpecField = (k) => (e) => setSpec((s) => ({ ...s, [k]: e.target.value }));
   const isPlant = type === "plant";
+  const isPump = type === "pump";
+  const isHandover = type === "handover_point";
+  const assetTypeOptions = allowedAssetTypesForCategory(type);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -48,6 +67,14 @@ export default function NetworkEntityCreateModal({ type, onCancel, onCreated }) 
             ? { capacity_limit_absolute: form.capacity_limit_absolute }
             : {}),
         }
+      : isHandover
+      ? {
+          ...spec,
+          capacity_limitation_value:
+            spec.capacity_limitation_value === "" || spec.capacity_limitation_value == null
+              ? null
+              : Number(spec.capacity_limitation_value),
+        }
       : {
           pumps: pumps.map((p) => ({
             ...p,
@@ -62,8 +89,10 @@ export default function NetworkEntityCreateModal({ type, onCancel, onCreated }) 
       commissioning_date: form.commissioning_date,
       decommissioning_date: form.decommissioning_date,
       active: form.active,
-      ...(isPlant
-        ? { activity: form.activity, asset_type: form.asset_type, region: form.region, entity_category: form.entity_category }
+      activity: form.activity,
+      asset_type: form.asset_type,
+      ...(isPlant || isHandover
+        ? { region: form.region, entity_category: form.entity_category }
         : {}),
       specifications,
     };
@@ -90,15 +119,27 @@ export default function NetworkEntityCreateModal({ type, onCancel, onCreated }) 
             <Field label="Name *">
               <input type="text" value={form.name} onChange={set("name")} required autoFocus />
             </Field>
+            <Field label="Asset Type *">
+              <select value={form.asset_type} onChange={set("asset_type")} required>
+                <option value="" disabled>Select asset type</option>
+                {assetTypeOptions.map((assetType) => (
+                  <option key={assetType} value={assetType}>{assetType}</option>
+                ))}
+              </select>
+            </Field>
             {isPlant && (
               <>
                 <Field label="Activity"><input value={form.activity} onChange={set("activity")} /></Field>
-                <Field label="Asset Type"><input value={form.asset_type} onChange={set("asset_type")} /></Field>
               </>
+            )}
+            {isHandover && (
+              <Field label="Region">
+                <input value={form.region} onChange={set("region")} />
+              </Field>
             )}
             <Field label="Status">
               <select value={form.status} onChange={set("status")}>
-                {STATUSES.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}
+                {(isHandover ? HANDOVER_STATUSES : STATUSES).map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}
               </select>
             </Field>
             {isPlant && (
@@ -147,14 +188,15 @@ export default function NetworkEntityCreateModal({ type, onCancel, onCreated }) 
           </div>
 
           {isPlant && <PlantQuickFields spec={spec} set={setSpecField} />}
-          {!isPlant && <PumpStationFields pumps={pumps} setPumps={setPumps} />}
+          {isPump && <PumpStationFields pumps={pumps} setPumps={setPumps} />}
+          {isHandover && <HandoverPointFields spec={spec} set={setSpecField} />}
 
           {error && <div className="af__error">{error}</div>}
 
           <div className="af__footer">
             <button type="button" className="af__btn af__btn--ghost" onClick={onCancel}>Cancel</button>
             <button type="submit" className="af__btn af__btn--primary" disabled={saving}>
-              {saving ? "Saving…" : `Add ${isPlant ? "plant" : "pump station"}`}
+              {saving ? "Saving…" : `Add ${isPlant ? "plant" : isHandover ? "handover point" : "pump station"}`}
             </button>
           </div>
         </form>

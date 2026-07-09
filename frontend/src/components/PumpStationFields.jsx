@@ -17,8 +17,8 @@ export default function PumpStationFields({ pumps, setPumps }) {
   const removePump = (id) => setPumps(pumps.filter((p) => p.id !== id));
 
   return (
-    <>
-      <div className="af__section">Pump Configuration</div>
+    <div className="form-section">
+      <h3>Pump Configuration</h3>
       <div className="af__pump-list">
         {pumps.length === 0 && <p className="af__pump-empty">No pumps added yet.</p>}
         {pumps.map((p) => (
@@ -62,6 +62,6 @@ export default function PumpStationFields({ pumps, setPumps }) {
         <button type="button" className="af__btn" onClick={() => addPump("functional")}>+ Functional</button>
         <button type="button" className="af__btn" onClick={() => addPump("backup")}>+ Backup</button>
       </div>
-    </>
+    </div>
   );
 }
