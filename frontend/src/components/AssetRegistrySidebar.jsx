@@ -31,7 +31,7 @@ const formatTypeLabel = (type) =>
 // from a reference app's AssetsTaggingSidebar). Fetches its own asset list
 // independent of whatever filters are active in the main content, and
 // clicking an asset navigates straight to its detail page.
-export default function AssetRegistrySidebar({ view, onShowMap, onShowList, onCreate }) {
+export default function AssetRegistrySidebar({ view, onShowMap, onShowList, onCreate, onShowHelp, onExport }) {
   const navigate = useNavigate();
   const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -101,8 +101,8 @@ export default function AssetRegistrySidebar({ view, onShowMap, onShowList, onCr
           extraActions={[
             { title: view === "list" ? "List View (active)" : "List View", iconSrc: LIST_ICON, active: view === "list", onClick: onShowList },
             { title: view === "map" ? "Map View (active)" : "Map View", iconSrc: MAP_ICON, active: view === "map", onClick: onShowMap },
-            { title: "Asset Documents", iconSrc: DOCUMENT_ICON, onClick: onShowList },
-            { title: "Help", iconSrc: HELP_ICON, onClick: () => {} },
+            { title: "Export CSV", iconSrc: DOCUMENT_ICON, onClick: onExport },
+            { title: "Help", iconSrc: HELP_ICON, onClick: onShowHelp },
           ]}
         />
       </div>
