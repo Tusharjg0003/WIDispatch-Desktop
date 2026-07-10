@@ -4,7 +4,7 @@ import { buildSummary, buildRecords, DOMAINS } from "./metrics.js";
 import { buildTransmission } from "./transmission.js";
 import { buildQuality } from "./quality.js";
 import { buildEconomics } from "./economics.js";
-import { listAssets, createAsset, getAssetById, updateAsset } from "./assetRegistry.js";
+import { listAssets, createAsset, getAssetById, updateAsset, deleteAsset } from "./assetRegistry.js";
 import {
   listTransmissionSystems, createTransmissionSystem,
   listTransmissionLines, createTransmissionLine,
@@ -151,6 +151,17 @@ app.put("/api/assets/:id", async (req, res) => {
   } catch (err) {
     console.error("asset update error:", err);
     res.status(err.statusCode || 500).json({ error: err.message || "Failed to update asset" });
+  }
+});
+
+app.delete("/api/assets/:id", async (req, res) => {
+  try {
+    const deleted = await deleteAsset(req.params.id);
+    if (!deleted) return res.status(404).json({ error: "Asset not found" });
+    res.status(204).end();
+  } catch (err) {
+    console.error("asset delete error:", err);
+    res.status(err.statusCode || 500).json({ error: err.message || "Failed to delete asset" });
   }
 });
 

@@ -248,8 +248,9 @@
   background: #f1f5f9;
   font-family: inherit;
 }
-/* Pump-station triangle markers: drop Leaflet's default divIcon box/border. */
-.leaflet-div-icon.asset-triangle-marker {
+/* Category divIcon markers: drop Leaflet's default box/border. */
+.leaflet-div-icon.asset-triangle-marker,
+.leaflet-div-icon.asset-square-marker {
   background: transparent;
   border: none;
 }

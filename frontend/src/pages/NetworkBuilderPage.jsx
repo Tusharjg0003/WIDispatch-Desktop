@@ -2,20 +2,57 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom";
 import cytoscape from "cytoscape";
 import {
-  Save, CopyPlus, FileUp, Download, FileSpreadsheet,
-  Undo2, Redo2,
-  Factory, Droplet, Dot, Library, Spline, Split,
-  MousePointer2, Search, Crosshair,
-  Maximize, Frame, Tag, Grid3x3,
-  AlignStartVertical, AlignCenterVertical, AlignEndVertical,
-  AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal,
-  AlignHorizontalDistributeCenter, AlignVerticalDistributeCenter,
-  LayoutGrid, Circle, Network, Waypoints,
-  StickyNote, Group,
-  Bold, Italic, Underline,
-  Copy, ClipboardPaste, Pencil, Trash2, PanelRight,
-  AlertTriangle, CheckSquare, FileText,
-} from "lucide-react";
+  EmptyIcon,
+  IconActive,
+  IconAlertTriangle,
+  IconAlignCenter,
+  IconAlignJustify,
+  IconAlignLeft,
+  IconAlignRight,
+  IconArrowDown,
+  IconArrowUp,
+  IconBold,
+  IconBriefcase,
+  IconCheckSquare,
+  IconChevronLeft,
+  IconChevronRight,
+  IconClipboard,
+  IconCopy,
+  IconCrosshair,
+  IconDistributionNetwork,
+  IconDownload,
+  IconDroplet,
+  IconEdit2,
+  IconEyeOff,
+  IconFileText,
+  IconFolder,
+  IconGitBranch,
+  IconGrid,
+  IconItalic,
+  IconLayers,
+  IconMaximize,
+  IconMaximize2,
+  IconMinus,
+  IconPipe,
+  IconPipelineNetwork,
+  IconPlant,
+  IconPlay,
+  IconPlusCircle,
+  IconRefresh,
+  IconRotateCcw,
+  IconRotateCw,
+  IconSave,
+  IconSearch,
+  IconSelect,
+  IconSquare,
+  IconStop,
+  IconTag,
+  IconTarget,
+  IconTreatmentPlant,
+  IconTrash2,
+  IconUnderline,
+  IconUpload,
+} from "../components/IconAssets";
 import { useLayout } from "../contexts/LayoutContext";
 import { buildCyStyle, ENTITY_TYPE_COLORS, ENTITY_TYPE_LABELS } from "../cytoscape/buildCyStyle";
 import { applyCardIcon } from "../cytoscape/nodeCard";
@@ -54,7 +91,55 @@ const ENTITY_TYPES_LIST = [
   { type: "pump", label: "Pump Station", description: "Pumping asset" },
   { type: "handover_point", label: "Handover Point", description: "City gate / HP" },
 ];
-const ENTITY_ICONS = { plant: Factory, pump: Droplet, handover_point: Crosshair, node: Dot };
+const ENTITY_ICONS = {
+  plant: IconPlant,
+  tank: IconLayers,
+  handover_point: IconTarget,
+  node: EmptyIcon,
+  pump: IconDroplet,
+  stp: IconTreatmentPlant,
+  filling_station: IconBriefcase,
+};
+const IconTextDecrease = ({ size = 15, className = "", style = {}, ...props }) => (
+  <span
+    aria-hidden="true"
+    className={className}
+    style={{
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      width: size,
+      height: size,
+      fontSize: typeof size === "number" ? Math.max(10, Math.round(size * 0.78)) : size,
+      fontWeight: 700,
+      lineHeight: 1,
+      ...style,
+    }}
+    {...props}
+  >
+    A-
+  </span>
+);
+const IconTextIncrease = ({ size = 15, className = "", style = {}, ...props }) => (
+  <span
+    aria-hidden="true"
+    className={className}
+    style={{
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      width: size,
+      height: size,
+      fontSize: typeof size === "number" ? Math.max(10, Math.round(size * 0.78)) : size,
+      fontWeight: 700,
+      lineHeight: 1,
+      ...style,
+    }}
+    {...props}
+  >
+    A+
+  </span>
+);
 const ANNOTATION_TYPES = ["note", "group-box"];
 const NOTE_SIZES = ["small", "normal", "large", "xlarge"];
 const ACTIVE_STATUSES = new Set(["operational", "maintenance", "under_construction", "planned"]);
@@ -222,6 +307,8 @@ export default function NetworkBuilderPage() {
   const [lineSource, setLineSource] = useState(null);
   const [selectedEl, setSelectedEl] = useState(null);
   const [hasSelection, setHasSelection] = useState(false);
+  const [selectedEdgeCount, setSelectedEdgeCount] = useState(0);
+  const [selectedDeletableCount, setSelectedDeletableCount] = useState(0);
   const [counts, setCounts] = useState({ nodes: 0, edges: 0 });
   const [placedIds, setPlacedIds] = useState(new Set());
   const [network, setNetwork] = useState({ id: null, name: "", description: "" });
@@ -265,6 +352,10 @@ export default function NetworkBuilderPage() {
     if (!cy) return;
     const sel = cy.$(":selected");
     setHasSelection(sel.length > 0);
+    setSelectedEdgeCount(sel.filter((el) => el.isEdge()).length);
+    setSelectedDeletableCount(
+      sel.filter((el) => el.isEdge() || (el.isNode() && !ANNOTATION_TYPES.includes(el.data("type")))).length
+    );
     if (sel.length !== 1) {
       setSelectedEl(null);
       return;
@@ -823,20 +914,9 @@ export default function NetworkBuilderPage() {
       const cy = cyRef.current;
       if (!cy || !selectedEl) return;
       const el = cy.getElementById(selectedEl.id);
+      if (!el.isEdge()) return;
       el.data("label", value);
       el.data("displayLabel", value);
-      syncSelection();
-    },
-    [selectedEl, syncSelection]
-  );
-
-  const handleStatusChange = useCallback(
-    (value) => {
-      const cy = cyRef.current;
-      if (!cy || !selectedEl) return;
-      const el = cy.getElementById(selectedEl.id);
-      el.data("status", value);
-      if (el.isNode()) applyCardIcon(el); // refresh the status band
       syncSelection();
     },
     [selectedEl, syncSelection]
@@ -847,6 +927,7 @@ export default function NetworkBuilderPage() {
       const cy = cyRef.current;
       if (!cy || !selectedEl) return;
       const el = cy.getElementById(selectedEl.id);
+      if (!el.isEdge()) return;
       const meta = { ...(el.data("meta") || {}) };
       const specs = { ...(meta.specifications || {}) };
       if (value === "" || value == null) delete specs[field];
@@ -865,6 +946,7 @@ export default function NetworkBuilderPage() {
       const cy = cyRef.current;
       if (!cy || !selectedEl) return;
       const el = cy.getElementById(selectedEl.id);
+      if (!el.isEdge()) return;
       const meta = { ...(el.data("meta") || {}) };
       const specs = { ...(meta.specifications || {}), [field]: !!checked };
       meta.specifications = specs;
@@ -881,6 +963,7 @@ export default function NetworkBuilderPage() {
       const cy = cyRef.current;
       if (!cy || !selectedEl) return;
       const el = cy.getElementById(selectedEl.id);
+      if (!el.isEdge()) return;
       const meta = { ...(el.data("meta") || {}) };
       const specs = { ...(meta.specifications || {}) };
       if (!values.length) delete specs[field];
@@ -893,14 +976,13 @@ export default function NetworkBuilderPage() {
   );
 
   // Generic top-level edge field setter (e.g. pipe commissioningDate/
-  // decommissioningDate) — distinct from handleLabelChange/handleStatusChange
-  // since those two are shared across node/edge/note branches with their
-  // own specific semantics.
+  // decommissioningDate).
   const handleEdgeFieldChange = useCallback(
     (field, value) => {
       const cy = cyRef.current;
       if (!cy || !selectedEl) return;
       const el = cy.getElementById(selectedEl.id);
+      if (!el.isEdge()) return;
       el.data(field, value);
       syncSelection();
     },
@@ -915,6 +997,7 @@ export default function NetworkBuilderPage() {
       const cy = cyRef.current;
       if (!cy || !selectedEl) return;
       const el = cy.getElementById(selectedEl.id);
+      if (!el.isEdge()) return;
       el.data("active", checked);
       el.data("status", checked ? "operational" : "inactive");
       syncSelection();
@@ -925,11 +1008,19 @@ export default function NetworkBuilderPage() {
   const handleDelete = useCallback(() => {
     const cy = cyRef.current;
     if (!cy) return;
-    const sel = cy.$(":selected");
-    if (!sel.length) return;
+    const sel = cy.$(":selected").filter((el) => el.isEdge() || (el.isNode() && !ANNOTATION_TYPES.includes(el.data("type"))));
+    if (!sel.length) {
+      setToast("Select a pipe or asset node to delete.");
+      return;
+    }
     sel.remove();
+    scheduleCommit();
     setSelectedEl(null);
-  }, []);
+    setSelectedEdgeCount(0);
+    setSelectedDeletableCount(0);
+    syncGraph();
+    syncSelection();
+  }, [scheduleCommit, syncGraph, syncSelection]);
 
   // Called by PipeVariablesModal's onSubmit with the raw form values. Creates
   // any new Transmission System/Line first (appending to the shared state so
@@ -1042,37 +1133,27 @@ export default function NetworkBuilderPage() {
   const handleMakeSelectionActive = useCallback(() => {
     const cy = cyRef.current;
     if (!cy) return;
-    const editable = cy.$(":selected").filter((el) => el.isEdge() || !ANNOTATION_TYPES.includes(el.data("type")));
+    const editable = cy.$(":selected").filter((el) => el.isEdge());
     editable.forEach((el) => {
-      if (el.isEdge()) el.data("active", true);
-      if (el.isNode()) {
-        const meta = { ...(el.data("meta") || {}), active: true };
-        el.data("meta", meta);
-      }
+      el.data("active", true);
       el.data("status", "operational");
-      if (el.isNode()) applyCardIcon(el);
     });
     if (editable.length) scheduleCommit();
     syncSelection();
-    setToast(editable.length ? `Marked ${editable.length} selected element(s) active.` : "Select an asset or pipe first.");
+    setToast(editable.length ? `Marked ${editable.length} selected pipe(s) active.` : "Select a pipe first.");
   }, [scheduleCommit, syncSelection]);
 
   const handleMakeSelectionInactive = useCallback(() => {
     const cy = cyRef.current;
     if (!cy) return;
-    const editable = cy.$(":selected").filter((el) => el.isEdge() || !ANNOTATION_TYPES.includes(el.data("type")));
+    const editable = cy.$(":selected").filter((el) => el.isEdge());
     editable.forEach((el) => {
-      if (el.isEdge()) el.data("active", false);
-      if (el.isNode()) {
-        const meta = { ...(el.data("meta") || {}), active: false };
-        el.data("meta", meta);
-      }
+      el.data("active", false);
       el.data("status", "inactive");
-      if (el.isNode()) applyCardIcon(el);
     });
     if (editable.length) scheduleCommit();
     syncSelection();
-    setToast(editable.length ? `Marked ${editable.length} selected element(s) inactive.` : "Select an asset or pipe first.");
+    setToast(editable.length ? `Marked ${editable.length} selected pipe(s) inactive.` : "Select a pipe first.");
   }, [scheduleCommit, syncSelection]);
 
   const handleToggleIsolation = useCallback(() => {
@@ -1452,24 +1533,12 @@ export default function NetworkBuilderPage() {
     box.unselect();
   }, []);
 
-  // Note formatting on the selected note.
+  // Note formatting is disabled here; Network Builder edits are pipe-only.
   const noteFmt = useCallback(
-    (field, value) => {
-      const cy = cyRef.current;
-      if (!cy || !selectedEl || selectedEl.type !== "note") return;
-      const el = cy.getElementById(selectedEl.id);
-      if (field === "sizeStep") {
-        const cur = el.data("noteSize") || "normal";
-        const i = Math.min(NOTE_SIZES.length - 1, Math.max(0, NOTE_SIZES.indexOf(cur) + value));
-        el.data("noteSize", NOTE_SIZES[i]);
-      } else if (field === "noteBold" || field === "noteItalic" || field === "noteUnderline") {
-        el.data(field, el.data(field) === "true" ? "false" : "true");
-      } else {
-        el.data(field, value);
-      }
-      syncSelection();
+    () => {
+      setToast("Only pipe edits are enabled.");
     },
-    [selectedEl, syncSelection]
+    []
   );
 
   // ── Clipboard ────────────────────────────────────────────────────────────────
@@ -1729,7 +1798,9 @@ export default function NetworkBuilderPage() {
   }, [showLabels, cyReady]);
 
   // ── Contextual toolbar ────────────────────────────────────────────────────────
-  const isNoteSel = selectedEl?.type === "note";
+  const isPipeSel = selectedEl?._group === "edge";
+  const hasPipeSelection = selectedEdgeCount > 0;
+  const hasDeletableSelection = selectedDeletableCount > 0;
   const canUndo = historyRef.current.past.length > 0;
   const canRedo = historyRef.current.future.length > 0;
   const realNodeCount = counts.nodes;
@@ -1744,7 +1815,7 @@ export default function NetworkBuilderPage() {
         title={title}
         data-id={dataId}
       >
-        {Icon && <Icon size={15} strokeWidth={1.9} />}
+        {Icon && <Icon size={15} />}
         {(!iconOnly || !Icon) && <span>{children}</span>}
       </button>
     );
@@ -1755,11 +1826,11 @@ export default function NetworkBuilderPage() {
           {/* File */}
           <div className="toolbar-group toolbar-group--cols-2">
             <div className="toolbar-group__buttons">
-              <Btn on={handleSave} icon={Save} primary disabled={saveStatus === "saving"} title="Save current canvas">{saveLabel}</Btn>
-              <Btn on={handleSaveAs} icon={CopyPlus} title="Save a copy under a new name">Save As</Btn>
-              <Btn on={() => fileInputRef.current?.click()} icon={FileUp} title="Import canvas from JSON file">Import</Btn>
-              <Btn on={handleExportJSON} icon={Download} title="Export canvas as JSON">JSON</Btn>
-              <Btn on={handleExportCSV} icon={FileSpreadsheet} title="Export nodes & edges as CSV">CSV</Btn>
+              <Btn on={handleSave} icon={IconSave} primary disabled={saveStatus === "saving"} title="Save current canvas">{saveLabel}</Btn>
+              <Btn on={handleSaveAs} icon={IconCopy} title="Save a copy under a new name">Save As</Btn>
+              <Btn on={() => fileInputRef.current?.click()} icon={IconUpload} title="Import canvas from JSON file">Import</Btn>
+              <Btn on={handleExportJSON} icon={IconDownload} title="Export canvas as JSON">JSON</Btn>
+              <Btn on={handleExportCSV} icon={IconDownload} title="Export nodes & edges as CSV">CSV</Btn>
             </div>
             <span className="toolbar-group__label">File</span>
           </div>
@@ -1767,8 +1838,8 @@ export default function NetworkBuilderPage() {
           {/* History */}
           <div className="toolbar-group toolbar-group--cols-1">
             <div className="toolbar-group__buttons">
-              <Btn on={handleUndo} icon={Undo2} disabled={!canUndo} title="Undo (Ctrl/Cmd+Z)">Undo</Btn>
-              <Btn on={handleRedo} icon={Redo2} disabled={!canRedo} title="Redo (Ctrl/Cmd+Shift+Z)">Redo</Btn>
+              <Btn on={handleUndo} icon={IconRotateCcw} disabled={!canUndo} title="Undo (Ctrl/Cmd+Z)">Undo</Btn>
+              <Btn on={handleRedo} icon={IconRotateCw} disabled={!canRedo} title="Redo (Ctrl/Cmd+Shift+Z)">Redo</Btn>
             </div>
             <span className="toolbar-group__label">History</span>
           </div>
@@ -1778,7 +1849,7 @@ export default function NetworkBuilderPage() {
             <div className="toolbar-group__buttons">
               {INSERT_ENTITY_BUTTONS.map(({ type, implemented }) => {
                 const label = toolbarEntityLabel(type);
-                const Icon = ENTITY_ICONS[type] || Factory;
+                const Icon = ENTITY_ICONS[type] || EmptyIcon;
                 return (
                 <Btn
                   key={type}
@@ -1795,10 +1866,10 @@ export default function NetworkBuilderPage() {
                 </Btn>
                 );
               })}
-              <Btn on={() => setShowLibrary((v) => !v)} icon={Library} active={showLibrary} title="Toggle the asset library panel">Library</Btn>
+              <Btn on={() => setShowLibrary((v) => !v)} icon={IconFolder} active={showLibrary} title="Toggle the asset library panel">Library</Btn>
               <Btn
                 on={() => setModeSafe(mode === "draw-pipe" ? "select" : "draw-pipe")}
-                icon={Spline}
+                icon={IconPipe}
                 active={mode === "draw-pipe"}
                 disabled={realNodeCount < 2}
                 title="Draw a pipe (click source then target)"
@@ -1807,7 +1878,7 @@ export default function NetworkBuilderPage() {
               </Btn>
               <Btn
                 on={() => setModeSafe(mode === "insert-on-edge" ? "select" : "insert-on-edge")}
-                icon={Split}
+                icon={IconPlusCircle}
                 active={mode === "insert-on-edge"}
                 disabled={counts.edges < 1}
                 title="Insert an entity on a pipe"
@@ -1821,14 +1892,14 @@ export default function NetworkBuilderPage() {
           {/* Select */}
           <div className="toolbar-group toolbar-group--cols-3">
             <div className="toolbar-group__buttons">
-              <Btn on={handleSelectAll} icon={MousePointer2} title="Select all (Ctrl/Cmd+A)">All</Btn>
-              <Btn on={() => setFindOpen((v) => !v)} icon={Search} active={findOpen} title="Find assets on the canvas">Find</Btn>
-              <Btn on={handleZoomToSelection} icon={Crosshair} title="Zoom to selection (or fit all)">To Sel</Btn>
-              <Btn on={handleToggleIsolation} icon={Frame} active={isolationActive} title="Isolate current selection, or clear isolate">Isolate / Unisolate</Btn>
-              <Btn on={handleSelectActive} icon={CheckSquare} title="Select active assets and pipes">Active</Btn>
-              <Btn on={handleSelectInactive} icon={AlertTriangle} title="Select inactive assets and pipes">Inactive</Btn>
-              <Btn on={handleMakeSelectionActive} icon={CheckSquare} disabled={!hasSelection} title="Mark selected assets and pipes active">Activate</Btn>
-              <Btn on={handleMakeSelectionInactive} icon={AlertTriangle} disabled={!hasSelection} title="Mark selected assets and pipes inactive">Inactive</Btn>
+              <Btn on={handleSelectAll} icon={IconSelect} title="Select all (Ctrl/Cmd+A)">All</Btn>
+              <Btn on={() => setFindOpen((v) => !v)} icon={IconSearch} active={findOpen} title="Find assets on the canvas">Find</Btn>
+              <Btn on={handleZoomToSelection} icon={IconCrosshair} title="Zoom to selection (or fit all)">To Sel</Btn>
+              <Btn on={handleToggleIsolation} icon={EmptyIcon} active={isolationActive} title="Isolate current selection, or clear isolate">Isolate / Unisolate</Btn>
+              <Btn on={handleSelectActive} icon={IconActive} title="Select active assets and pipes">Active</Btn>
+              <Btn on={handleSelectInactive} icon={IconEyeOff} title="Select inactive assets and pipes">Inactive</Btn>
+              <Btn on={handleMakeSelectionActive} icon={EmptyIcon} disabled={!hasPipeSelection} title="Mark selected pipes active">Activate</Btn>
+              <Btn on={handleMakeSelectionInactive} icon={IconStop} disabled={!hasPipeSelection} title="Mark selected pipes inactive">Inactive</Btn>
             </div>
             <span className="toolbar-group__label">Select</span>
           </div>
@@ -1836,12 +1907,12 @@ export default function NetworkBuilderPage() {
           {/* View */}
           <div className="toolbar-group toolbar-group--cols-2">
             <div className="toolbar-group__buttons">
-              <Btn on={handleFit} icon={Maximize} title="Fit to screen">Fit</Btn>
-              <Btn on={() => setModeSafe(mode === "area-zoom" ? "select" : "area-zoom")} icon={Frame} active={mode === "area-zoom"} title="Drag a rectangle to zoom">Area</Btn>
-              <Btn on={() => setShowLabels((v) => !v)} icon={Tag} active={showLabels} title="Toggle labels">Labels</Btn>
-              <Btn on={() => setShowGrid((v) => !v)} icon={Grid3x3} active={showGrid} title="Toggle grid">Grid</Btn>
-              <Btn on={() => notImplemented("Trace Delivery")} icon={Waypoints} title="Trace delivery paths">Trace HP</Btn>
-              <Btn on={handleResetView} icon={Maximize} title="Reset pan and zoom">Reset</Btn>
+              <Btn on={handleFit} icon={IconMaximize2} title="Fit to screen">Fit</Btn>
+              <Btn on={() => setModeSafe(mode === "area-zoom" ? "select" : "area-zoom")} icon={IconMaximize} active={mode === "area-zoom"} title="Drag a rectangle to zoom">Area</Btn>
+              <Btn on={() => setShowLabels((v) => !v)} icon={IconTag} active={showLabels} title="Toggle labels">Labels</Btn>
+              <Btn on={() => setShowGrid((v) => !v)} icon={IconGrid} active={showGrid} title="Toggle grid">Grid</Btn>
+              <Btn on={() => notImplemented("Trace Delivery")} icon={IconDistributionNetwork} title="Trace delivery paths">Trace HP</Btn>
+              <Btn on={handleResetView} icon={IconRefresh} title="Reset pan and zoom">Reset</Btn>
             </div>
             <span className="toolbar-group__label">View</span>
           </div>
@@ -1849,14 +1920,14 @@ export default function NetworkBuilderPage() {
           {/* Review */}
           <div className="toolbar-group toolbar-group--cols-3">
             <div className="toolbar-group__buttons">
-              <Btn on={() => notImplemented("Group Lines")} icon={Group} title="Group selected pipes into a line">Group Lines</Btn>
-              <Btn on={handleValidateNetwork} icon={CheckSquare} title="Validate the current network">Validate</Btn>
-              <Btn on={handleShowIssues} icon={AlertTriangle} title="Show validation issues">Issues</Btn>
-              <Btn on={handleFocusIssues} icon={Crosshair} title="Focus the first validation issue">Focus</Btn>
-              <Btn on={handleSelectDisconnected} icon={Split} title="Select disconnected assets">Disconnected</Btn>
-              <Btn on={handleSelectMissingCapacity} icon={FileText} title="Select pipes with missing capacity">No Capacity</Btn>
-              <Btn on={handleSelectInactive} icon={AlertTriangle} title="Select inactive assets and pipes">Inactive</Btn>
-              <Btn on={handleClearHighlights} icon={Trash2} title="Clear selection, find results, and isolate dimming">Clear Marks</Btn>
+              <Btn on={() => notImplemented("Group Lines")} icon={IconGitBranch} title="Group selected pipes into a line">Group Lines</Btn>
+              <Btn on={handleValidateNetwork} icon={IconCheckSquare} title="Validate the current network">Validate</Btn>
+              <Btn on={handleShowIssues} icon={IconAlertTriangle} title="Show validation issues">Issues</Btn>
+              <Btn on={handleFocusIssues} icon={IconCrosshair} title="Focus the first validation issue">Focus</Btn>
+              <Btn on={handleSelectDisconnected} icon={IconAlertTriangle} title="Select disconnected assets">Disconnected</Btn>
+              <Btn on={handleSelectMissingCapacity} icon={EmptyIcon} title="Select pipes with missing capacity">No Capacity</Btn>
+              <Btn on={handleSelectInactive} icon={IconEyeOff} title="Select inactive assets and pipes">Inactive</Btn>
+              <Btn on={handleClearHighlights} icon={EmptyIcon} title="Clear selection, find results, and isolate dimming">Clear Marks</Btn>
             </div>
             <span className="toolbar-group__label">Review</span>
           </div>
@@ -1864,14 +1935,14 @@ export default function NetworkBuilderPage() {
           {/* Arrange */}
           <div className="toolbar-group toolbar-group--cols-3">
             <div className="toolbar-group__buttons">
-              <Btn icon={AlignStartVertical} on={() => arrange("left")} title="Align left">Left</Btn>
-              <Btn icon={AlignCenterVertical} on={() => arrange("centerh")} title="Center horizontally">Center H</Btn>
-              <Btn icon={AlignEndVertical} on={() => arrange("right")} title="Align right">Right</Btn>
-              <Btn icon={AlignStartHorizontal} on={() => arrange("top")} title="Align top">Top</Btn>
-              <Btn icon={AlignCenterHorizontal} on={() => arrange("centerv")} title="Center vertically">Center V</Btn>
-              <Btn icon={AlignEndHorizontal} on={() => arrange("bottom")} title="Align bottom">Bottom</Btn>
-              <Btn icon={AlignHorizontalDistributeCenter} on={() => arrange("disth")} title="Distribute horizontally">Dist H</Btn>
-              <Btn icon={AlignVerticalDistributeCenter} on={() => arrange("distv")} title="Distribute vertically">Dist V</Btn>
+              <Btn icon={IconAlignLeft} on={() => arrange("left")} title="Align left">Left</Btn>
+              <Btn icon={IconAlignCenter} on={() => arrange("centerh")} title="Center horizontally">Center H</Btn>
+              <Btn icon={IconAlignRight} on={() => arrange("right")} title="Align right">Right</Btn>
+              <Btn icon={IconArrowUp} on={() => arrange("top")} title="Align top">Top</Btn>
+              <Btn icon={IconMinus} on={() => arrange("centerv")} title="Center vertically">Center V</Btn>
+              <Btn icon={IconArrowDown} on={() => arrange("bottom")} title="Align bottom">Bottom</Btn>
+              <Btn icon={IconAlignJustify} on={() => arrange("disth")} title="Distribute horizontally">Dist H</Btn>
+              <Btn icon={IconGrid} on={() => arrange("distv")} title="Distribute vertically">Dist V</Btn>
             </div>
             <span className="toolbar-group__label">Arrange</span>
           </div>
@@ -1879,10 +1950,10 @@ export default function NetworkBuilderPage() {
           {/* Layout */}
           <div className="toolbar-group toolbar-group--cols-2">
             <div className="toolbar-group__buttons">
-              <Btn on={() => runLayout("grid")} icon={LayoutGrid} title="Grid layout">Grid</Btn>
-              <Btn on={() => runLayout("circle")} icon={Circle} title="Circle layout">Circle</Btn>
-              <Btn on={() => runLayout("tree")} icon={Network} title="Tree layout">Tree</Btn>
-              <Btn on={() => runLayout("force")} icon={Waypoints} title="Force-directed layout">Force</Btn>
+              <Btn on={() => runLayout("grid")} icon={EmptyIcon} title="Grid layout">Grid</Btn>
+              <Btn on={() => runLayout("circle")} icon={EmptyIcon} title="Circle layout">Circle</Btn>
+              <Btn on={() => runLayout("tree")} icon={EmptyIcon} title="Tree layout">Tree</Btn>
+              <Btn on={() => runLayout("force")} icon={EmptyIcon} title="Force-directed layout">Force</Btn>
             </div>
             <span className="toolbar-group__label">Layout</span>
           </div>
@@ -1890,8 +1961,8 @@ export default function NetworkBuilderPage() {
           {/* Annotate */}
           <div className="toolbar-group toolbar-group--cols-1">
             <div className="toolbar-group__buttons">
-              <Btn on={() => setModeSafe(mode === "place-note" ? "select" : "place-note")} icon={StickyNote} active={mode === "place-note"} title="Place a sticky note">Note</Btn>
-              <Btn on={handleGroupBox} icon={Group} title="Group box around selected nodes">Group</Btn>
+              <Btn on={() => setModeSafe(mode === "place-note" ? "select" : "place-note")} icon={IconFileText} active={mode === "place-note"} title="Place a sticky note">Note</Btn>
+              <Btn on={handleGroupBox} icon={IconSquare} title="Group box around selected nodes">Group</Btn>
             </div>
             <span className="toolbar-group__label">Annotate</span>
           </div>
@@ -1901,7 +1972,7 @@ export default function NetworkBuilderPage() {
             <div className="toolbar-group__buttons toolbar-group__buttons--note">
               <select
                 className="toolbar-select"
-                disabled={!isNoteSel}
+                disabled
                 value={selectedEl?.noteFont || "sans"}
                 onChange={(e) => noteFmt("noteFont", e.target.value)}
                 title="Font"
@@ -1912,7 +1983,7 @@ export default function NetworkBuilderPage() {
               </select>
               <select
                 className="toolbar-select"
-                disabled={!isNoteSel}
+                disabled
                 value={selectedEl?.noteSize || "normal"}
                 onChange={(e) => noteFmt("noteSize", e.target.value)}
                 title="Size"
@@ -1921,11 +1992,11 @@ export default function NetworkBuilderPage() {
                   <option key={s} value={s}>{s[0].toUpperCase() + s.slice(1)}</option>
                 ))}
               </select>
-              <Btn iconOnly dataId="note-size-down" disabled={!isNoteSel} on={() => noteFmt("sizeStep", -1)} title="Decrease Size">A↓</Btn>
-              <Btn iconOnly dataId="note-size-up" disabled={!isNoteSel} on={() => noteFmt("sizeStep", 1)} title="Increase Size">A↑</Btn>
-              <Btn iconOnly dataId="note-bold" icon={Bold} disabled={!isNoteSel} active={selectedEl?.noteBold === "true"} on={() => noteFmt("noteBold")} title="Bold" />
-              <Btn iconOnly icon={Italic} disabled={!isNoteSel} active={selectedEl?.noteItalic === "true"} on={() => noteFmt("noteItalic")} title="Italic" />
-              <Btn iconOnly icon={Underline} disabled={!isNoteSel} active={selectedEl?.noteUnderline === "true"} on={() => noteFmt("noteUnderline")} title="Underline" />
+              <Btn iconOnly dataId="note-size-down" icon={IconTextDecrease} disabled on={() => noteFmt("sizeStep", -1)} title="Decrease Size" />
+              <Btn iconOnly dataId="note-size-up" icon={IconTextIncrease} disabled on={() => noteFmt("sizeStep", 1)} title="Increase Size" />
+              <Btn iconOnly dataId="note-bold" icon={IconBold} disabled active={selectedEl?.noteBold === "true"} on={() => noteFmt("noteBold")} title="Bold" />
+              <Btn iconOnly icon={IconItalic} disabled active={selectedEl?.noteItalic === "true"} on={() => noteFmt("noteItalic")} title="Italic" />
+              <Btn iconOnly icon={IconUnderline} disabled active={selectedEl?.noteUnderline === "true"} on={() => noteFmt("noteUnderline")} title="Underline" />
             </div>
             <span className="toolbar-group__label">Note Format</span>
           </div>
@@ -1933,11 +2004,11 @@ export default function NetworkBuilderPage() {
           {/* Edit */}
           <div className="toolbar-group toolbar-group--cols-2">
             <div className="toolbar-group__buttons">
-              <Btn on={handleCopySelection} icon={Copy} disabled={!hasSelection} title="Copy selection (Ctrl/Cmd+C)">Copy Sel</Btn>
-              <Btn on={handleCopyAll} icon={CopyPlus} title="Copy all">Copy All</Btn>
-              <Btn on={handlePaste} icon={ClipboardPaste} title="Paste (Ctrl/Cmd+V)">Paste</Btn>
-              <Btn on={() => { setShowInspector(true); setRightPanelTab("details"); }} icon={Pencil} disabled={!selectedEl} title="Edit selected element">Edit</Btn>
-              <Btn danger icon={Trash2} on={handleDelete} disabled={!hasSelection} title="Delete selected (Del)">Delete</Btn>
+              <Btn on={handleCopySelection} icon={IconCopy} disabled={!hasSelection} title="Copy selection (Ctrl/Cmd+C)">Copy Sel</Btn>
+              <Btn on={handleCopyAll} icon={IconCopy} title="Copy all">Copy All</Btn>
+              <Btn on={handlePaste} icon={IconClipboard} title="Paste (Ctrl/Cmd+V)">Paste</Btn>
+              <Btn on={() => { setShowInspector(true); setRightPanelTab("details"); }} icon={IconEdit2} disabled={!isPipeSel} title="Edit selected pipe">Edit</Btn>
+              <Btn danger icon={IconTrash2} on={handleDelete} disabled={!hasDeletableSelection} title="Delete selected pipe or asset node (Del)">Delete</Btn>
             </div>
             <span className="toolbar-group__label">Edit</span>
           </div>
@@ -1945,8 +2016,8 @@ export default function NetworkBuilderPage() {
           {/* Run */}
           <div className="toolbar-group toolbar-group--cols-1">
             <div className="toolbar-group__buttons">
-              <Btn on={() => notImplemented("Run")} icon={Network} title="Run network analysis">Run</Btn>
-              <Btn on={() => notImplemented("Clear run results")} icon={Trash2} title="Clear run results">Clear</Btn>
+              <Btn on={() => notImplemented("Run")} icon={IconPlay} title="Run network analysis">Run</Btn>
+              <Btn on={() => notImplemented("Clear run results")} icon={EmptyIcon} title="Clear run results">Clear</Btn>
             </div>
             <span className="toolbar-group__label">Run</span>
           </div>
@@ -1959,7 +2030,7 @@ export default function NetworkBuilderPage() {
                   setShowInspector((v) => !v);
                   setRightPanelTab("details");
                 }}
-                icon={PanelRight}
+                icon={showInspector && rightPanelTab === "details" ? IconChevronRight : IconChevronLeft}
                 active={showInspector && rightPanelTab === "details"}
                 title="Toggle details panel"
               >
@@ -1973,7 +2044,7 @@ export default function NetworkBuilderPage() {
     );
   }, [
     mode, pendingEntity, network.name, counts.nodes, counts.edges, realNodeCount, saveStatus,
-    selectedEl, hasSelection, isNoteSel, canUndo, canRedo,
+    selectedEl, hasSelection, isPipeSel, hasPipeSelection, hasDeletableSelection, canUndo, canRedo,
     showLabels, showGrid, showInspector, showLibrary, findOpen, isolationActive, rightPanelTab,
     setToolbar, setModeSafe, notImplemented, handleInsertEntity, handleFit, handleResetView,
     handleZoomToSelection, handleSelectAll, handleSelectActive, handleSelectInactive,
@@ -2066,7 +2137,7 @@ export default function NetworkBuilderPage() {
         <WorkspaceHeader
           title="Network Builder"
           subtitle={network.name || "Untitled network"}
-          icon={Network}
+          icon={IconPipelineNetwork}
           status={saveStatusLabel}
           statusTone={saveStatusTone}
           className="workspace-header--network-builder"
@@ -2191,7 +2262,6 @@ export default function NetworkBuilderPage() {
                   systems={transmissionSystems}
                   lines={transmissionLines}
                   onLabelChange={handleLabelChange}
-                  onStatusChange={handleStatusChange}
                   onSpecChange={handleSpecChange}
                   onSpecBooleanChange={handleSpecBooleanChange}
                   onSpecArrayChange={handleSpecArrayChange}
@@ -2209,13 +2279,13 @@ export default function NetworkBuilderPage() {
                     className={`ns2-adv-toggle-btn${issuePanelMode === "issues" ? " ns2-adv-toggle-btn--active" : ""}`}
                     onClick={() => setIssuePanelMode("issues")}
                   >
-                    <AlertTriangle size={12} /> Issues
+                    <IconAlertTriangle size={12} /> Issues
                   </button>
                   <button
                     className={`ns2-adv-toggle-btn${issuePanelMode === "find" ? " ns2-adv-toggle-btn--active" : ""}`}
                     onClick={() => setIssuePanelMode("find")}
                   >
-                    <Search size={12} /> Find
+                    <IconSearch size={12} /> Find
                   </button>
                 </div>
 
@@ -2231,7 +2301,7 @@ export default function NetworkBuilderPage() {
                         </div>
                       </div>
                       <button className="ns2-btn ns2-btn--sm" onClick={handleValidateNetwork}>
-                        <CheckSquare size={12} /> Validate
+                        <IconCheckSquare size={12} /> Validate
                       </button>
                     </div>
 
@@ -2242,12 +2312,12 @@ export default function NetworkBuilderPage() {
                         {validationIssues.map((issue) => {
                           const IssueIcon =
                             issue.severity === "error"
-                              ? AlertTriangle
+                              ? IconAlertTriangle
                               : issue.severity === "success"
-                              ? CheckSquare
+                              ? IconCheckSquare
                               : issue.severity === "info"
-                              ? FileText
-                              : AlertTriangle;
+                              ? IconFileText
+                              : IconAlertTriangle;
                           return (
                             <button
                               key={issue.id}
@@ -2382,7 +2452,7 @@ export default function NetworkBuilderPage() {
             </div>
             <div className="ns2-insert-grid">
               {ENTITY_TYPES_LIST.map((entityType) => {
-                const Icon = ENTITY_ICONS[entityType.type] || Dot;
+                const Icon = ENTITY_ICONS[entityType.type] || EmptyIcon;
                 return (
                   <button
                     key={entityType.type}
@@ -2406,7 +2476,7 @@ export default function NetworkBuilderPage() {
             </div>
             <div className="ns2-modal-footer">
               <button type="button" className="ns2-btn" onClick={handleInsertFromLibrary}>
-                <Library size={13} /> Select From Asset Library
+                <IconFolder size={13} /> Select From Asset Library
               </button>
               <button type="button" className="ns2-btn" onClick={closeInsertModal}>Cancel</button>
             </div>

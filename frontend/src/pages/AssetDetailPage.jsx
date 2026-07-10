@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Archive, ArrowLeft } from "lucide-react";
+import { Archive, ArrowLeft, Edit2, Trash2 } from "lucide-react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import { fetchAsset } from "../api/metrics";
+import { deleteAsset, fetchAsset } from "../api/metrics";
 import AssetDetailFields from "../components/AssetDetailFields";
 import WorkspaceHeader, { WorkspaceHeaderButton } from "../components/WorkspaceHeader";
 import "./AssetDetailPage.css";
@@ -53,7 +53,9 @@ export default function AssetDetailPage() {
   const navigate = useNavigate();
   const [asset, setAsset] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState(null);
+  const [actionError, setActionError] = useState(null);
 
   const productionBars = useMemo(() => {
     const cap = Number(asset?.specifications?.design_capacity) || Number(asset?.specifications?.maximum_capacity) || 100;
@@ -98,6 +100,23 @@ export default function AssetDetailPage() {
   const categoryLabel = CATEGORY_LABEL[asset.category] || asset.category;
   const showProduction = isProductionAsset(asset);
   const showTopRow = showProduction || hasLocation;
+  const editTo = `/asset-registry/edit/${encodeURIComponent(asset.id)}`;
+
+  const handleDelete = async () => {
+    if (deleting) return;
+    const label = asset.name || asset.id;
+    if (!window.confirm(`Delete "${label}"? This cannot be undone.`)) return;
+    setDeleting(true);
+    setActionError(null);
+    try {
+      await deleteAsset(asset.id);
+      navigate(backTo);
+    } catch (e) {
+      setActionError(e.message || "Couldn't delete asset");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <div className="asset-detail-page">
@@ -108,13 +127,23 @@ export default function AssetDetailPage() {
         status={statusLabel(asset.status)}
         statusTone={STATUS_TONE[asset.status] || "default"}
         actions={(
-          <WorkspaceHeaderButton icon={ArrowLeft} onClick={() => navigate(backTo)} title="Back to list">
-            Back
-          </WorkspaceHeaderButton>
+          <>
+            <WorkspaceHeaderButton icon={ArrowLeft} onClick={() => navigate(backTo)} title="Back to list">
+              Back
+            </WorkspaceHeaderButton>
+            <WorkspaceHeaderButton icon={Edit2} onClick={() => navigate(editTo)} title="Edit asset">
+              Edit
+            </WorkspaceHeaderButton>
+            <WorkspaceHeaderButton icon={Trash2} tone="danger" onClick={handleDelete} disabled={deleting} title="Delete asset">
+              {deleting ? "Deleting..." : "Delete"}
+            </WorkspaceHeaderButton>
+          </>
         )}
       />
 
       <div className="form-container">
+        {actionError && <div className="metric__notice metric__notice--error">{actionError}</div>}
+
         {showTopRow && (
           <div className={`view-asset-top-row${showProduction && hasLocation ? "" : " view-asset-top-row--single"}`}>
             {showProduction && (

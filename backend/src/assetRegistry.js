@@ -192,3 +192,12 @@ export async function updateAsset(id, patch = {}) {
   const updated = await db.collection(found.collection).findOne({ id }, { projection: { _id: 0 } });
   return { category: found.category, ...updated };
 }
+
+export async function deleteAsset(id) {
+  const db = await getDb();
+  for (const collection of Object.values(ASSET_CATEGORIES)) {
+    const result = await db.collection(collection).deleteOne({ id });
+    if (result.deletedCount > 0) return true;
+  }
+  return false;
+}

@@ -1,6 +1,12 @@
 import React from "react";
 import { ENTITY_TYPE_LABELS } from "../cytoscape/buildCyStyle";
 import { Switch } from "./AssetFormControls";
+import {
+  IconDroplet,
+  IconPipe,
+  IconPlant,
+  IconTarget,
+} from "./IconAssets";
 
 const MATERIALS = [
   { value: "steel", label: "Steel" },
@@ -8,14 +14,6 @@ const MATERIALS = [
   { value: "hdpe", label: "HDPE" },
   { value: "concrete", label: "Concrete" },
   { value: "pvc", label: "PVC" },
-];
-
-const STATUSES = [
-  "operational",
-  "maintenance",
-  "under_construction",
-  "planned",
-  "decommissioned",
 ];
 
 const statusLabel = (s) =>
@@ -41,6 +39,28 @@ function capacityLimitLabel(spec) {
 
 const yesNo = (v) => (v == null ? null : v ? "Yes" : "No");
 
+const LIFECYCLE_LEGEND = [
+  { key: "planned", label: "Planned" },
+  { key: "operational", label: "Operational" },
+  { key: "construction", label: "Under construction" },
+  { key: "inactive", label: "Inactive" },
+];
+
+const ASSET_LEGEND = [
+  { key: "plant", label: "Plant", icon: IconPlant },
+  { key: "handover", label: "Handover point", icon: IconTarget },
+  { key: "pump", label: "Pump station", icon: IconDroplet },
+  { key: "junction", label: "Junction", dot: true },
+  { key: "pipe", label: "Pipe", icon: IconPipe },
+];
+
+const RUN_OVERLAY_LEGEND = [
+  { key: "capacity", label: "Capacity-limited", tone: "capacity" },
+  { key: "utilisation", label: "High utilisation", tone: "utilisation" },
+  { key: "bottleneck", label: "Bottleneck", tone: "bottleneck" },
+  { key: "shortage", label: "Shortage point", tone: "shortage", dashed: true },
+];
+
 function Row({ label, value }) {
   const v = clean(value);
   if (v == null) return null;
@@ -52,20 +72,78 @@ function Row({ label, value }) {
   );
 }
 
+function CanvasLegend() {
+  return (
+    <div className="ns2-legend" aria-label="Canvas legend">
+      <div className="ns2-legend__title">Canvas Legend</div>
+
+      <section className="ns2-legend__section">
+        <div className="ns2-legend__section-title">Lifecycle</div>
+        <div className="ns2-legend__grid">
+          {LIFECYCLE_LEGEND.map((item) => (
+            <div className="ns2-legend__item" key={item.key} title={item.label}>
+              <span
+                aria-hidden="true"
+                className={`ns2-legend__status ns2-legend__status--${item.key}`}
+              />
+              <span className="ns2-legend__label">{item.label}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="ns2-legend__section">
+        <div className="ns2-legend__section-title">Assets</div>
+        <div className="ns2-legend__grid">
+          {ASSET_LEGEND.map((item) => {
+            const Icon = item.icon;
+            return (
+              <div className="ns2-legend__item" key={item.key} title={item.label}>
+                <span className="ns2-legend__asset" aria-hidden="true">
+                  {Icon ? (
+                    <Icon size={13} />
+                  ) : item.dot ? (
+                    <span className="ns2-legend__junction" />
+                  ) : (
+                    <span className="ns2-legend__asset-text">{item.text}</span>
+                  )}
+                </span>
+                <span className="ns2-legend__label">{item.label}</span>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="ns2-legend__section">
+        <div className="ns2-legend__section-title">Run overlays</div>
+        <div className="ns2-legend__grid">
+          {RUN_OVERLAY_LEGEND.map((item) => (
+            <div className="ns2-legend__item" key={item.key} title={item.label}>
+              <span
+                aria-hidden="true"
+                className={`ns2-legend__line ns2-legend__line--${item.tone}${item.dashed ? " ns2-legend__line--dashed" : ""}`}
+              />
+              <span className="ns2-legend__label">{item.label}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 // Right-panel inspector for the selected canvas element. `selected` is a plain
 // object of the element's cytoscape data plus `_group` ("node" | "edge").
 export default function NetworkNodeDetails({
   selected, systems, lines,
-  onLabelChange, onStatusChange, onSpecChange, onSpecBooleanChange, onSpecArrayChange,
+  onLabelChange, onSpecChange, onSpecBooleanChange, onSpecArrayChange,
   onEdgeFieldChange, onActiveChange, onDelete,
 }) {
   if (!selected) {
     return (
       <div className="nnd nnd--empty">
-        <p>Select a node or pipe to see its details.</p>
-        <p className="nnd__hint">
-          Pick an asset from the library, then click the canvas to place it.
-        </p>
+        <CanvasLegend />
       </div>
     );
   }
@@ -262,20 +340,9 @@ export default function NetworkNodeDetails({
           <h3 className="adr__name">{isNote ? "Sticky note" : selected.label || "Group"}</h3>
         </header>
         <div className="adr__body nnd__body">
-          <label className="af__field nnd__field">
-            {isNote ? "Text" : "Label"}
-            {isNote ? (
-              <textarea
-                rows={4}
-                value={selected.label || ""}
-                onChange={(e) => onLabelChange(e.target.value)}
-              />
-            ) : (
-              <input type="text" value={selected.label || ""} onChange={(e) => onLabelChange(e.target.value)} />
-            )}
-          </label>
-          {isNote && <p className="nnd__hint">Use the Note Format group in the toolbar to style the text.</p>}
-          <button className="af__btn nnd__delete" onClick={onDelete}>Delete {isNote ? "note" : "group box"}</button>
+          <dl className="adr__list">
+            <Row label={isNote ? "Text" : "Label"} value={selected.label} />
+          </dl>
         </div>
       </div>
     );
@@ -299,26 +366,10 @@ export default function NetworkNodeDetails({
       </header>
 
       <div className="adr__body nnd__body">
-        <label className="af__field nnd__field">
-          Label
-          <input
-            type="text"
-            value={selected.label || ""}
-            onChange={(e) => onLabelChange(e.target.value)}
-          />
-        </label>
-        <label className="af__field nnd__field">
-          Status
-          <select value={selected.status || ""} onChange={(e) => onStatusChange(e.target.value)}>
-            <option value="">—</option>
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>{statusLabel(s)}</option>
-            ))}
-          </select>
-        </label>
-
         <div className="af__section">Asset</div>
         <dl className="adr__list">
+          <Row label="Label" value={selected.label} />
+          <Row label="Status" value={statusLabel(selected.status)} />
           <Row label="Asset ID" value={selected.assetId} />
           <Row label="Category" value={ENTITY_TYPE_LABELS[selected.category] || selected.category} />
           <Row label="Region" value={meta.region} />
@@ -379,8 +430,6 @@ export default function NetworkNodeDetails({
             </dl>
           </>
         )}
-
-        <button className="af__btn nnd__delete" onClick={onDelete}>Delete node</button>
       </div>
     </div>
   );

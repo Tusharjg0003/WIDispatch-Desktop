@@ -1755,7 +1755,7 @@
   padding: 0;
 }
 .nnd--empty {
-  padding: 24px 20px;
+  padding: 0;
   color: var(--ink-dim);
   font-size: 0.85rem;
 }
@@ -1815,6 +1815,154 @@
 }
 .nnd__delete:hover {
   background: #fef2f2;
+}
+
+.ns2-legend {
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #334155;
+  overflow: hidden;
+}
+
+.ns2-legend__title {
+  padding: 9px 10px 8px;
+  border-bottom: 1px solid #e5e7eb;
+  color: #0f172a;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.ns2-legend__section {
+  padding: 8px 10px 9px;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.ns2-legend__section:last-child {
+  border-bottom: 0;
+}
+
+.ns2-legend__section-title {
+  margin-bottom: 7px;
+  color: #64748b;
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.ns2-legend__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 8px;
+}
+
+.ns2-legend__item {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: center;
+  min-width: 0;
+  min-height: 20px;
+}
+
+.ns2-legend__label {
+  min-width: 0;
+  overflow: hidden;
+  color: #334155;
+  font-size: 0.71875rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ns2-legend__status {
+  justify-self: start;
+  width: 10px;
+  height: 10px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: #94a3b8;
+}
+
+.ns2-legend__status--planned {
+  background: #3b82f6;
+}
+
+.ns2-legend__status--operational {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #10b981;
+}
+
+.ns2-legend__status--construction {
+  background: #f59e0b;
+}
+
+.ns2-legend__status--inactive {
+  background: #ffffff;
+  border-color: #94a3b8;
+  border-style: dashed;
+}
+
+.ns2-legend__asset {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: start;
+  width: 18px;
+  height: 18px;
+  border: 1px solid #dbe3ee;
+  border-radius: 4px;
+  background: #f8fafc;
+  color: #475569;
+}
+
+.ns2-legend__asset-text {
+  color: #475569;
+  font-size: 0.5625rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.ns2-legend__junction {
+  width: 8px;
+  height: 8px;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  background: #64748b;
+  box-shadow: 0 0 0 1px #cbd5e1;
+}
+
+.ns2-legend__line {
+  justify-self: start;
+  width: 22px;
+  height: 0;
+  border-top: 3px solid #f97316;
+  border-radius: 2px;
+}
+
+.ns2-legend__line--capacity {
+  border-top-color: #f97316;
+}
+
+.ns2-legend__line--utilisation {
+  border-top-color: #7c3aed;
+}
+
+.ns2-legend__line--bottleneck,
+.ns2-legend__line--shortage {
+  border-top-color: #dc2626;
+}
+
+.ns2-legend__line--dashed {
+  border-top-style: dashed;
 }
 
 /* ── Saved-networks rail (fixed, far left) ─────────────────────────────────

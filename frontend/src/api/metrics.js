@@ -71,6 +71,16 @@ export async function updateAsset(id, payload) {
   return data;
 }
 
+export async function deleteAsset(id) {
+  const res = await fetch(`${API_BASE}/api/assets/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+  if (res.status === 204) return true;
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+  return true;
+}
+
 async function postJson(path, payload) {
   const res = await fetch(`${API_BASE}${path}`, {
     method: "POST",

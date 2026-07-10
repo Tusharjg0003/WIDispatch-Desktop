@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Home } from "lucide-react";
+import { ICONS } from "./IconAssets";
 import "./TopNavigationBar.css";
 
 const iconPath = (path) => encodeURI(`/All Icons Zipped/${path}`);
@@ -164,7 +164,7 @@ const TopNavigationBar = () => {
             aria-expanded={searchOpen}
             onClick={toggleSearch}
           >
-            <span aria-hidden="true">⌕</span>
+            <ICONS.search className="top-navigation-bar__utility-icon" size={16} />
           </button>
           <input
             ref={searchInputRef}
@@ -182,11 +182,11 @@ const TopNavigationBar = () => {
           aria-label="Home"
           onClick={() => handleNavClick("/")}
         >
-          <Home size={13} strokeWidth={1.8} aria-hidden="true" />
+          <ICONS.home className="top-navigation-bar__utility-icon" size={16} />
         </button>
 
         <button className="top-navigation-bar__icon-btn" title="Help" aria-label="Help">
-          <span aria-hidden="true">?</span>
+          <ICONS.help className="top-navigation-bar__utility-icon" size={16} />
         </button>
 
         <div className="top-navigation-bar__divider" />
