@@ -31,7 +31,7 @@ Add two endpoints in `backend/src/` (new module `production.js`, wired in `serve
 querying the same collections the website uses:
 
 - `GET /api/production/plants`
-  Returns operational plants with the fields the list needs plus a computed data
+  Returns all plants with the fields the list needs plus a computed data
   status: `{ id, external_id, name, city, entity, region, asset_type, status,
   specifications, hasData, latestDataDate }`.
   `hasData`/`latestDataDate` come from aggregating which `plant_id`s appear in
@@ -54,7 +54,7 @@ Replace the current `MetricDashboard`-based Production page. Two routes:
 - `/production` — **plant list table** (mirrors `components/plants/plant-list.tsx`):
   columns Asset ID, Plant Name (+ city), Type, Entity, Region, Status,
   Contracted Capacity, **+ Data** = "Reporting" (with `latestDataDate`) or "Pending".
-  Operational plants only. Top search box (name / id / city / region / entity).
+  All plants (all statuses), like the website. Top search box (name / id / city / region / entity).
   Row click → `/production/:plantId`.
 
 - `/production/:plantId` — **plant detail**, header (plant name + back link) plus the
