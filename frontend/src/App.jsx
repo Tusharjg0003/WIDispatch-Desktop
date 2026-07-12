@@ -4,6 +4,7 @@ import { useLayout } from "./contexts/LayoutContext";
 import TopNavigationBar from "./components/TopNavigationBar";
 import HomePage from "./pages/HomePage";
 import ProductionPage from "./pages/ProductionPage";
+import ProductionPlantDetail from "./pages/ProductionPlantDetail";
 import DemandPage from "./pages/DemandPage";
 import TransmissionPage from "./pages/TransmissionPage";
 import EconomicsPage from "./pages/EconomicsPage";
@@ -33,6 +34,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/production" element={<ProductionPage />} />
+            <Route path="/production/:plantId" element={<ProductionPlantDetail />} />
             <Route path="/demand" element={<DemandPage />} />
             <Route path="/transmission" element={<TransmissionPage />} />
             <Route path="/economics" element={<EconomicsPage />} />

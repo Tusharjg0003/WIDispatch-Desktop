@@ -1,0 +1,15 @@
+.ppd { padding: 12px; background: #f8fafc; min-height: 100%; }
+.ppd__head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; padding: 8px 12px; border: 1px solid #d0d7de; border-radius: 2px; background: #fff; box-shadow: 0 1px 1px rgba(0,0,0,.04); }
+.ppd__back { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: 1px solid #d0d7de; border-radius: 2px; color: #111827; text-decoration: none; }
+.ppd__back:hover { background: #eef4ff; }
+.ppd__name { font-size: 1.15rem; font-weight: 700; color: #111827; }
+.ppd__meta { font-size: 0.72rem; color: #6b7280; margin-top: 2px; }
+.ppd__state { padding: 24px; color: #4b5563; }
+.ppd__state--err { color: #b91c1c; }
+
+.ppd__sections { display: flex; flex-direction: column; gap: 12px; }
+.ppd__card { border: 1px solid #d0d7de; border-radius: 2px; background: #fff; }
+.ppd__card-head { padding: 10px 12px; border-bottom: 1px solid #d0d7de; }
+.ppd__card-head h2 { font-size: 0.95rem; font-weight: 700; color: #111827; }
+.ppd__card-head p { font-size: 0.72rem; color: #6b7280; margin-top: 2px; }
+.ppd__card-body { padding: 12px; }
