@@ -1,0 +1,7 @@
+.cap-chart { width: 100%; }
+.cap-tip { background: #fff; border: 1px solid #d0d7de; border-radius: 2px; padding: 8px 12px; font-size: 12px; min-width: 180px; color: #111827; box-shadow: 0 8px 24px rgba(0,0,0,.15); }
+.cap-tip p { margin: 2px 0; }
+.cap-tip__title { font-weight: 600; margin-bottom: 6px; }
+.cap-tip__flag { color: #dc2626; font-weight: 600; margin: 6px 0 2px; border-top: 1px solid #e5e7eb; padding-top: 4px; }
+.cap-legend { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 16px; padding-top: 8px; font-size: 11px; color: #4b5563; }
+.cap-legend__item { display: inline-flex; align-items: center; gap: 6px; }
