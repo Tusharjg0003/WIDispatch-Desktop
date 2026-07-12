@@ -9,3 +9,8 @@ export function escapeCell(value) {
   if (FORMULA_LEAD.test(s)) s = `'${s}`;
   return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
+
+// Serialize a header row + body rows to CSV, escaping every cell.
+export function toCsv(headers, rows) {
+  return [headers, ...rows].map((row) => row.map(escapeCell).join(",")).join("\n");
+}
