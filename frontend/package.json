@@ -10,12 +10,14 @@
   },
   "dependencies": {
     "cytoscape": "^3.30.2",
+    "date-fns": "^3.6.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.23.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-leaflet": "^4.2.1",
-    "react-router-dom": "^6.26.2"
+    "react-router-dom": "^6.26.2",
+    "recharts": "^2.15.4"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",
