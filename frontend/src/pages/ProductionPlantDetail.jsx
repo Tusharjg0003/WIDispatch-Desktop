@@ -17,6 +17,8 @@ export default function ProductionPlantDetail() {
   useEffect(() => {
     let alive = true;
     setLoading(true);
+    setError(null);
+    setBundle(null);
     fetchPlantBundle(plantId)
       .then((b) => { if (alive) { setBundle(b); setLoading(false); } })
       .catch((e) => { if (alive) { setError(e.message); setLoading(false); } });
