@@ -1,4 +1,5 @@
 import { format, parseISO } from "date-fns";
+import { escapeCell } from "./csvCell.js";
 
 const HEADERS = [
   "Date", "Contracted Capacity (m³/day)", "Maintenance Loss (m³)", "Outage Loss (m³)",
@@ -27,5 +28,5 @@ export function productionRowsToCsv(rows, resolveUserName) {
     fmtDateTime(r.submittedAt),
     fmtDateTime(r.approvedAt),
   ]);
-  return [HEADERS, ...body].map((row) => row.map((c) => `"${c}"`).join(",")).join("\n");
+  return [HEADERS, ...body].map((row) => row.map(escapeCell).join(",")).join("\n");
 }
