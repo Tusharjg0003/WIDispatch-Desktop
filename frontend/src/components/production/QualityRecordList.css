@@ -1,0 +1,4 @@
+.qrl { display: flex; flex-direction: column; gap: 12px; }
+/* Reuses shared prod-* classes from ProductionInputTable.css, which is imported by the
+   sibling table component on the same page; these fallbacks keep this tab self-contained. */
+.qrl .prod-table .empty { text-align: center; color: #6b7280; padding: 16px; }
