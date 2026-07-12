@@ -2,9 +2,10 @@ import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { fetchPlantBundle } from "../api/production";
+import PlantOverview from "../components/production/PlantOverview";
 import ProductionInputTable from "../components/production/ProductionInputTable";
-import ProductionCapacityChart from "../components/production/ProductionCapacityChart";
-import QualityParameterCharts from "../components/production/QualityParameterCharts";
+import QualityRecordList from "../components/production/QualityRecordList";
+import MaintenanceRecordList from "../components/production/MaintenanceRecordList";
 import "./ProductionPlantDetail.css";
 
 export default function ProductionPlantDetail() {
@@ -13,6 +14,13 @@ export default function ProductionPlantDetail() {
   const [bundle, setBundle] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState("overview");
+  const TABS = [
+    { key: "overview", label: "Overview" },
+    { key: "production", label: "Production" },
+    { key: "quality", label: "Quality" },
+    { key: "maintenance", label: "Maintenance" },
+  ];
 
   useEffect(() => {
     let alive = true;
@@ -41,22 +49,27 @@ export default function ProductionPlantDetail() {
       {error && <div className="ppd__state ppd__state--err">Failed to load plant: {error}</div>}
 
       {!loading && !error && bundle && (
-        <div className="ppd__sections">
-          <section className="ppd__card">
-            <div className="ppd__card-head"><h2>Production Inputs</h2><p>Per-day contracted, available and delivered volumes with maintenance/outage losses.</p></div>
-            <div className="ppd__card-body"><ProductionInputTable plant={plant} plantId={plantId} bundle={bundle} /></div>
-          </section>
-
-          <section className="ppd__card">
-            <div className="ppd__card-head"><h2>Production &amp; Capacity</h2><p>Production against contracted, design &amp; maximum capacity, with maintenance, outage and quality factors.</p></div>
-            <div className="ppd__card-body"><ProductionCapacityChart plant={plant} plantId={plantId} bundle={bundle} /></div>
-          </section>
-
-          <section className="ppd__card">
-            <div className="ppd__card-head"><h2>Water Quality Parameters</h2><p>Daily readings per parameter with the plant's acceptable range shaded; out-of-range points flagged.</p></div>
-            <div className="ppd__card-body"><QualityParameterCharts plantId={plantId} bundle={bundle} /></div>
-          </section>
-        </div>
+        <>
+          <div className="ppd__tabs" role="tablist">
+            {TABS.map((t) => (
+              <button
+                key={t.key}
+                role="tab"
+                aria-selected={activeTab === t.key}
+                className={`ppd__tab ${activeTab === t.key ? "ppd__tab--active" : ""}`}
+                onClick={() => setActiveTab(t.key)}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <div className="ppd__tabpanel">
+            {activeTab === "overview" && <PlantOverview plant={plant} plantId={plantId} bundle={bundle} />}
+            {activeTab === "production" && <ProductionInputTable plant={plant} plantId={plantId} bundle={bundle} />}
+            {activeTab === "quality" && <QualityRecordList plantId={plantId} bundle={bundle} />}
+            {activeTab === "maintenance" && <MaintenanceRecordList plantId={plantId} bundle={bundle} />}
+          </div>
+        </>
       )}
     </div>
   );

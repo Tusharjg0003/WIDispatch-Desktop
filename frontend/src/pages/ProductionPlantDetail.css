@@ -13,3 +13,9 @@
 .ppd__card-head h2 { font-size: 0.95rem; font-weight: 700; color: #111827; }
 .ppd__card-head p { font-size: 0.72rem; color: #6b7280; margin-top: 2px; }
 .ppd__card-body { padding: 12px; }
+
+.ppd__tabs { display: flex; gap: 2px; border-bottom: 1px solid #d0d7de; margin-bottom: 12px; }
+.ppd__tab { padding: 8px 16px; border: 1px solid transparent; border-bottom: none; background: transparent; color: #4b5563; font-size: 0.82rem; font-weight: 600; cursor: pointer; border-radius: 2px 2px 0 0; }
+.ppd__tab:hover { color: #111827; background: #eef4ff; }
+.ppd__tab--active { color: #003eb1; background: #fff; border-color: #d0d7de; margin-bottom: -1px; }
+.ppd__tabpanel { min-height: 200px; }
