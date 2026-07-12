@@ -14,16 +14,6 @@ export function deriveDataStatus(plant, dataMap) {
   return { ...plant, hasData: latest != null, latestDataDate: latest };
 }
 
-// Newest ISO date string across a list of records for the given date field.
-function latestDate(records, field) {
-  let max = null;
-  for (const r of records) {
-    const d = r[field];
-    if (d && (max == null || d > max)) max = d;
-  }
-  return max;
-}
-
 export async function listProductionPlants() {
   const db = await getDb();
   const [plants, prodDates, qualDates] = await Promise.all([
@@ -63,21 +53,29 @@ export async function getPlantBundle(id) {
       db.collection("qualityRecords").find({ plant_id: id }, { projection: { _id: 0 } }).toArray(),
       db.collection("maintenanceRecords").find({ plant_id: id }, { projection: { _id: 0 } }).toArray(),
       db.collection("outages").find({ plant_id: id }, { projection: { _id: 0 } }).toArray(),
-      db.collection("qualityLimits").find({ plant_id: id }, { projection: { _id: 0 } }).toArray(),
+      db.collection("qualityLimits").find({ plant_id: id }, { projection: { _id: 0 } }).sort({ effective_from: -1 }).toArray(),
       db.collection("contractedCapacity").find({ plant_id: id }, { projection: { _id: 0 } })
         .sort({ effective_from: -1 }).toArray(),
       db.collection("users").find({}, { projection: { _id: 1, id: 1, name: 1, email: 1 } }).toArray(),
     ]);
 
   // qualityLimits: fold rows into { [parameter]: { min, max } } keyed for this plant.
+  // Rows are sorted newest-first (effective_from: -1), so keep only the first row seen per parameter.
   const qualityLimits = {};
   for (const row of qualityLimitRows) {
     const key = row.parameter;
-    if (!key) continue;
+    if (!key || qualityLimits[key]) continue;
     qualityLimits[key] = { min: row.min ?? undefined, max: row.max ?? undefined };
   }
 
-  const users = userRows.map((u) => ({ id: u.id || String(u._id), name: u.name, email: u.email }));
+  const referencedRefs = new Set();
+  for (const r of [...productionInputs, ...maintenanceRecords, ...outages, ...qualityRecords]) {
+    if (r.submitted_by) referencedRefs.add(r.submitted_by);
+    if (r.approved_by) referencedRefs.add(r.approved_by);
+  }
+  const users = userRows
+    .filter((u) => referencedRefs.has(u.id) || referencedRefs.has(String(u._id)))
+    .map((u) => ({ id: u.id || String(u._id), name: u.name, email: u.email }));
 
   return {
     plant,
