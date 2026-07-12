@@ -10,6 +10,7 @@ import {
   listTransmissionLines, createTransmissionLine,
 } from "./transmissionRegistry.js";
 import { listNetworks, getNetwork, createNetwork, updateNetwork, deleteNetwork } from "./networks.js";
+import { listProductionPlants, getPlantBundle } from "./production.js";
 
 const app = express();
 const PORT = Number(process.env.PORT ?? 4000);
@@ -210,6 +211,24 @@ app.delete("/api/networks/:id", async (req, res) => {
   } catch (err) {
     console.error(`network delete error (id=${req.params.id}):`, err);
     res.status(err.statusCode || 500).json({ error: err.message || "Failed to delete network" });
+  }
+});
+
+app.get("/api/production/plants", async (_req, res) => {
+  try {
+    res.json(await listProductionPlants());
+  } catch (err) {
+    console.error("production plants error:", err);
+    res.status(500).json({ error: "Failed to list production plants" });
+  }
+});
+
+app.get("/api/production/plant/:id/bundle", async (req, res) => {
+  try {
+    res.json(await getPlantBundle(req.params.id));
+  } catch (err) {
+    console.error(`production bundle error (id=${req.params.id}):`, err);
+    res.status(err.statusCode || 500).json({ error: err.message || "Failed to fetch plant bundle" });
   }
 });
 
