@@ -1,0 +1,11 @@
+.pov { display: flex; flex-direction: column; gap: 12px; }
+.pov__row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.pov__card { border: 1px solid #d0d7de; border-radius: 2px; background: #fff; }
+.pov__card-head { padding: 10px 12px; border-bottom: 1px solid #d0d7de; }
+.pov__card-head h3 { font-size: 0.95rem; font-weight: 700; color: #111827; }
+.pov__card-head p { font-size: 0.72rem; color: #6b7280; margin-top: 2px; }
+.pov__card-body { padding: 12px; }
+.pov__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 12px; padding: 12px; }
+.pov__label { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #6b7280; }
+.pov__value { font-size: 0.82rem; color: #111827; margin-top: 2px; }
+@media (max-width: 900px) { .pov__row { grid-template-columns: 1fr; } .pov__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
