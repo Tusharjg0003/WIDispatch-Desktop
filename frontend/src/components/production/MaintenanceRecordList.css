@@ -1,0 +1,5 @@
+.mrl { display: flex; flex-direction: column; gap: 12px; }
+.mrl__desc { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mrl .prod-table .empty { text-align: center; color: #6b7280; padding: 16px; }
+/* prod-badge--draft/under_revision aren't defined in ProductionInputTable.css; add neutral fallback */
+.prod-badge--draft, .prod-badge--revised { background: #f3f4f6; border-color: #d1d5db; color: #374151; }
