@@ -10,7 +10,7 @@ import {
   listTransmissionLines, createTransmissionLine,
 } from "./transmissionRegistry.js";
 import { listNetworks, getNetwork, createNetwork, updateNetwork, deleteNetwork } from "./networks.js";
-import { listProductionPlants, getPlantBundle } from "./production.js";
+import { listProductionPlants, getPlantBundle, updateMaintenanceDesktopApproval, listRecentOutages } from "./production.js";
 
 const app = express();
 const PORT = Number(process.env.PORT ?? 4000);
@@ -229,6 +229,24 @@ app.get("/api/production/plant/:id/bundle", async (req, res) => {
   } catch (err) {
     console.error(`production bundle error (id=${req.params.id}):`, err);
     res.status(err.statusCode || 500).json({ error: err.message || "Failed to fetch plant bundle" });
+  }
+});
+
+app.get("/api/production/outages/recent", async (req, res) => {
+  try {
+    res.json(await listRecentOutages({ since: req.query.since, limit: req.query.limit }));
+  } catch (err) {
+    console.error("recent outages error:", err);
+    res.status(500).json({ error: "Failed to fetch recent outages" });
+  }
+});
+
+app.patch("/api/production/maintenance/:recordId/desktop-approval", async (req, res) => {
+  try {
+    res.json(await updateMaintenanceDesktopApproval(req.params.recordId, req.body?.status));
+  } catch (err) {
+    console.error(`maintenance desktop approval error (id=${req.params.recordId}):`, err);
+    res.status(err.statusCode || 500).json({ error: err.message || "Failed to update desktop approval" });
   }
 });
 

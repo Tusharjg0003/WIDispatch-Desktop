@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Factory } from "lucide-react";
 import { fetchProductionPlants } from "../api/production";
 import "./ProductionPlantList.css";
+
+const uniqSorted = (values) => [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
 
 export default function ProductionPlantList() {
   const navigate = useNavigate();
@@ -10,6 +11,9 @@ export default function ProductionPlantList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [query, setQuery] = useState("");
+  const [plantType, setPlantType] = useState("");
+  const [entity, setEntity] = useState("");
+  const [region, setRegion] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -19,19 +23,41 @@ export default function ProductionPlantList() {
     return () => { alive = false; };
   }, []);
 
+  const filterOptions = useMemo(() => ({
+    plantTypes: uniqSorted(plants.map((p) => p.asset_type)),
+    entities: uniqSorted(plants.map((p) => p.entity)),
+    regions: uniqSorted(plants.map((p) => p.region)),
+  }), [plants]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return plants;
-    return plants.filter((p) =>
-      [p.name, p.external_id, p.city, p.region, p.entity].filter(Boolean).some((f) => f.toLowerCase().includes(q)),
-    );
-  }, [plants, query]);
+    return plants.filter((p) => {
+      if (plantType && p.asset_type !== plantType) return false;
+      if (entity && p.entity !== entity) return false;
+      if (region && p.region !== region) return false;
+      if (!q) return true;
+      return [p.name, p.external_id, p.city, p.region, p.entity, p.asset_type]
+        .filter(Boolean)
+        .some((f) => f.toLowerCase().includes(q));
+    });
+  }, [plants, query, plantType, entity, region]);
 
   return (
     <div className="ppl">
       <header className="ppl__head">
-        <div className="ppl__title"><Factory size={18} /><h1>Production — Plants</h1></div>
         <input className="ppl__search" placeholder="Search name, ID, city, region, entity…" value={query} onChange={(e) => setQuery(e.target.value)} />
+        <select className="ppl__filter" aria-label="Plant type" value={plantType} onChange={(e) => setPlantType(e.target.value)}>
+          <option value="">All Plant Types</option>
+          {filterOptions.plantTypes.map((type) => <option key={type} value={type}>{type}</option>)}
+        </select>
+        <select className="ppl__filter" aria-label="Entity" value={entity} onChange={(e) => setEntity(e.target.value)}>
+          <option value="">All Entities</option>
+          {filterOptions.entities.map((item) => <option key={item} value={item}>{item}</option>)}
+        </select>
+        <select className="ppl__filter" aria-label="Region" value={region} onChange={(e) => setRegion(e.target.value)}>
+          <option value="">All Regions</option>
+          {filterOptions.regions.map((item) => <option key={item} value={item}>{item}</option>)}
+        </select>
       </header>
 
       {loading && <div className="ppl__state">Loading plants…</div>}
@@ -63,7 +89,7 @@ export default function ProductionPlantList() {
                   </td>
                 </tr>
               ))}
-              {filtered.length === 0 && <tr><td colSpan={8} className="ppl__empty">No plants match your search.</td></tr>}
+              {filtered.length === 0 && <tr><td colSpan={8} className="ppl__empty">No plants match your filters.</td></tr>}
             </tbody>
           </table>
         </div>

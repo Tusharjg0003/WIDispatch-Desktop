@@ -1,0 +1,3 @@
+.orl { display: flex; flex-direction: column; gap: 12px; }
+.orl__desc { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.orl .prod-table .empty { text-align: center; color: #6b7280; padding: 16px; }

@@ -37,7 +37,7 @@ export function computeMaintenanceStats(rows) {
 const MAINT_HEADERS = [
   "Description", "Start Date & Time", "End Date & Time", "Duration (hours)",
   "Expected Loss (m³)", "Actual Impact (m³)", "Status", "Responsible User",
-  "Submitted At", "Approved At",
+  "Submitted At", "Website Approved At", "Desktop Approval", "Desktop Approved At",
 ];
 
 const fmtDT = (v) => {
@@ -58,6 +58,8 @@ export function maintenanceRowsToCsv(rows, resolveUserName) {
     resolveUserName(r.submitted_by || r.approved_by || null),
     fmtDT(r.submitted_at || r.created_at || null),
     fmtDT(r.approved_at || null),
+    r.desktop_approval_status || r.desktop_decision_status || r.desktop_approval || "pending",
+    fmtDT(r.desktop_approved_at || r.desktop_decision_at || null),
   ]);
   return toCsv(MAINT_HEADERS, body);
 }

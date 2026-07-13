@@ -1,5 +1,25 @@
 .mrl { display: flex; flex-direction: column; gap: 12px; }
 .mrl__desc { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mrl__actions { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.mrl__approval-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid #d0d7de;
+  border-radius: 2px;
+  background: #fff;
+  color: #111827;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.mrl__approval-btn--accept { border-color: #86efac; color: #166534; }
+.mrl__approval-btn--reject { border-color: #fca5a5; color: #991b1b; }
+.mrl__approval-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.mrl__error { color: #991b1b; font-size: 0.74rem; font-weight: 700; }
 .mrl .prod-table .empty { text-align: center; color: #6b7280; padding: 16px; }
 /* prod-badge--draft/under_revision aren't defined in ProductionInputTable.css; add neutral fallback */
 .prod-badge--draft, .prod-badge--revised { background: #f3f4f6; border-color: #d1d5db; color: #374151; }
+.prod-badge--pending { background: #f3f4f6; border-color: #d1d5db; color: #374151; }

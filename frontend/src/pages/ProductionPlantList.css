@@ -1,8 +1,8 @@
 .ppl { padding: 12px; background: #f8fafc; min-height: 100%; }
-.ppl__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; padding: 0 12px; min-height: 42px; border: 1px solid #d0d7de; border-radius: 2px; background: #fff; box-shadow: 0 1px 1px rgba(0,0,0,.04); }
-.ppl__title { display: flex; align-items: center; gap: 8px; color: #111827; }
-.ppl__title h1 { font-size: 1.25rem; font-weight: 700; }
-.ppl__search { height: 30px; width: 320px; max-width: 45vw; padding: 0 10px; border: 1px solid #d0d7de; border-radius: 2px; background: #fff; color: #111827; font-size: 0.8rem; }
+.ppl__head { display: flex; align-items: center; justify-content: flex-start; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; padding: 6px 12px; min-height: 42px; border: 1px solid #d0d7de; border-radius: 2px; background: #fff; box-shadow: 0 1px 1px rgba(0,0,0,.04); }
+.ppl__search, .ppl__filter { height: 30px; padding: 0 10px; border: 1px solid #d0d7de; border-radius: 2px; background: #fff; color: #111827; font-size: 0.8rem; }
+.ppl__search { width: 320px; max-width: 100%; }
+.ppl__filter { min-width: 160px; }
 .ppl__state { padding: 24px; color: #4b5563; }
 .ppl__state--err { color: #b91c1c; }
 
@@ -23,3 +23,7 @@
 .ppl__badge--type { background: #f3e8ff; border-color: #d8b4fe; color: #6b21a8; }
 .ppl__badge--data { background: #dcfce7; border-color: #86efac; color: #166534; }
 .ppl__badge--pending { background: #f3f4f6; border-color: #d1d5db; color: #6b7280; }
+
+@media (max-width: 640px) {
+  .ppl__search, .ppl__filter { width: 100%; }
+}

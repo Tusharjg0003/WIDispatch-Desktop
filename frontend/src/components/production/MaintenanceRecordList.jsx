@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
-import { Download } from "lucide-react";
+import { Check, Download, X } from "lucide-react";
+import { updateMaintenanceDesktopApproval } from "../../api/production";
 import { buildMaintenanceRows, filterMaintenanceByStatus, computeMaintenanceStats, maintenanceDurationHours, maintenanceRowsToCsv } from "../../lib/maintenanceRecords";
 import "./MaintenanceRecordList.css";
 import "./ProductionInputTable.css";
@@ -8,12 +9,22 @@ import "./ProductionInputTable.css";
 const fmtDT = (v) => { if (!v) return "N/A"; const d = parseISO(v); return Number.isNaN(d.getTime()) ? "N/A" : format(d, "yyyy-MM-dd HH:mm"); };
 const fmtShort = (v) => { if (!v) return "—"; const d = parseISO(v); return Number.isNaN(d.getTime()) ? "—" : format(d, "MMM dd, HH:mm"); };
 const num = (v) => (v == null ? "—" : Number(v).toLocaleString());
+const humanStatus = (v) => (v ? String(v).replaceAll("_", " ") : "pending");
+const desktopStatus = (r) => r.desktop_approval_status || r.desktop_decision_status || r.desktop_approval || "pending";
+const desktopApprovedAt = (r) => r.desktop_approved_at || r.desktop_decision_at || null;
 
 export default function MaintenanceRecordList({ plantId, bundle }) {
   const { maintenanceRecords, users } = bundle;
+  const [localRecords, setLocalRecords] = useState(maintenanceRecords);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [status, setStatus] = useState("all");
+  const [pendingApprovals, setPendingApprovals] = useState({});
+  const [approvalError, setApprovalError] = useState("");
+
+  useEffect(() => {
+    setLocalRecords(maintenanceRecords);
+  }, [maintenanceRecords]);
 
   const resolveUserName = (ref) => {
     if (!ref) return "N/A";
@@ -22,13 +33,40 @@ export default function MaintenanceRecordList({ plantId, bundle }) {
   };
 
   const rows = useMemo(() => filterMaintenanceByStatus(
-    buildMaintenanceRows(maintenanceRecords, plantId, {
+    buildMaintenanceRows(localRecords, plantId, {
       startDate: startDate ? new Date(startDate) : undefined,
       endDate: endDate ? new Date(`${endDate}T23:59:59`) : undefined,
     }), status,
-  ), [maintenanceRecords, plantId, startDate, endDate, status]);
+  ), [localRecords, plantId, startDate, endDate, status]);
 
   const stats = useMemo(() => computeMaintenanceStats(rows), [rows]);
+
+  const setDesktopApproval = async (record, nextStatus) => {
+    if (!record.id) return;
+    setApprovalError("");
+    setPendingApprovals((current) => ({ ...current, [record.id]: nextStatus }));
+
+    const now = new Date().toISOString();
+    const previousRecords = localRecords;
+    setLocalRecords((current) => current.map((r) => (
+      r.id === record.id
+        ? { ...r, desktop_approval_status: nextStatus, desktop_approved_at: now }
+        : r
+    )));
+
+    try {
+      const updated = await updateMaintenanceDesktopApproval(record.id, nextStatus);
+      setLocalRecords((current) => current.map((r) => (r.id === updated.id ? updated : r)));
+    } catch (err) {
+      setLocalRecords(previousRecords);
+      setApprovalError(err.message || "Failed to update desktop approval.");
+    } finally {
+      setPendingApprovals((current) => {
+        const { [record.id]: _done, ...rest } = current;
+        return rest;
+      });
+    }
+  };
 
   const exportCsv = () => {
     const csv = maintenanceRowsToCsv(rows, resolveUserName);
@@ -67,7 +105,8 @@ export default function MaintenanceRecordList({ plantId, bundle }) {
             <tr>
               <th>Description</th><th>Start</th><th>End</th><th className="ta-r">Duration</th>
               <th className="ta-r">Expected Loss</th><th className="ta-r">Actual Impact</th><th>Status</th>
-              <th>Responsible User</th><th>Submitted At</th><th>Approved At</th>
+              <th>Responsible User</th><th>Submitted At</th><th>Website Approved At</th>
+              <th>Desktop Approval</th><th>Desktop Approved At</th><th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -79,16 +118,39 @@ export default function MaintenanceRecordList({ plantId, bundle }) {
                 <td className="ta-r mono">{maintenanceDurationHours(r.start_datetime, r.end_datetime)}h</td>
                 <td className="ta-r mono">{num(r.expected_impact_m3)}{r.expected_impact_m3 != null ? " m³" : ""}</td>
                 <td className="ta-r mono">{r.actual_impact_m3 != null ? `${num(r.actual_impact_m3)} m³` : "-"}</td>
-                <td><span className={`prod-badge prod-badge--${r.submission_status}`}>{(r.submission_status || "").replace("_", " ")}</span></td>
+                <td><span className={`prod-badge prod-badge--${r.submission_status}`}>{humanStatus(r.submission_status)}</span></td>
                 <td className="nowrap muted">{resolveUserName(r.submitted_by || r.approved_by)}</td>
                 <td className="nowrap">{fmtDT(r.submitted_at || r.created_at)}</td>
                 <td className="nowrap">{fmtDT(r.approved_at)}</td>
+                <td><span className={`prod-badge prod-badge--${desktopStatus(r)}`}>{humanStatus(desktopStatus(r))}</span></td>
+                <td className="nowrap">{fmtDT(desktopApprovedAt(r))}</td>
+                <td>
+                  <div className="mrl__actions">
+                    <button
+                      type="button"
+                      className="mrl__approval-btn mrl__approval-btn--accept"
+                      onClick={() => setDesktopApproval(r, "approved")}
+                      disabled={!r.id || !!pendingApprovals[r.id] || desktopStatus(r) === "approved"}
+                    >
+                      <Check size={13} /> Accept
+                    </button>
+                    <button
+                      type="button"
+                      className="mrl__approval-btn mrl__approval-btn--reject"
+                      onClick={() => setDesktopApproval(r, "rejected")}
+                      disabled={!r.id || !!pendingApprovals[r.id] || desktopStatus(r) === "rejected"}
+                    >
+                      <X size={13} /> Reject
+                    </button>
+                  </div>
+                </td>
               </tr>
             ))}
-            {rows.length === 0 && <tr><td colSpan={10} className="empty">No maintenance records match the filters.</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={13} className="empty">No maintenance records match the filters.</td></tr>}
           </tbody>
         </table>
       </div>
+      {approvalError && <div className="mrl__error">{approvalError}</div>}
     </div>
   );
 }

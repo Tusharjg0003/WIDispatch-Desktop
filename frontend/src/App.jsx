@@ -2,6 +2,7 @@ import React from "react";
 import { Routes, Route } from "react-router-dom";
 import { useLayout } from "./contexts/LayoutContext";
 import TopNavigationBar from "./components/TopNavigationBar";
+import OutageNotificationToast from "./components/production/OutageNotificationToast";
 import HomePage from "./pages/HomePage";
 import ProductionPage from "./pages/ProductionPage";
 import ProductionPlantDetail from "./pages/ProductionPlantDetail";
@@ -19,6 +20,7 @@ export default function App() {
   return (
     <div className="app-shell">
       <TopNavigationBar />
+      <OutageNotificationToast />
 
       {toolbar && <header className="app-toolbar">{toolbar}</header>}
 
