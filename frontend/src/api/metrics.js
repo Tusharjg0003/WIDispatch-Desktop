@@ -28,6 +28,14 @@ export function fetchTransmission(filters) {
   return getJson(`/api/transmission/summary${buildQuery(filters)}`);
 }
 
+export function fetchTransmissionPumpStations() {
+  return getJson("/api/transmission/pump-stations");
+}
+
+export function fetchTransmissionPumpStationBundle(id) {
+  return getJson(`/api/transmission/pump-station/${encodeURIComponent(id)}/bundle`);
+}
+
 export function fetchQuality(filters) {
   return getJson(`/api/quality${buildQuery(filters)}`);
 }

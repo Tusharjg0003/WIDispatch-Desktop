@@ -8,6 +8,7 @@ import ProductionPage from "./pages/ProductionPage";
 import ProductionPlantDetail from "./pages/ProductionPlantDetail";
 import DemandPage from "./pages/DemandPage";
 import TransmissionPage from "./pages/TransmissionPage";
+import TransmissionPumpStationDetail from "./pages/TransmissionPumpStationDetail";
 import EconomicsPage from "./pages/EconomicsPage";
 import AssetRegistryPage from "./pages/AssetRegistryPage";
 import AssetDetailPage from "./pages/AssetDetailPage";
@@ -39,6 +40,7 @@ export default function App() {
             <Route path="/production/:plantId" element={<ProductionPlantDetail />} />
             <Route path="/demand" element={<DemandPage />} />
             <Route path="/transmission" element={<TransmissionPage />} />
+            <Route path="/transmission/:pumpStationId" element={<TransmissionPumpStationDetail />} />
             <Route path="/economics" element={<EconomicsPage />} />
             <Route path="/network-builder" element={<NetworkBuilderPage />} />
             <Route path="/network-builder/:id" element={<NetworkBuilderPage />} />

@@ -42,7 +42,7 @@ export function computeOutageStats(rows) {
 }
 
 const OUTAGE_HEADERS = [
-  "Failure Type", "Scope", "Description", "Start", "End", "Duration (hours)",
+  "outage_type", "outage_scope", "failure_type", "description", "Start", "End", "Duration (hours)",
   "Loss (m³)", "Responsible User", "Submitted At",
 ];
 
@@ -52,10 +52,24 @@ const fmtDT = (v) => {
   return Number.isNaN(d.getTime()) ? "N/A" : format(d, "yyyy-MM-dd HH:mm");
 };
 
+function outageScope(value) {
+  const normalized = String(value || "").trim().toLowerCase().replace(/[_-]+/g, " ");
+  if (!normalized) return "";
+  if (normalized.includes("partial")) return "partial";
+  if (normalized.includes("complete")) return "complete";
+  if (normalized.includes("full")) return "full";
+  return "";
+}
+
+function outageScopeValue(record) {
+  return record.outage_scope || record.scope || outageScope(record.failure_type) || outageScope(record.outage_type);
+}
+
 export function outageRowsToCsv(rows, resolveUserName) {
   const body = rows.map((r) => [
-    r.failure_type || r.outage_type || "",
-    r.outage_scope || r.scope || "",
+    r.outage_type || r.type || "",
+    outageScopeValue(r),
+    r.failure_type || "",
     r.description || "",
     fmtDT(r.start_datetime),
     fmtDT(r.end_datetime),

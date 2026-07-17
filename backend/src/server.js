@@ -10,7 +10,13 @@ import {
   listTransmissionLines, createTransmissionLine,
 } from "./transmissionRegistry.js";
 import { listNetworks, getNetwork, createNetwork, updateNetwork, deleteNetwork } from "./networks.js";
-import { listProductionPlants, getPlantBundle, updateMaintenanceDesktopApproval, listRecentOutages } from "./production.js";
+import {
+  listProductionPlants,
+  getPlantBundle,
+  updateMaintenanceDesktopApproval,
+  listRecentOutages,
+} from "./production.js";
+import { listPumpStations, getPumpStationBundle } from "./pumpStations.js";
 
 const app = express();
 const PORT = Number(process.env.PORT ?? 4000);
@@ -223,12 +229,30 @@ app.get("/api/production/plants", async (_req, res) => {
   }
 });
 
+app.get("/api/transmission/pump-stations", async (_req, res) => {
+  try {
+    res.json(await listPumpStations());
+  } catch (err) {
+    console.error("transmission pump stations error:", err);
+    res.status(500).json({ error: "Failed to list pump stations" });
+  }
+});
+
 app.get("/api/production/plant/:id/bundle", async (req, res) => {
   try {
     res.json(await getPlantBundle(req.params.id));
   } catch (err) {
     console.error(`production bundle error (id=${req.params.id}):`, err);
     res.status(err.statusCode || 500).json({ error: err.message || "Failed to fetch plant bundle" });
+  }
+});
+
+app.get("/api/transmission/pump-station/:id/bundle", async (req, res) => {
+  try {
+    res.json(await getPumpStationBundle(req.params.id));
+  } catch (err) {
+    console.error(`transmission pump station bundle error (id=${req.params.id}):`, err);
+    res.status(err.statusCode || 500).json({ error: err.message || "Failed to fetch pump station bundle" });
   }
 });
 

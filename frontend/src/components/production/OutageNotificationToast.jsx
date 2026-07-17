@@ -15,6 +15,18 @@ function latestTime(rows) {
     .at(-1);
 }
 
+function outageScope(value) {
+  const normalized = String(value || "").trim().toLowerCase().replace(/[_-]+/g, " ");
+  if (!normalized) return null;
+  if (normalized.includes("partial")) return "partial";
+  if (normalized.includes("complete") || normalized.includes("full")) return "complete";
+  return null;
+}
+
+function toastScope(toast) {
+  return outageScope(toast.scope) || outageScope(toast.failureType);
+}
+
 export default function OutageNotificationToast() {
   const navigate = useNavigate();
   const latestSeenRef = useRef(null);
@@ -70,12 +82,17 @@ export default function OutageNotificationToast() {
 
   const openOutage = () => {
     setToast(null);
-    if (toast.plantId) {
-      navigate(`/production/${encodeURIComponent(toast.plantId)}?tab=outages`);
+    const assetId = toast.assetId || toast.plantId;
+    if (!assetId) return;
+
+    if (toast.assetKind === "pumpStation") {
+      navigate(`/transmission/${encodeURIComponent(assetId)}?tab=outages`);
+    } else {
+      navigate(`/production/${encodeURIComponent(assetId)}?tab=outages`);
     }
   };
 
-  const isPartial = String(toast.scope || "").toLowerCase() === "partial";
+  const isPartial = toastScope(toast) === "partial";
 
   return (
     <div
@@ -87,7 +104,7 @@ export default function OutageNotificationToast() {
         <span className="outage-toast__icon"><AlertTriangle size={18} /></span>
         <span className="outage-toast__copy">
           <span className="outage-toast__title">{toast.count > 1 ? `${toast.count} new outages` : "New outage reported"}</span>
-          <span className="outage-toast__meta">{toast.failureType} at {toast.plantName}</span>
+          <span className="outage-toast__meta">{toast.failureType} at {toast.assetName || toast.plantName}</span>
         </span>
       </button>
       <button type="button" className="outage-toast__close" aria-label="Dismiss outage notification" onClick={() => setToast(null)}>

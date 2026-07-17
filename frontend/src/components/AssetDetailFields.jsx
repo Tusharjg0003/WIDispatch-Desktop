@@ -6,6 +6,10 @@ const plantTypeLabel = (t) => (t === "water_purification" ? "Water Purification"
 const statusLabel = (s) => (s ? s.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase()) : "N/A");
 const statusBadgeClass = (s) => (s === "operational" ? "in-operation" : s || "unknown");
 const statusBadgeText = (s) => (s === "operational" ? "In Operation" : statusLabel(s));
+const isFunctionalPump = (pump) =>
+  ["active", "functional"].includes(String(pump?.role || "").toLowerCase());
+const isBackupPump = (pump) =>
+  ["standby", "backup"].includes(String(pump?.role || "").toLowerCase());
 const formatDateTime = (value) => {
   if (!value) return null;
   const date = new Date(value);
@@ -22,6 +26,11 @@ function Field({ label, value, full }) {
       <div className="form-display">{dash(value)}</div>
     </div>
   );
+}
+
+function pumpNameList(pumps, fallback) {
+  if (!Array.isArray(pumps) || pumps.length === 0) return null;
+  return pumps.map((pump, index) => pump.name || pump.id || `${fallback} ${index + 1}`).join(", ");
 }
 
 // Granular project-lifetime formatter — years when >= 1yr, else months, else
@@ -48,6 +57,9 @@ export default function AssetDetailFields({ asset }) {
   const isProduction = asset.category === "plant" && spec.plant_category !== "treatment";
   const isTreatment = asset.category === "plant" && spec.plant_category === "treatment";
   const lifetime = projectLifetime(asset.commissioning_date, asset.decommissioning_date);
+  const configuredPumps = Array.isArray(spec.pumps) ? spec.pumps : [];
+  const activePumps = Array.isArray(spec.active_pumps) ? spec.active_pumps : configuredPumps.filter(isFunctionalPump);
+  const standbyPumps = Array.isArray(spec.standby_pumps) ? spec.standby_pumps : configuredPumps.filter(isBackupPump);
 
   return (
     <>
@@ -127,6 +139,17 @@ export default function AssetDetailFields({ asset }) {
           </div>
           <div className="form-grid">
             <Field label="Project Lifetime" value={lifetime} />
+          </div>
+        </div>
+      )}
+
+      {asset.category === "pump" && (
+        <div className="form-section">
+          <h3>Asset Specifications</h3>
+          <div className="form-grid">
+            <Field label="Design Capacity (m³/day)" value={spec.design_capacity} />
+            <Field label="Active Pumps" value={pumpNameList(activePumps, "Functional pump")} />
+            <Field label="Standby Pumps" value={pumpNameList(standbyPumps, "Backup pump")} />
           </div>
         </div>
       )}

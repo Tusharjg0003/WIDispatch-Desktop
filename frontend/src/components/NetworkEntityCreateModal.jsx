@@ -30,6 +30,19 @@ function defaultsForType(type) {
   };
 }
 
+const isFunctionalPump = (pump) =>
+  ["active", "functional"].includes(String(pump?.role || "").toLowerCase());
+
+const isBackupPump = (pump) =>
+  ["standby", "backup"].includes(String(pump?.role || "").toLowerCase());
+
+function normalizePumpForSave(pump) {
+  return {
+    ...pump,
+    capacity_m3_day: pump.capacity_m3_day === "" ? null : Number(pump.capacity_m3_day),
+  };
+}
+
 // Quick-add modal for the Network Builder's "Plant"/"Pump" insert-toolbar
 // flow. Unlike CreateAssetForm (the Asset Registry page's full form), this
 // asks a deliberately short field set. Always creates a real Asset
@@ -55,6 +68,7 @@ export default function NetworkEntityCreateModal({ type, initialForm = null, onC
     setSaving(true);
     setError(null);
 
+    const normalizedPumps = pumps.map(normalizePumpForSave);
     const specifications = isPlant
       ? {
           ...spec,
@@ -76,10 +90,11 @@ export default function NetworkEntityCreateModal({ type, initialForm = null, onC
               : Number(spec.capacity_limitation_value),
         }
       : {
-          pumps: pumps.map((p) => ({
-            ...p,
-            capacity_m3_day: p.capacity_m3_day === "" ? null : Number(p.capacity_m3_day),
-          })),
+          ...spec,
+          design_capacity: spec.design_capacity === "" || spec.design_capacity == null ? null : spec.design_capacity,
+          pumps: normalizedPumps,
+          active_pumps: normalizedPumps.filter(isFunctionalPump),
+          standby_pumps: normalizedPumps.filter(isBackupPump),
         };
 
     const payload = {
@@ -188,7 +203,7 @@ export default function NetworkEntityCreateModal({ type, initialForm = null, onC
           </div>
 
           {isPlant && <PlantQuickFields spec={spec} set={setSpecField} />}
-          {isPump && <PumpStationFields pumps={pumps} setPumps={setPumps} />}
+          {isPump && <PumpStationFields pumps={pumps} setPumps={setPumps} spec={spec} setSpec={setSpecField} />}
           {isHandover && <HandoverPointFields spec={spec} set={setSpecField} />}
 
           {error && <div className="af__error">{error}</div>}

@@ -15,7 +15,7 @@ const CATEGORIES = [
 ];
 const CATEGORY_LABEL = Object.fromEntries(CATEGORIES.map((c) => [c.value, c.label]));
 
-const STATUSES = ["operational", "maintenance", "under_construction", "planned", "decommissioned"];
+const STATUSES = ["operational", "maintenance", "under_construction", "planned", "decommissioned", "inactive"];
 const HANDOVER_STATUSES = ["planned", "under_construction", "operational", "decommissioned", "inactive"];
 const statusLabel = (s) => s.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
 
@@ -46,12 +46,42 @@ const EMPTY_FORM = {
 
 function defaultsForCategory(category) {
   const activity = DEFAULT_ACTIVITY_BY_CATEGORY[category] || "";
+  const assetTypes = allowedAssetTypesForCategory(category);
   return {
     category,
     activity,
-    asset_type: "",
+    asset_type: assetTypes.length === 1 ? assetTypes[0] : "",
     region: "",
     status: category === "pump" ? "inactive" : "planned",
+  };
+}
+
+function defaultAssetTypeForCategory(category) {
+  const assetTypes = allowedAssetTypesForCategory(category);
+  return assetTypes.length === 1 ? assetTypes[0] : "";
+}
+
+function activityHasAllowedType(activity, category) {
+  const allowedTypes = allowedAssetTypesForCategory(category);
+  return (ACTIVITY_ASSET_TYPES[activity] || []).some((type) => allowedTypes.includes(type));
+}
+
+function defaultActivityForCategory(category, activity) {
+  return activity && activityHasAllowedType(activity, category)
+    ? activity
+    : DEFAULT_ACTIVITY_BY_CATEGORY[category] || "";
+}
+
+const isFunctionalPump = (pump) =>
+  ["active", "functional"].includes(String(pump?.role || "").toLowerCase());
+
+const isBackupPump = (pump) =>
+  ["standby", "backup"].includes(String(pump?.role || "").toLowerCase());
+
+function normalizePumpForSave(pump) {
+  return {
+    ...pump,
+    capacity_m3_day: pump.capacity_m3_day === "" ? null : Number(pump.capacity_m3_day),
   };
 }
 
@@ -60,15 +90,18 @@ const isLinearAssetType = (assetType) =>
 
 // Map a fetched asset document back into the flat form shape.
 function formFromAsset(asset) {
+  const category = asset.category || "plant";
+  const activity = defaultActivityForCategory(category, asset.activity);
+  const assetType = canonicalizeAssetType(asset.asset_type) || defaultAssetTypeForCategory(category) || asset.asset_type || "";
   return {
-    category: asset.category || "plant",
+    category,
     name: asset.name || "",
     external_id: asset.external_id || "",
     asset_name_ar: asset.asset_name_ar || "",
     entity: asset.entity || "",
     entity_type: asset.entity_type || "",
-    activity: asset.activity || DEFAULT_ACTIVITY_BY_CATEGORY[asset.category] || "",
-    asset_type: canonicalizeAssetType(asset.asset_type) || asset.asset_type || "",
+    activity,
+    asset_type: assetType,
     region: asset.region || "",
     cluster: asset.cluster || "",
     governorate: asset.governorate && asset.governorate !== "NULL" ? asset.governorate : "",
@@ -90,7 +123,7 @@ export default function AssetForm({ mode = "create", defaultCategory = "plant", 
     isEdit && initialAsset ? formFromAsset(initialAsset) : { ...EMPTY_FORM, ...defaultsForCategory(defaultCategory) }
   );
   const [spec, setSpec] = useState(
-    isEdit && initialAsset && initialAsset.category !== "pump" ? { ...(initialAsset.specifications || {}) } : {}
+    isEdit && initialAsset ? { ...(initialAsset.specifications || {}) } : {}
   );
   const [pumps, setPumps] = useState(
     isEdit && initialAsset && initialAsset.category === "pump"
@@ -118,10 +151,13 @@ export default function AssetForm({ mode = "create", defaultCategory = "plant", 
 
   const changeActivity = (e) => {
     const activity = e.target.value;
+    const matchingAssetTypes = allowedAssetTypesForCategory(form.category).filter((type) =>
+      (ACTIVITY_ASSET_TYPES[activity] || []).includes(type)
+    );
     setForm((f) => ({
       ...f,
       activity,
-      asset_type: "",
+      asset_type: matchingAssetTypes.length === 1 ? matchingAssetTypes[0] : "",
     }));
   };
 
@@ -133,8 +169,15 @@ export default function AssetForm({ mode = "create", defaultCategory = "plant", 
     setError(null);
     setSuccess(null);
     const { category, latitude, longitude, end_latitude, end_longitude, ...top } = form;
+    const normalizedPumps = pumps.map(normalizePumpForSave);
     const specifications = category === "pump"
-      ? { pumps: pumps.map((p) => ({ ...p, capacity_m3_day: p.capacity_m3_day === "" ? null : Number(p.capacity_m3_day) })) }
+      ? {
+          ...spec,
+          design_capacity: spec.design_capacity === "" || spec.design_capacity == null ? null : spec.design_capacity,
+          pumps: normalizedPumps,
+          active_pumps: normalizedPumps.filter(isFunctionalPump),
+          standby_pumps: normalizedPumps.filter(isBackupPump),
+        }
       : category === "handover_point"
       ? {
           ...spec,
@@ -170,6 +213,7 @@ export default function AssetForm({ mode = "create", defaultCategory = "plant", 
 
   const isPump = form.category === "pump";
   const isHandover = form.category === "handover_point";
+  const statusOptions = isHandover ? HANDOVER_STATUSES : STATUSES;
   const activityOptions = Object.entries(ACTIVITY_ASSET_TYPES)
     .filter(([, types]) => types.some((type) => allowedAssetTypesForCategory(form.category).includes(type)))
     .map(([activity]) => activity);
@@ -274,19 +318,11 @@ export default function AssetForm({ mode = "create", defaultCategory = "plant", 
                 <Field label="Cluster"><input value={form.cluster} onChange={set("cluster")} /></Field>
                 <Field label="Governorate"><input value={form.governorate} onChange={set("governorate")} /></Field>
                 <Field label="City"><input value={form.city} onChange={set("city")} /></Field>
-                {isPump ? (
-                  <Toggle
-                    label="Active"
-                    checked={form.status === "operational"}
-                    onChange={(v) => setForm((f) => ({ ...f, status: v ? "operational" : "inactive" }))}
-                  />
-                ) : (
-                  <Field label="Operational Status">
-                    <select value={form.status} onChange={set("status")}>
-                      {(isHandover ? HANDOVER_STATUSES : STATUSES).map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}
-                    </select>
-                  </Field>
-                )}
+                <Field label="Operational Status">
+                  <select value={form.status} onChange={set("status")}>
+                    {statusOptions.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}
+                  </select>
+                </Field>
                 <Field label="Entity"><input value={form.entity} onChange={set("entity")} /></Field>
                 <Field label="Entity Type"><input value={form.entity_type} onChange={set("entity_type")} placeholder="e.g. Private" /></Field>
                 <Field label="Activity *">
@@ -323,7 +359,7 @@ export default function AssetForm({ mode = "create", defaultCategory = "plant", 
                 decommissioningDate={form.decommissioning_date}
               />
             )}
-            {hasSelectedAssetType && isPump && <PumpStationFields pumps={pumps} setPumps={setPumps} />}
+            {hasSelectedAssetType && isPump && <PumpStationFields pumps={pumps} setPumps={setPumps} spec={spec} setSpec={setSpecField} />}
             {hasSelectedAssetType && isHandover && <HandoverPointFields spec={spec} set={setSpecField} />}
           </div>
         </div>

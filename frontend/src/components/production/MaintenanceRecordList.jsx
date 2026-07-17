@@ -13,8 +13,10 @@ const humanStatus = (v) => (v ? String(v).replaceAll("_", " ") : "pending");
 const desktopStatus = (r) => r.desktop_approval_status || r.desktop_decision_status || r.desktop_approval || "pending";
 const desktopApprovedAt = (r) => r.desktop_approved_at || r.desktop_decision_at || null;
 
-export default function MaintenanceRecordList({ plantId, bundle }) {
+export default function MaintenanceRecordList({ plantId, bundle, readOnly = false }) {
   const { maintenanceRecords, users } = bundle;
+  const showActions = !readOnly;
+  const emptyColSpan = 12 + (showActions ? 1 : 0);
   const [localRecords, setLocalRecords] = useState(maintenanceRecords);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -106,7 +108,9 @@ export default function MaintenanceRecordList({ plantId, bundle }) {
               <th>Description</th><th>Start</th><th>End</th><th className="ta-r">Duration</th>
               <th className="ta-r">Expected Loss</th><th className="ta-r">Actual Impact</th><th>Status</th>
               <th>Responsible User</th><th>Submitted At</th><th>Website Approved At</th>
-              <th>Desktop Approval</th><th>Desktop Approved At</th><th>Actions</th>
+              <th>Desktop Approval</th>
+              <th>Desktop Approved At</th>
+              {showActions && <th>Actions</th>}
             </tr>
           </thead>
           <tbody>
@@ -118,39 +122,45 @@ export default function MaintenanceRecordList({ plantId, bundle }) {
                 <td className="ta-r mono">{maintenanceDurationHours(r.start_datetime, r.end_datetime)}h</td>
                 <td className="ta-r mono">{num(r.expected_impact_m3)}{r.expected_impact_m3 != null ? " m³" : ""}</td>
                 <td className="ta-r mono">{r.actual_impact_m3 != null ? `${num(r.actual_impact_m3)} m³` : "-"}</td>
-                <td><span className={`prod-badge prod-badge--${r.submission_status}`}>{humanStatus(r.submission_status)}</span></td>
+                <td>
+                  <span className={`prod-badge prod-badge--${r.submission_status}`}>
+                    {humanStatus(r.submission_status)}
+                  </span>
+                </td>
                 <td className="nowrap muted">{resolveUserName(r.submitted_by || r.approved_by)}</td>
                 <td className="nowrap">{fmtDT(r.submitted_at || r.created_at)}</td>
                 <td className="nowrap">{fmtDT(r.approved_at)}</td>
                 <td><span className={`prod-badge prod-badge--${desktopStatus(r)}`}>{humanStatus(desktopStatus(r))}</span></td>
                 <td className="nowrap">{fmtDT(desktopApprovedAt(r))}</td>
-                <td>
-                  <div className="mrl__actions">
-                    <button
-                      type="button"
-                      className="mrl__approval-btn mrl__approval-btn--accept"
-                      onClick={() => setDesktopApproval(r, "approved")}
-                      disabled={!r.id || !!pendingApprovals[r.id] || desktopStatus(r) === "approved"}
-                    >
-                      <Check size={13} /> Accept
-                    </button>
-                    <button
-                      type="button"
-                      className="mrl__approval-btn mrl__approval-btn--reject"
-                      onClick={() => setDesktopApproval(r, "rejected")}
-                      disabled={!r.id || !!pendingApprovals[r.id] || desktopStatus(r) === "rejected"}
-                    >
-                      <X size={13} /> Reject
-                    </button>
-                  </div>
-                </td>
+                {showActions && (
+                  <td>
+                    <div className="mrl__actions">
+                      <button
+                        type="button"
+                        className="mrl__approval-btn mrl__approval-btn--accept"
+                        onClick={() => setDesktopApproval(r, "approved")}
+                        disabled={!r.id || !!pendingApprovals[r.id] || desktopStatus(r) === "approved"}
+                      >
+                        <Check size={13} /> Accept
+                      </button>
+                      <button
+                        type="button"
+                        className="mrl__approval-btn mrl__approval-btn--reject"
+                        onClick={() => setDesktopApproval(r, "rejected")}
+                        disabled={!r.id || !!pendingApprovals[r.id] || desktopStatus(r) === "rejected"}
+                      >
+                        <X size={13} /> Reject
+                      </button>
+                    </div>
+                  </td>
+                )}
               </tr>
             ))}
-            {rows.length === 0 && <tr><td colSpan={13} className="empty">No maintenance records match the filters.</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={emptyColSpan} className="empty">No maintenance records match the filters.</td></tr>}
           </tbody>
         </table>
       </div>
-      {approvalError && <div className="mrl__error">{approvalError}</div>}
+      {showActions && approvalError && <div className="mrl__error">{approvalError}</div>}
     </div>
   );
 }

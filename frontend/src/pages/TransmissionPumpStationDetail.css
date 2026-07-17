@@ -1,0 +1,118 @@
+.transmission-detail .ppd__tabpanel {
+  min-width: 0;
+}
+
+.tpsd {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tpsd__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.8fr);
+  gap: 12px;
+}
+
+.tpsd__card {
+  border: 1px solid #d0d7de;
+  border-radius: 2px;
+  background: #ffffff;
+}
+
+.tpsd__card-head {
+  padding: 10px 12px;
+  border-bottom: 1px solid #d0d7de;
+}
+
+.tpsd__card-head h2 {
+  margin: 0;
+  color: #111827;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.tpsd__card-head p {
+  margin: 2px 0 0;
+  color: #6b7280;
+  font-size: 0.72rem;
+}
+
+.tpsd__card-body {
+  padding: 12px;
+}
+
+.tpsd__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 12px;
+  padding: 12px;
+}
+
+.tpsd__label {
+  color: #6b7280;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.tpsd__value {
+  margin-top: 2px;
+  color: #111827;
+  font-size: 0.82rem;
+}
+
+.tpsd__table-wrap {
+  overflow-x: auto;
+}
+
+.tpsd__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.tpsd__table th,
+.tpsd__table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #e5e7eb;
+  color: #111827;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.tpsd__table thead th {
+  color: #111827;
+  background: #f8fafc;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.tpsd__table .ta-r,
+.tpsd__table th.ta-r {
+  text-align: right;
+}
+
+.tpsd__empty {
+  padding: 16px;
+  color: #6b7280;
+  text-align: center;
+}
+
+@media (max-width: 980px) {
+  .tpsd__row {
+    grid-template-columns: 1fr;
+  }
+
+  .tpsd__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .tpsd__grid {
+    grid-template-columns: 1fr;
+  }
+}

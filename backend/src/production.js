@@ -39,6 +39,17 @@ export async function listProductionPlants() {
   return plants.map((p) => deriveDataStatus(p, dataMap));
 }
 
+function publicUsersForRecords(userRows, records) {
+  const referencedRefs = new Set();
+  for (const r of records) {
+    if (r.submitted_by) referencedRefs.add(r.submitted_by);
+    if (r.approved_by) referencedRefs.add(r.approved_by);
+  }
+  return userRows
+    .filter((u) => referencedRefs.has(u.id) || referencedRefs.has(String(u._id)))
+    .map((u) => ({ id: u.id || String(u._id), name: u.name, email: u.email }));
+}
+
 export async function getPlantBundle(id) {
   const db = await getDb();
   const plant = await db.collection("plants").findOne({ id }, { projection: PLANT_PROJECTION });
@@ -74,14 +85,7 @@ export async function getPlantBundle(id) {
     qualityLimits[key] = { min: row.min ?? undefined, max: row.max ?? undefined };
   }
 
-  const referencedRefs = new Set();
-  for (const r of [...productionInputs, ...maintenanceRecords, ...outages, ...qualityRecords]) {
-    if (r.submitted_by) referencedRefs.add(r.submitted_by);
-    if (r.approved_by) referencedRefs.add(r.approved_by);
-  }
-  const users = userRows
-    .filter((u) => referencedRefs.has(u.id) || referencedRefs.has(String(u._id)))
-    .map((u) => ({ id: u.id || String(u._id), name: u.name, email: u.email }));
+  const users = publicUsersForRecords(userRows, [...productionInputs, ...maintenanceRecords, ...outages, ...qualityRecords]);
 
   return {
     plant,
@@ -146,6 +150,14 @@ function outageEventTime(row) {
   ].filter(Boolean).sort().at(-1) || null;
 }
 
+function outageScope(value) {
+  const normalized = String(value || "").trim().toLowerCase().replace(/[_-]+/g, " ");
+  if (!normalized) return null;
+  if (normalized.includes("partial")) return "partial";
+  if (normalized.includes("complete") || normalized.includes("full")) return "complete";
+  return null;
+}
+
 function newerThan(field, sinceDate) {
   return [
     { [field]: { $gt: sinceDate.toISOString() } },
@@ -179,24 +191,37 @@ export async function listRecentOutages({ since, limit = 10 } = {}) {
     .limit(parsedLimit)
     .toArray();
 
-  const plantIds = [...new Set(rows.map((r) => r.plant_id).filter(Boolean))];
-  const plants = plantIds.length
-    ? await db.collection("plants").find({ id: { $in: plantIds } }, { projection: { _id: 0, id: 1, name: 1 } }).toArray()
-    : [];
-  const plantNameById = new Map(plants.map((p) => [p.id, p.name]));
+  const assetIds = [...new Set(rows.map((r) => r.plant_id).filter(Boolean))];
+  const [plants, pumpStations] = assetIds.length
+    ? await Promise.all([
+      db.collection("plants").find({ id: { $in: assetIds } }, { projection: { _id: 0, id: 1, name: 1 } }).toArray(),
+      db.collection("pumps").find({ id: { $in: assetIds } }, { projection: { _id: 0, id: 1, name: 1 } }).toArray(),
+    ])
+    : [[], []];
+  const assetById = new Map([
+    ...plants.map((plant) => [plant.id, { name: plant.name, kind: "plant" }]),
+    ...pumpStations.map((station) => [station.id, { name: station.name, kind: "pumpStation" }]),
+  ]);
 
   return rows
-    .map(({ _id, ...row }) => ({
-      id: String(_id),
-      plantId: row.plant_id,
-      plantName: plantNameById.get(row.plant_id) || row.plant_id || "Unknown plant",
-      failureType: row.failure_type || row.failureType || row.outage_type || row.outageType || "Outage",
-      scope: row.outage_scope || row.scope || null,
-      description: row.description || null,
-      start: asIso(row.start_datetime) || asIso(row.startDate),
-      submittedAt: asIso(row.submitted_at) || asIso(row.submittedAt) || asIso(row.created_at) || asIso(row.createdAt),
-      eventTime: outageEventTime({ _id, ...row }),
-    }))
+    .map(({ _id, ...row }) => {
+      const asset = assetById.get(row.plant_id);
+      const failureType = row.failure_type || row.failureType || row.outage_type || row.outageType || "Outage";
+      return {
+        id: String(_id),
+        assetId: row.plant_id,
+        assetName: asset?.name || row.plant_id || "Unknown asset",
+        assetKind: asset?.kind || "plant",
+        plantId: row.plant_id,
+        plantName: asset?.name || row.plant_id || "Unknown asset",
+        failureType,
+        scope: row.outage_scope || row.scope || outageScope(failureType),
+        description: row.description || null,
+        start: asIso(row.start_datetime) || asIso(row.startDate),
+        submittedAt: asIso(row.submitted_at) || asIso(row.submittedAt) || asIso(row.created_at) || asIso(row.createdAt),
+        eventTime: outageEventTime({ _id, ...row }),
+      };
+    })
     .filter((row) => !hasSince || !row.eventTime || row.eventTime > sinceDate.toISOString())
     .sort((a, b) => (b.eventTime || "").localeCompare(a.eventTime || ""));
 }

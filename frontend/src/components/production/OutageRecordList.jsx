@@ -10,6 +10,19 @@ const fmtShort = (v) => { if (!v) return "—"; const d = parseISO(v); return Nu
 const num = (v) => Number(v || 0).toLocaleString();
 const label = (v) => (v ? String(v).replaceAll("_", " ") : "—");
 
+function outageScope(value) {
+  const normalized = String(value || "").trim().toLowerCase().replace(/[_-]+/g, " ");
+  if (!normalized) return null;
+  if (normalized.includes("partial")) return "partial";
+  if (normalized.includes("complete")) return "complete";
+  if (normalized.includes("full")) return "full";
+  return null;
+}
+
+function rowScope(row) {
+  return row.outage_scope || row.scope || outageScope(row.failure_type) || outageScope(row.outage_type);
+}
+
 export default function OutageRecordList({ plantId, bundle }) {
   const { outages, users } = bundle;
   const [startDate, setStartDate] = useState("");
@@ -56,7 +69,7 @@ export default function OutageRecordList({ plantId, bundle }) {
         <table className="prod-table">
           <thead>
             <tr>
-              <th>Failure Type</th><th>Scope</th><th>Description</th><th>Start</th><th>End</th>
+              <th>outage_type</th><th>outage_scope</th><th>failure_type</th><th>description</th><th>Start</th><th>End</th>
               <th className="ta-r">Duration</th><th className="ta-r">Loss (m³)</th>
               <th>Responsible User</th><th>Submitted At</th>
             </tr>
@@ -64,8 +77,9 @@ export default function OutageRecordList({ plantId, bundle }) {
           <tbody>
             {rows.map((r, i) => (
               <tr key={r.id || i}>
-                <td><span className="prod-badge">{label(r.failure_type || r.outage_type)}</span></td>
-                <td>{label(r.outage_scope || r.scope)}</td>
+                <td><span className="prod-badge">{label(r.outage_type || r.type)}</span></td>
+                <td>{label(rowScope(r))}</td>
+                <td>{label(r.failure_type)}</td>
                 <td className="orl__desc">{r.description || "—"}</td>
                 <td className="nowrap">{fmtShort(r.start_datetime)}</td>
                 <td className="nowrap">{fmtShort(r.end_datetime)}</td>
@@ -75,7 +89,7 @@ export default function OutageRecordList({ plantId, bundle }) {
                 <td className="nowrap">{fmtDT(r.submitted_at || r.created_at)}</td>
               </tr>
             ))}
-            {rows.length === 0 && <tr><td colSpan={9} className="empty">No outage records match the filters.</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={10} className="empty">No outage records match the filters.</td></tr>}
           </tbody>
         </table>
       </div>

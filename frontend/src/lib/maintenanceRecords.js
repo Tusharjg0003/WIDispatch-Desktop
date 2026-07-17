@@ -46,6 +46,9 @@ const fmtDT = (v) => {
   return Number.isNaN(d.getTime()) ? "N/A" : format(d, "yyyy-MM-dd HH:mm");
 };
 
+const desktopStatus = (r) => r.desktop_approval_status || r.desktop_decision_status || r.desktop_approval || "pending";
+const desktopApprovedAt = (r) => r.desktop_approved_at || r.desktop_decision_at || null;
+
 export function maintenanceRowsToCsv(rows, resolveUserName) {
   const body = rows.map((r) => [
     r.description || "",
@@ -58,8 +61,8 @@ export function maintenanceRowsToCsv(rows, resolveUserName) {
     resolveUserName(r.submitted_by || r.approved_by || null),
     fmtDT(r.submitted_at || r.created_at || null),
     fmtDT(r.approved_at || null),
-    r.desktop_approval_status || r.desktop_decision_status || r.desktop_approval || "pending",
-    fmtDT(r.desktop_approved_at || r.desktop_decision_at || null),
+    desktopStatus(r),
+    fmtDT(desktopApprovedAt(r)),
   ]);
   return toCsv(MAINT_HEADERS, body);
 }

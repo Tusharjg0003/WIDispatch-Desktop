@@ -9,16 +9,50 @@ const emptyPump = (role) => ({
   active: true,
 });
 
+const isFunctionalPump = (pump) =>
+  ["active", "functional"].includes(String(pump?.role || "").toLowerCase());
+
+const isBackupPump = (pump) =>
+  ["standby", "backup"].includes(String(pump?.role || "").toLowerCase());
+
+const pumpLabel = (pump, index, fallback) => pump.name || pump.id || `${fallback} ${index + 1}`;
+
+function linkedPumpSummary(pumps, predicate, fallback) {
+  const linked = pumps.filter(predicate);
+  if (!linked.length) return `No ${fallback.toLowerCase()} pumps configured`;
+  return linked.map((pump, index) => pumpLabel(pump, index, fallback)).join(", ");
+}
+
 // Repeatable "Pump Configuration" list for a Pump Station asset. `pumps` is
 // the array stored at specifications.pumps; `setPumps` replaces the array.
-export default function PumpStationFields({ pumps, setPumps }) {
+export default function PumpStationFields({ pumps, setPumps, spec = {}, setSpec }) {
   const addPump = (role) => setPumps([...pumps, emptyPump(role)]);
   const updatePump = (id, patch) => setPumps(pumps.map((p) => (p.id === id ? { ...p, ...patch } : p)));
   const removePump = (id) => setPumps(pumps.filter((p) => p.id !== id));
+  const updateSpec = (key) => setSpec?.(key);
 
   return (
     <div className="form-section">
       <h3>Pump Configuration</h3>
+      <div className="form-grid af__grid">
+        <div className="form-group af__field">
+          <label>Design Capacity (m³/day)</label>
+          <input
+            type="number"
+            step="any"
+            value={spec.design_capacity ?? ""}
+            onChange={updateSpec("design_capacity")}
+          />
+        </div>
+        <div className="form-group af__field">
+          <label>Active Pumps</label>
+          <input readOnly value={linkedPumpSummary(pumps, isFunctionalPump, "Functional pump")} />
+        </div>
+        <div className="form-group af__field">
+          <label>Standby Pumps</label>
+          <input readOnly value={linkedPumpSummary(pumps, isBackupPump, "Backup pump")} />
+        </div>
+      </div>
       <div className="af__pump-list">
         {pumps.length === 0 && <p className="af__pump-empty">No pumps added yet.</p>}
         {pumps.map((p) => (

@@ -36,7 +36,16 @@ test("computeOutageStats", () => {
 
 test("outageRowsToCsv: header + user", () => {
   const csv = outageRowsToCsv(buildOutageRows(recs, "P1"), (r) => (r === "u1" ? "Alice" : "N/A"));
-  assert.match(csv.split("\n")[0], /^Failure Type,Scope,Description,/);
+  assert.match(csv.split("\n")[0], /^outage_type,outage_scope,failure_type,description,/);
   assert.match(csv, /Alice/);
   assert.match(csv, /Breaker trip/);
+});
+
+test("outageRowsToCsv: keeps outage type, scope, and failure type separate", () => {
+  const rows = buildOutageRows([
+    { plant_id: "PS1", failure_type: "Complete Outage", outage_type: "Pump outage", description: "Station down", start_datetime: "2026-03-02T00:00:00Z", submitted_by: "u1" },
+  ], "PS1");
+  const csv = outageRowsToCsv(rows, (r) => (r === "u1" ? "Alice" : "N/A"));
+  assert.match(csv.split("\n")[0], /^outage_type,outage_scope,failure_type,description,/);
+  assert.match(csv, /Pump outage,complete,Complete Outage,Station down/);
 });

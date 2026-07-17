@@ -39,3 +39,24 @@ test("maintenanceRowsToCsv: header + duration + user", () => {
   assert.match(csv, /Alice/);
   assert.match(csv, /Pump swap/);
 });
+
+test("maintenanceRowsToCsv: pump station columns match maintenance approval columns", () => {
+  const csv = maintenanceRowsToCsv([
+    {
+      plant_id: "PS1",
+      description: "Pump station check",
+      start_datetime: "2026-03-02T00:00:00Z",
+      end_datetime: "2026-03-02T06:00:00Z",
+      expected_impact_m3: 1000,
+      actual_impact_m3: 900,
+      submission_status: "approved",
+      approved_at: "2026-03-03T00:30:00Z",
+      desktop_approval_status: "approved",
+      desktop_approved_at: "2026-03-03T01:00:00Z",
+      submitted_by: "u1",
+    },
+  ], (r) => (r === "u1" ? "Alice" : "N/A"));
+  assert.equal(csv.split("\n")[0], "Description,Start Date & Time,End Date & Time,Duration (hours),Expected Loss (m³),Actual Impact (m³),Status,Responsible User,Submitted At,Website Approved At,Desktop Approval,Desktop Approved At");
+  assert.match(csv, /approved/);
+  assert.match(csv, /Alice/);
+});
