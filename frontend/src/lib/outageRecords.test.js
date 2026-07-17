@@ -47,5 +47,5 @@ test("outageRowsToCsv: keeps outage type, scope, and failure type separate", () 
   ], "PS1");
   const csv = outageRowsToCsv(rows, (r) => (r === "u1" ? "Alice" : "N/A"));
   assert.match(csv.split("\n")[0], /^outage_type,outage_scope,failure_type,description,/);
-  assert.match(csv, /Pump outage,complete,Complete Outage,Station down/);
+  assert.match(csv, /Pump outage,full,Complete Outage,Station down/);
 });

@@ -154,7 +154,7 @@ function outageScope(value) {
   const normalized = String(value || "").trim().toLowerCase().replace(/[_-]+/g, " ");
   if (!normalized) return null;
   if (normalized.includes("partial")) return "partial";
-  if (normalized.includes("complete") || normalized.includes("full")) return "complete";
+  if (normalized.includes("complete") || normalized.includes("full")) return "full";
   return null;
 }
 
@@ -207,6 +207,7 @@ export async function listRecentOutages({ since, limit = 10 } = {}) {
     .map(({ _id, ...row }) => {
       const asset = assetById.get(row.plant_id);
       const failureType = row.failure_type || row.failureType || row.outage_type || row.outageType || "Outage";
+      const scope = outageScope(row.outage_scope || row.scope) || outageScope(failureType) || "full";
       return {
         id: String(_id),
         assetId: row.plant_id,
@@ -215,7 +216,7 @@ export async function listRecentOutages({ since, limit = 10 } = {}) {
         plantId: row.plant_id,
         plantName: asset?.name || row.plant_id || "Unknown asset",
         failureType,
-        scope: row.outage_scope || row.scope || outageScope(failureType),
+        scope,
         description: row.description || null,
         start: asIso(row.start_datetime) || asIso(row.startDate),
         submittedAt: asIso(row.submitted_at) || asIso(row.submittedAt) || asIso(row.created_at) || asIso(row.createdAt),

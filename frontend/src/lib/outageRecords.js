@@ -56,8 +56,7 @@ function outageScope(value) {
   const normalized = String(value || "").trim().toLowerCase().replace(/[_-]+/g, " ");
   if (!normalized) return "";
   if (normalized.includes("partial")) return "partial";
-  if (normalized.includes("complete")) return "complete";
-  if (normalized.includes("full")) return "full";
+  if (normalized.includes("complete") || normalized.includes("full")) return "full";
   return "";
 }
 

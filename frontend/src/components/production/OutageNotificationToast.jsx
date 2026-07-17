@@ -19,12 +19,16 @@ function outageScope(value) {
   const normalized = String(value || "").trim().toLowerCase().replace(/[_-]+/g, " ");
   if (!normalized) return null;
   if (normalized.includes("partial")) return "partial";
-  if (normalized.includes("complete") || normalized.includes("full")) return "complete";
+  if (normalized.includes("complete") || normalized.includes("full")) return "full";
   return null;
 }
 
 function toastScope(toast) {
-  return outageScope(toast.scope) || outageScope(toast.failureType);
+  return outageScope(toast.scope) || outageScope(toast.failureType) || "full";
+}
+
+function scopeLabel(scope) {
+  return scope === "partial" ? "Partial outage" : "Full outage";
 }
 
 export default function OutageNotificationToast() {
@@ -92,7 +96,9 @@ export default function OutageNotificationToast() {
     }
   };
 
-  const isPartial = toastScope(toast) === "partial";
+  const scope = toastScope(toast);
+  const isPartial = scope === "partial";
+  const outageLabel = scopeLabel(scope);
 
   return (
     <div
@@ -103,8 +109,8 @@ export default function OutageNotificationToast() {
       <button type="button" className="outage-toast__body" onClick={openOutage}>
         <span className="outage-toast__icon"><AlertTriangle size={18} /></span>
         <span className="outage-toast__copy">
-          <span className="outage-toast__title">{toast.count > 1 ? `${toast.count} new outages` : "New outage reported"}</span>
-          <span className="outage-toast__meta">{toast.failureType} at {toast.assetName || toast.plantName}</span>
+          <span className="outage-toast__title">{toast.count > 1 ? `${toast.count} new outages` : `${outageLabel} reported`}</span>
+          <span className="outage-toast__meta">{outageLabel} at {toast.assetName || toast.plantName}</span>
         </span>
       </button>
       <button type="button" className="outage-toast__close" aria-label="Dismiss outage notification" onClick={() => setToast(null)}>
