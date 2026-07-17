@@ -75,8 +75,14 @@ export default function OutageNotificationToast() {
     }
   };
 
+  const isPartial = String(toast.scope || "").toLowerCase() === "partial";
+
   return (
-    <div className="outage-toast" role="status" aria-live="polite">
+    <div
+      className={`outage-toast ${isPartial ? "outage-toast--partial" : "outage-toast--full"}`}
+      role="status"
+      aria-live="polite"
+    >
       <button type="button" className="outage-toast__body" onClick={openOutage}>
         <span className="outage-toast__icon"><AlertTriangle size={18} /></span>
         <span className="outage-toast__copy">

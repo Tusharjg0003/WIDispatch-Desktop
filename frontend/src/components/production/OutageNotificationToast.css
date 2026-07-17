@@ -14,6 +14,40 @@
   overflow: hidden;
 }
 
+/* Full outage keeps the default red styling above. Partial outage → amber. */
+.outage-toast--partial {
+  background: #f59e0b;
+}
+
+.outage-toast--partial .outage-toast__body {
+  color: #111827;
+}
+
+.outage-toast--partial .outage-toast__icon {
+  border-color: #111827;
+  background: #b45309;
+  color: #fff;
+}
+
+.outage-toast--partial .outage-toast__title {
+  color: #111827;
+}
+
+.outage-toast--partial .outage-toast__meta {
+  color: #78350f;
+}
+
+.outage-toast--partial .outage-toast__close {
+  border-left-color: rgba(17, 24, 39, 0.25);
+  background: #d97706;
+  color: #111827;
+}
+
+.outage-toast--partial .outage-toast__close:hover {
+  background: #b45309;
+  color: #fff;
+}
+
 .outage-toast__body {
   display: flex;
   align-items: center;
