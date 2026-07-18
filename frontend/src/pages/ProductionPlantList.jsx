@@ -5,6 +5,13 @@ import "./ProductionPlantList.css";
 
 const uniqSorted = (values) => [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
 
+const typeBadgeClass = (type) => {
+  const normalized = String(type || "").toLowerCase();
+  if (normalized.includes("desalination")) return "ppl__badge--type-desalination";
+  if (normalized.includes("purification")) return "ppl__badge--type-purification";
+  return "ppl__badge--type-other";
+};
+
 export default function ProductionPlantList() {
   const navigate = useNavigate();
   const [plants, setPlants] = useState([]);
@@ -77,7 +84,7 @@ export default function ProductionPlantList() {
                 <tr key={p.id} onClick={() => navigate(`/production/${encodeURIComponent(p.id)}`)}>
                   <td className="mono muted">{p.external_id}</td>
                   <td><div className="ppl__name">{p.name}</div><div className="ppl__city">{p.city}</div></td>
-                  <td><span className="ppl__badge ppl__badge--type">{p.asset_type || "N/A"}</span></td>
+                  <td><span className={`ppl__badge ppl__badge--type ${typeBadgeClass(p.asset_type)}`}>{p.asset_type || "N/A"}</span></td>
                   <td className="muted">{p.entity}</td>
                   <td className="muted">{p.region}</td>
                   <td>{p.status}</td>
