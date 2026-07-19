@@ -212,6 +212,150 @@
   letter-spacing: 0.06em;
 }
 
+/* -- List view (AssetListView) --------------------------------------------
+   Div-based grid "professional table" toggled from the sidebar's List View
+   button. Mirrors the page's denser data-tool treatment (sharp corners,
+   tight row padding, saturated status pills matching the .st palette). The
+   8 columns line up header + rows via a shared grid-template. */
+.ar-page .list-wrapper {
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.ar-page .list-content {
+  overflow-x: auto;
+}
+.ar-page .no-data {
+  padding: 40px 16px;
+  text-align: center;
+  color: var(--ink-dim);
+  font-size: 0.85rem;
+}
+.ar-page .no-data p {
+  margin: 0;
+}
+
+.ar-page .professional-table {
+  min-width: 900px;
+}
+.ar-page .table-header,
+.ar-page .table-row {
+  display: grid;
+  grid-template-columns:
+    minmax(120px, 1.1fr) minmax(150px, 1.6fr) minmax(90px, 1fr)
+    minmax(110px, 1.2fr) minmax(90px, 1fr) minmax(100px, 1fr)
+    minmax(110px, 0.9fr) 84px;
+  align-items: center;
+  gap: 10px;
+}
+.ar-page .table-header {
+  padding: 9px 14px;
+  background: var(--surface-subtle);
+  border-bottom: 1px solid var(--line);
+}
+.ar-page .table-cell.header {
+  font-size: 0.64rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-dim);
+}
+.ar-page .table-row {
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 0.78rem;
+  color: var(--ink);
+}
+.ar-page .table-row:last-child {
+  border-bottom: none;
+}
+.ar-page .table-row:hover {
+  background: var(--surface-subtle);
+}
+.ar-page .table-cell {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ar-page .table-cell .generated-id {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--ink-dim);
+}
+.ar-page .table-cell .asset-name {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* Status badge - same palette as the .st pills used elsewhere on this page. */
+.ar-page .status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  border: 1px solid var(--line);
+  color: var(--ink-dim);
+  background: var(--line-soft);
+  text-transform: capitalize;
+}
+.ar-page .status-badge.operational {
+  color: #065f46;
+  border-color: rgba(5, 150, 105, 0.3);
+  background: #d1fae5;
+}
+.ar-page .status-badge.maintenance {
+  color: #92400e;
+  border-color: rgba(217, 119, 6, 0.3);
+  background: #fef3c7;
+}
+.ar-page .status-badge.decommissioned {
+  color: #991b1b;
+  border-color: rgba(220, 38, 38, 0.3);
+  background: #fee2e2;
+}
+.ar-page .status-badge.under_construction,
+.ar-page .status-badge.planned {
+  color: #1d4ed8;
+  border-color: rgba(37, 99, 235, 0.3);
+  background: #dbeafe;
+}
+
+/* Row actions */
+.ar-page .action-buttons {
+  display: flex;
+  gap: 6px;
+}
+.ar-page .asset-table-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-dim);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.ar-page .asset-table-action-btn:hover {
+  background: var(--surface-subtle);
+  color: var(--ink);
+  border-color: #cbd5e1;
+}
+.ar-page .asset-table-action-btn--view:hover {
+  color: var(--accent);
+  border-color: rgba(26, 74, 138, 0.4);
+}
+.ar-page .asset-table-action-btn--edit:hover {
+  color: #b45309;
+  border-color: rgba(217, 119, 6, 0.4);
+}
+
 /* Map */
 .map-view-container {
   padding: 16px;
