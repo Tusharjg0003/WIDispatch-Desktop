@@ -3,9 +3,10 @@ import assert from "node:assert/strict";
 import { maintenanceDurationHours, buildMaintenanceRows, filterMaintenanceByStatus, computeMaintenanceStats, maintenanceRowsToCsv } from "./maintenanceRecords.js";
 
 const recs = [
-  { plant_id: "P1", description: "Pump swap", start_datetime: "2026-03-02T00:00:00Z", end_datetime: "2026-03-02T06:00:00Z", expected_impact_m3: 1000, actual_impact_m3: 900, submission_status: "approved", submitted_by: "u1" },
-  { plant_id: "P1", description: "Valve check", start_datetime: "2026-03-01T00:00:00Z", end_datetime: "2026-03-01T02:00:00Z", expected_impact_m3: 500, submission_status: "submitted", submitted_by: "u1" },
-  { plant_id: "P2", description: "x", start_datetime: "2026-03-01T00:00:00Z", end_datetime: "2026-03-01T01:00:00Z", expected_impact_m3: 10, submission_status: "approved" },
+  { plant_id: "P1", description: "Pump swap", start_datetime: "2026-03-02T00:00:00Z", end_datetime: "2026-03-02T06:00:00Z", expected_impact_m3: 1000, actual_impact_m3: 900, submission_status: "approved", approved_at: "2026-03-03T00:00:00Z", submitted_by: "u1" },
+  { plant_id: "P1", description: "Valve check", start_datetime: "2026-03-01T00:00:00Z", end_datetime: "2026-03-01T02:00:00Z", expected_impact_m3: 500, submission_status: "approved", approved_at: "2026-03-01T05:00:00Z", submitted_by: "u1" },
+  { plant_id: "P1", description: "Pending job", start_datetime: "2026-03-04T00:00:00Z", end_datetime: "2026-03-04T02:00:00Z", expected_impact_m3: 700, submission_status: "submitted", submitted_by: "u1" },
+  { plant_id: "P2", description: "x", start_datetime: "2026-03-01T00:00:00Z", end_datetime: "2026-03-01T01:00:00Z", expected_impact_m3: 10, submission_status: "approved", approved_at: "2026-03-02T00:00:00Z" },
 ];
 
 test("maintenanceDurationHours: whole hours", () => {
@@ -13,23 +14,29 @@ test("maintenanceDurationHours: whole hours", () => {
   assert.equal(maintenanceDurationHours("bad", "worse"), 0);
 });
 
-test("buildMaintenanceRows: plant filter + newest-first", () => {
+test("buildMaintenanceRows: plant filter + newest-first + website-approved only", () => {
   const rows = buildMaintenanceRows(recs, "P1");
   assert.equal(rows.length, 2);
   assert.equal(rows[0].description, "Pump swap");
 });
 
+test("buildMaintenanceRows: excludes records without a Website Approved At", () => {
+  const rows = buildMaintenanceRows(recs, "P1");
+  assert.ok(rows.every((r) => r.approved_at));
+  assert.ok(!rows.some((r) => r.description === "Pending job"));
+});
+
 test("filterMaintenanceByStatus", () => {
   const rows = buildMaintenanceRows(recs, "P1");
-  assert.equal(filterMaintenanceByStatus(rows, "approved").length, 1);
+  assert.equal(filterMaintenanceByStatus(rows, "approved").length, 2);
   assert.equal(filterMaintenanceByStatus(rows, "all").length, 2);
 });
 
 test("computeMaintenanceStats", () => {
   const s = computeMaintenanceStats(buildMaintenanceRows(recs, "P1"));
   assert.equal(s.total, 2);
-  assert.equal(s.pending, 1);
-  assert.equal(s.approved, 1);
+  assert.equal(s.pending, 0);
+  assert.equal(s.approved, 2);
   assert.equal(s.totalImpact, 1500);
 });
 

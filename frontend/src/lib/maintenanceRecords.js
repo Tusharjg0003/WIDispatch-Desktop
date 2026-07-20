@@ -11,6 +11,7 @@ export function maintenanceDurationHours(start, end) {
 export function buildMaintenanceRows(maintenanceRecords, plantId, { startDate, endDate } = {}) {
   return maintenanceRecords
     .filter((r) => r.plant_id === plantId && r.start_datetime)
+    .filter((r) => r.approved_at)
     .filter((r) => {
       const t = new Date(r.start_datetime);
       if (startDate && t < startDate) return false;
