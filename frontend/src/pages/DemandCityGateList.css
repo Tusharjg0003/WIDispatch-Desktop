@@ -1,0 +1,35 @@
+/* Layers on top of ProductionPlantList.css (.ppl* list classes). */
+
+.ppl__titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  min-height: 42px;
+  border: 1px solid #d0d7de;
+  border-radius: 2px;
+  background: #ffffff;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+}
+
+.ppl__title {
+  margin: 0;
+  color: #111827;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.ppl__subtitle {
+  margin: 2px 0 0;
+  color: #6b7280;
+  font-size: 0.72rem;
+}
+
+.demand-city-gates .ppl__head {
+  justify-content: flex-start;
+}
+
+.demand-city-gates .ppl__badge--data { background: #dbeafe; color: #1e40af; }

@@ -7,6 +7,7 @@ import HomePage from "./pages/HomePage";
 import ProductionPage from "./pages/ProductionPage";
 import ProductionPlantDetail from "./pages/ProductionPlantDetail";
 import DemandPage from "./pages/DemandPage";
+import DemandCityGateDetail from "./pages/DemandCityGateDetail";
 import TransmissionPage from "./pages/TransmissionPage";
 import TransmissionPumpStationDetail from "./pages/TransmissionPumpStationDetail";
 import EconomicsPage from "./pages/EconomicsPage";
@@ -39,6 +40,7 @@ export default function App() {
             <Route path="/production" element={<ProductionPage />} />
             <Route path="/production/:plantId" element={<ProductionPlantDetail />} />
             <Route path="/demand" element={<DemandPage />} />
+            <Route path="/demand/:cityGateId" element={<DemandCityGateDetail />} />
             <Route path="/transmission" element={<TransmissionPage />} />
             <Route path="/transmission/:pumpStationId" element={<TransmissionPumpStationDetail />} />
             <Route path="/economics" element={<EconomicsPage />} />
