@@ -1,0 +1,2 @@
+/* Demand-only tweaks layered on top of the shared prod-* classes. */
+.prod-input .prod-badge--approved { background: #dcfce7; color: #166534; }
