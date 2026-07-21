@@ -13,10 +13,10 @@ const humanStatus = (v) => (v ? String(v).replaceAll("_", " ") : "pending");
 const desktopStatus = (r) => r.desktop_approval_status || r.desktop_decision_status || r.desktop_approval || "pending";
 const desktopApprovedAt = (r) => r.desktop_approved_at || r.desktop_decision_at || null;
 
-export default function MaintenanceRecordList({ plantId, bundle, readOnly = false }) {
+export default function MaintenanceRecordList({ plantId, bundle, readOnly = false, hideDesktopApproval = false }) {
   const { maintenanceRecords, users } = bundle;
   const showActions = !readOnly;
-  const emptyColSpan = 12 + (showActions ? 1 : 0);
+  const emptyColSpan = (hideDesktopApproval ? 10 : 12) + (showActions ? 1 : 0);
   const [localRecords, setLocalRecords] = useState(maintenanceRecords);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -108,8 +108,8 @@ export default function MaintenanceRecordList({ plantId, bundle, readOnly = fals
               <th>Description</th><th>Start</th><th>End</th><th className="ta-r">Duration</th>
               <th className="ta-r">Expected Loss</th><th className="ta-r">Actual Impact</th><th>Status</th>
               <th>Responsible User</th><th>Submitted At</th><th>Website Approved At</th>
-              <th>Desktop Approval</th>
-              <th>Desktop Approved At</th>
+              {!hideDesktopApproval && <th>Desktop Approval</th>}
+              {!hideDesktopApproval && <th>Desktop Approved At</th>}
               {showActions && <th>Actions</th>}
             </tr>
           </thead>
@@ -130,8 +130,8 @@ export default function MaintenanceRecordList({ plantId, bundle, readOnly = fals
                 <td className="nowrap muted">{resolveUserName(r.submitted_by || r.approved_by)}</td>
                 <td className="nowrap">{fmtDT(r.submitted_at || r.created_at)}</td>
                 <td className="nowrap">{fmtDT(r.approved_at)}</td>
-                <td><span className={`prod-badge prod-badge--${desktopStatus(r)}`}>{humanStatus(desktopStatus(r))}</span></td>
-                <td className="nowrap">{fmtDT(desktopApprovedAt(r))}</td>
+                {!hideDesktopApproval && <td><span className={`prod-badge prod-badge--${desktopStatus(r)}`}>{humanStatus(desktopStatus(r))}</span></td>}
+                {!hideDesktopApproval && <td className="nowrap">{fmtDT(desktopApprovedAt(r))}</td>}
                 {showActions && (
                   <td>
                     <div className="mrl__actions">

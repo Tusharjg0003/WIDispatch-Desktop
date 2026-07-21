@@ -86,7 +86,7 @@ export default function DemandCityGateDetail() {
             {activeTab === "overview" && <DemandOverview cityGate={cityGate} cityGateId={cityGateId} bundle={bundle} />}
             {activeTab === "demand" && <DemandInputTable cityGate={cityGate} cityGateId={cityGateId} bundle={bundle} />}
             {activeTab === "quality" && <QualityRecordList plantId={cityGateId} bundle={bundle} />}
-            {activeTab === "maintenance" && <MaintenanceRecordList plantId={cityGateId} bundle={bundle} readOnly />}
+            {activeTab === "maintenance" && <MaintenanceRecordList plantId={cityGateId} bundle={bundle} readOnly hideDesktopApproval />}
             {activeTab === "outages" && <OutageRecordList plantId={cityGateId} bundle={bundle} />}
           </div>
         </>
