@@ -15,6 +15,7 @@ export default function DemandCityGateList() {
   const [gateType, setGateType] = useState("");
   const [entity, setEntity] = useState("");
   const [region, setRegion] = useState("");
+  const [status, setStatus] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -28,6 +29,7 @@ export default function DemandCityGateList() {
     gateTypes: uniqSorted(gates.map((g) => g.asset_type)),
     entities: uniqSorted(gates.map((g) => g.entity)),
     regions: uniqSorted(gates.map((g) => g.region)),
+    statuses: uniqSorted(gates.map((g) => g.status)),
   }), [gates]);
 
   const filtered = useMemo(() => {
@@ -36,12 +38,13 @@ export default function DemandCityGateList() {
       if (gateType && g.asset_type !== gateType) return false;
       if (entity && g.entity !== entity) return false;
       if (region && g.region !== region) return false;
+      if (status && g.status !== status) return false;
       if (!q) return true;
       return [g.name, g.external_id, g.city, g.region, g.entity, g.asset_type]
         .filter(Boolean)
         .some((f) => f.toLowerCase().includes(q));
     });
-  }, [gates, query, gateType, entity, region]);
+  }, [gates, query, gateType, entity, region, status]);
 
   return (
     <div className="ppl demand-city-gates">
@@ -65,6 +68,10 @@ export default function DemandCityGateList() {
         <select className="ppl__filter" aria-label="Region" value={region} onChange={(e) => setRegion(e.target.value)}>
           <option value="">All Regions</option>
           {filterOptions.regions.map((item) => <option key={item} value={item}>{item}</option>)}
+        </select>
+        <select className="ppl__filter" aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value)}>
+          <option value="">All Statuses</option>
+          {filterOptions.statuses.map((item) => <option key={item} value={item}>{item}</option>)}
         </select>
       </header>
 
