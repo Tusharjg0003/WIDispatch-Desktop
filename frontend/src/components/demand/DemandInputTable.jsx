@@ -1,33 +1,47 @@
 import React, { useMemo, useState } from "react";
 import { format, parseISO, startOfDay, subDays } from "date-fns";
 import { Download } from "lucide-react";
-import { buildDemandRows, filterDemandByStatus, computeDemandTotals, demandRowsToCsv } from "../../lib/demandRows";
+import { buildProductionRows, filterRows, computeTotals } from "../../lib/productionRows";
+import { demandRowsToCsv } from "../../lib/demandRows";
 import "../production/ProductionInputTable.css"; // shared prod-* table/badge/kpi/filter classes
 import "./DemandInputTable.css";
 
 const num = (v) => Math.round(v).toLocaleString();
 const isoInput = (d) => format(d, "yyyy-MM-dd");
 
-export default function DemandInputTable({ cityGateId, bundle }) {
-  const { demandInputs, users } = bundle;
+export default function DemandInputTable({ cityGate, cityGateId, bundle }) {
+  const { demandInputs, maintenanceRecords, outages, contractedCapacities, users } = bundle;
+
   const [startDate, setStartDate] = useState(startOfDay(subDays(new Date(), 30)));
   const [endDate, setEndDate] = useState(startOfDay(new Date()));
-  const [status, setStatus] = useState("all");
+  const [requestedStatus, setRequestedStatus] = useState("all");
 
   const resolveUserName = (ref) => {
     if (!ref) return "N/A";
     const u = users.find((x) => x.id === ref || x.email === ref);
     return u?.name || u?.email || ref;
   };
+  const fmtDateTime = (v) => {
+    if (!v) return "N/A";
+    const d = parseISO(v);
+    return Number.isNaN(d.getTime()) ? "N/A" : format(d, "yyyy-MM-dd HH:mm");
+  };
 
+  // Reuse the production per-day engine: it walks every day in [start, end]
+  // and carries required_m3 as `requested`. Demand has no delivered/actual.
   const rows = useMemo(
-    () => filterDemandByStatus(buildDemandRows(demandInputs, cityGateId, { startDate, endDate }), status),
-    [demandInputs, cityGateId, startDate, endDate, status],
+    () => buildProductionRows({
+      plant: cityGate, plantId: cityGateId, productionInputs: demandInputs,
+      maintenanceRecords, outages, contractedCapacities, startDate, endDate,
+    }),
+    [cityGate, cityGateId, demandInputs, maintenanceRecords, outages, contractedCapacities, startDate, endDate],
   );
-  const totals = useMemo(() => computeDemandTotals(rows), [rows]);
+  const visibleRows = useMemo(() => filterRows(rows, { deliveredStatus: "all", requestedStatus }), [rows, requestedStatus]);
+  const totals = useMemo(() => computeTotals(visibleRows), [visibleRows]);
+  const requiredTotal = useMemo(() => visibleRows.reduce((s, r) => s + (r.requested ?? 0), 0), [visibleRows]);
 
   const exportToCSV = () => {
-    const csv = demandRowsToCsv(rows, resolveUserName);
+    const csv = demandRowsToCsv(visibleRows, resolveUserName);
     const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -41,10 +55,11 @@ export default function DemandInputTable({ cityGateId, bundle }) {
     <div className="prod-input">
       <div className="prod-strip">
         {[
-          ["Total Required (m³)", num(totals.totalM3), ""],
-          ["Avg / day (m³)", num(totals.avgDailyM3), "prod-kpi--blue"],
-          ["Peak day (m³)", num(totals.peakM3), "prod-kpi--green"],
-          ["Days Reporting", String(totals.days), ""],
+          ["Contracted (m³)", num(totals.contracted), ""],
+          ["Available (m³)", num(totals.available), "prod-kpi--blue"],
+          ["Required (m³)", num(requiredTotal), "prod-kpi--green"],
+          ["Total Loss (m³)", num(totals.loss), "prod-kpi--red"],
+          ["Avg Availability", `${totals.availabilityPct.toFixed(0)}%`, ""],
         ].map(([label, value, tone]) => (
           <div className="prod-strip-cell" key={label}>
             <div className="prod-kpi-label">{label}</div>
@@ -60,16 +75,14 @@ export default function DemandInputTable({ cityGateId, bundle }) {
         <label>End Date
           <input type="date" value={isoInput(endDate)} onChange={(e) => e.target.value && setEndDate(startOfDay(parseISO(e.target.value)))} />
         </label>
-        <label>Status
-          <select value={status} onChange={(e) => setStatus(e.target.value)}>
+        <label>Required Status
+          <select value={requestedStatus} onChange={(e) => setRequestedStatus(e.target.value)}>
             <option value="all">All</option>
-            <option value="approved">Approved</option>
-            <option value="submitted">Submitted</option>
-            <option value="revised">Revised</option>
-            <option value="rejected">Rejected</option>
+            <option value="allocated">Allocated</option>
+            <option value="pending">Pending</option>
           </select>
         </label>
-        <button type="button" className="prod-btn" onClick={exportToCSV} disabled={rows.length === 0}>
+        <button type="button" className="prod-btn" onClick={exportToCSV} disabled={visibleRows.length === 0}>
           <Download size={14} /> Export CSV
         </button>
       </div>
@@ -78,30 +91,34 @@ export default function DemandInputTable({ cityGateId, bundle }) {
         <table className="prod-table">
           <thead>
             <tr>
-              <th>Date</th><th className="ta-r">Required (m³)</th><th>Data Source</th>
-              <th>Comments</th><th>Status</th><th>Submitted By</th><th>Approved By</th>
+              <th>Date</th><th className="ta-r">Contracted</th><th className="ta-r">Maint. Loss</th>
+              <th className="ta-r">Outage Loss</th><th className="ta-r">Variance</th><th className="ta-r">Available</th>
+              <th className="ta-r">Required</th><th>Responsible User</th><th>Submitted At</th><th>Approved At</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
-              <tr key={r.date}>
-                <td className="nowrap">{format(parseISO(r.date), "EEE, MMM dd")}</td>
-                <td className="ta-r mono">{num(r.requiredM3)}</td>
-                <td className="muted">{r.dataSource || "—"}</td>
-                <td className="muted">{r.comments || "—"}</td>
-                <td>{r.status ? <span className={`prod-badge prod-badge--${r.status}`}>{r.status.replace("_", " ")}</span> : "—"}</td>
-                <td className="nowrap muted">{resolveUserName(r.submittedBy)}</td>
-                <td className="nowrap muted">{resolveUserName(r.approvedBy)}</td>
+            {visibleRows.map((r) => (
+              <tr key={r.iso}>
+                <td className="nowrap">{format(parseISO(r.iso), "EEE, MMM dd")}</td>
+                <td className="ta-r mono">{num(r.contracted)}</td>
+                <td className="ta-r mono">{r.maintenanceLoss > 0 ? num(r.maintenanceLoss) : "—"}</td>
+                <td className="ta-r mono">{r.outageLoss > 0 ? num(r.outageLoss) : "—"}</td>
+                <td className="ta-r mono"><span className={r.variance > 0 ? "neg" : ""}>{r.variance > 0 ? `-${num(r.variance)}` : "0"}</span></td>
+                <td className="ta-r mono">{num(r.available)}</td>
+                <td className="ta-r mono">{r.requested != null ? num(r.requested) : <span className="muted">Pending</span>}</td>
+                <td className="nowrap muted">{resolveUserName(r.responsibleUser)}</td>
+                <td className="nowrap">{fmtDateTime(r.submittedAt)}</td>
+                <td className="nowrap">{fmtDateTime(r.approvedAt)}</td>
               </tr>
             ))}
-            {rows.length === 0 && (
-              <tr><td colSpan={7} className="empty">No approved demand records match the selected range/filters.</td></tr>
+            {visibleRows.length === 0 && (
+              <tr><td colSpan={10} className="empty">No days match the selected range/filters.</td></tr>
             )}
           </tbody>
         </table>
       </div>
       <div className="prod-caption">
-        {rows.length === 0 ? "No demand records in range." : `Showing ${rows.length} day${rows.length === 1 ? "" : "s"}`}
+        {visibleRows.length === 0 ? "No days match the selected range/filters." : `Showing ${visibleRows.length} day${visibleRows.length === 1 ? "" : "s"}`}
       </div>
     </div>
   );

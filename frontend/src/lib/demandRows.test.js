@@ -1,44 +1,39 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildDemandRows, filterDemandByStatus, computeDemandTotals, demandRowsToCsv } from "./demandRows.js";
+import { demandRowsToCsv } from "./demandRows.js";
 
-const inputs = [
-  { plant_id: "G1", date: "2026-03-01", required_m3: 60000, data_source: "SCADA", comments: "", submission_status: "approved", submitted_by: "u1", approved_by: "u2" },
-  { plant_id: "G1", date: "2026-03-03", required_m3: 80000, data_source: "Manual", comments: "peak", submission_status: "approved", submitted_by: "u1", approved_by: "u2" },
-  { plant_id: "G2", date: "2026-03-02", required_m3: 5000, submission_status: "approved" },
-  { plant_id: "G1", date: "2026-03-02", required_m3: null, submission_status: "approved" },
+// productionRows-shaped day rows (see buildProductionRows).
+const rows = [
+  {
+    iso: "2026-03-03", contracted: 100000, maintenanceLoss: 0, outageLoss: 5000,
+    variance: 5000, available: 95000, requested: 80000,
+    responsibleUser: "u1", submittedAt: "2026-03-03T08:00:00Z", approvedAt: "2026-03-03T09:00:00Z",
+  },
+  {
+    iso: "2026-03-02", contracted: 100000, maintenanceLoss: 0, outageLoss: 0,
+    variance: 0, available: 100000, requested: null,
+    responsibleUser: null, submittedAt: null, approvedAt: null,
+  },
 ];
 
-test("buildDemandRows: filters by plant, drops null required, sorts newest-first", () => {
-  const rows = buildDemandRows(inputs, "G1", {});
-  assert.deepEqual(rows.map((r) => r.date), ["2026-03-03", "2026-03-01"]);
-  assert.equal(rows[0].requiredM3, 80000);
-  assert.equal(rows[0].dataSource, "Manual");
+test("demandRowsToCsv: header row (no delivered column)", () => {
+  const csv = demandRowsToCsv(rows);
+  const header = csv.split("\n")[0];
+  assert.equal(
+    header,
+    "Date,Contracted Capacity (m³/day),Maintenance Loss (m³),Outage Loss (m³),Variance (m³),Available Capacity (m³),Required (m³),Responsible User,Submitted At,Approved At",
+  );
 });
 
-test("buildDemandRows: date range is inclusive", () => {
-  const rows = buildDemandRows(inputs, "G1", { startDate: new Date("2026-03-02"), endDate: new Date("2026-03-31") });
-  assert.deepEqual(rows.map((r) => r.date), ["2026-03-03"]);
+test("demandRowsToCsv: rounds values and resolves user name", () => {
+  const csv = demandRowsToCsv(rows, (ref) => (ref === "u1" ? "Alice" : ref));
+  const line = csv.split("\n")[1];
+  assert.match(line, /^2026-03-03,100000,0,5000,5000,95000,80000,Alice,/);
 });
 
-test("computeDemandTotals: total, avg, peak, days", () => {
-  const totals = computeDemandTotals(buildDemandRows(inputs, "G1", {}));
-  assert.equal(totals.days, 2);
-  assert.equal(totals.totalM3, 140000);
-  assert.equal(totals.peakM3, 80000);
-  assert.equal(totals.avgDailyM3, 70000);
-});
-
-test("filterDemandByStatus: 'all' passes through", () => {
-  const rows = buildDemandRows(inputs, "G1", {});
-  assert.equal(filterDemandByStatus(rows, "all").length, 2);
-  assert.equal(filterDemandByStatus(rows, "approved").length, 2);
-});
-
-test("demandRowsToCsv: header + resolved user names", () => {
-  const rows = buildDemandRows(inputs, "G1", {});
-  const csv = demandRowsToCsv(rows, (ref) => (ref === "u1" ? "Alice" : ref === "u2" ? "Bob" : ref));
-  const lines = csv.split("\n");
-  assert.equal(lines[0], "Date,Required (m³),Data Source,Comments,Status,Submitted By,Approved By");
-  assert.match(lines[1], /2026-03-03,80000,Manual,peak,approved,Alice,Bob/);
+test("demandRowsToCsv: pending required renders as 'Pending'", () => {
+  const csv = demandRowsToCsv(rows);
+  const line = csv.split("\n")[2];
+  // default resolver returns "" for a null user; submitted/approved render "N/A"
+  assert.match(line, /2026-03-02,100000,0,0,0,100000,Pending,,N\/A,N\/A/);
 });
