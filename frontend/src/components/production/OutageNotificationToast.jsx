@@ -91,6 +91,8 @@ export default function OutageNotificationToast() {
 
     if (toast.assetKind === "pumpStation") {
       navigate(`/transmission/${encodeURIComponent(assetId)}?tab=outages`);
+    } else if (toast.assetKind === "cityGate") {
+      navigate(`/demand/${encodeURIComponent(assetId)}?tab=outages`);
     } else {
       navigate(`/production/${encodeURIComponent(assetId)}?tab=outages`);
     }

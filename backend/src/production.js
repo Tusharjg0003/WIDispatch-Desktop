@@ -192,15 +192,17 @@ export async function listRecentOutages({ since, limit = 10 } = {}) {
     .toArray();
 
   const assetIds = [...new Set(rows.map((r) => r.plant_id).filter(Boolean))];
-  const [plants, pumpStations] = assetIds.length
+  const [plants, pumpStations, cityGates] = assetIds.length
     ? await Promise.all([
       db.collection("plants").find({ id: { $in: assetIds } }, { projection: { _id: 0, id: 1, name: 1 } }).toArray(),
       db.collection("pumps").find({ id: { $in: assetIds } }, { projection: { _id: 0, id: 1, name: 1 } }).toArray(),
+      db.collection("cityGates").find({ id: { $in: assetIds } }, { projection: { _id: 0, id: 1, name: 1 } }).toArray(),
     ])
-    : [[], []];
+    : [[], [], []];
   const assetById = new Map([
     ...plants.map((plant) => [plant.id, { name: plant.name, kind: "plant" }]),
     ...pumpStations.map((station) => [station.id, { name: station.name, kind: "pumpStation" }]),
+    ...cityGates.map((gate) => [gate.id, { name: gate.name, kind: "cityGate" }]),
   ]);
 
   return rows
