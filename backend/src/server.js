@@ -17,7 +17,7 @@ import {
   listRecentOutages,
 } from "./production.js";
 import { listPumpStations, getPumpStationBundle } from "./pumpStations.js";
-import { listCityGates, getCityGateBundle } from "./demand.js";
+import { listCityGates, getCityGateBundle, updateDemandDesktopApproval } from "./demand.js";
 
 const app = express();
 const PORT = Number(process.env.PORT ?? 4000);
@@ -272,6 +272,15 @@ app.get("/api/demand/city-gate/:id/bundle", async (req, res) => {
   } catch (err) {
     console.error(`demand city gate bundle error (id=${req.params.id}):`, err);
     res.status(err.statusCode || 500).json({ error: err.message || "Failed to load city gate bundle" });
+  }
+});
+
+app.patch("/api/demand/:recordId/desktop-approval", async (req, res) => {
+  try {
+    res.json(await updateDemandDesktopApproval(req.params.recordId, req.body?.status));
+  } catch (err) {
+    console.error(`demand desktop approval error (id=${req.params.recordId}):`, err);
+    res.status(err.statusCode || 500).json({ error: err.message || "Failed to update desktop approval" });
   }
 });
 

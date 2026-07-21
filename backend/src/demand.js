@@ -1,4 +1,5 @@
 import { getDb } from "./db.js";
+import { ObjectId } from "mongodb";
 import { deriveDataStatus } from "./production.js";
 
 const CITY_GATE_PROJECTION = {
@@ -80,4 +81,41 @@ export async function getCityGateBundle(id) {
   const users = publicUsersForRecords(userRows, [...demandInputs, ...maintenanceRecords, ...outages, ...qualityRecords]);
 
   return { cityGate, demandInputs, qualityRecords, maintenanceRecords, outages, qualityLimits, contractedCapacities: capacityRows, users };
+}
+
+// Record the desktop operator's approve/reject decision on a demand record.
+// Matches on the record's business `id` (falls back to Mongo `_id`), and
+// preserves that `id` in the returned document so the client can reconcile.
+export async function updateDemandDesktopApproval(recordId, status) {
+  if (!["approved", "rejected"].includes(status)) {
+    const err = new Error("Desktop approval status must be approved or rejected");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const db = await getDb();
+  const now = new Date().toISOString();
+  const filter = ObjectId.isValid(recordId)
+    ? { $or: [{ id: recordId }, { _id: new ObjectId(recordId) }] }
+    : { id: recordId };
+
+  const result = await db.collection("demandInputs").findOneAndUpdate(
+    filter,
+    {
+      $set: {
+        desktop_approval_status: status,
+        desktop_approved_at: now,
+        updated_at: now,
+      },
+    },
+    { returnDocument: "after", projection: { _id: 0 } },
+  );
+
+  if (!result) {
+    const err = new Error("Demand record not found");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  return result;
 }
