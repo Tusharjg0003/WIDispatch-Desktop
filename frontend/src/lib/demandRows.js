@@ -5,6 +5,12 @@ import { toCsv } from "./csvCell.js";
 // null when the day has no demand record; "pending" until a decision is made.
 export const demandDesktopStatus = (input) => (input ? (input.desktop_approval_status || "pending") : null);
 
+export const isWebsiteAcceptedDemandRow = (row) => row?.input?.submission_status === "approved";
+
+export function filterWebsiteAcceptedDemandRows(rows) {
+  return rows.filter(isWebsiteAcceptedDemandRow);
+}
+
 // Approved Demand = the required_m3 once the desktop operator has approved the record.
 export function demandApprovedDemand(row) {
   return demandDesktopStatus(row.input) === "approved" ? row.requested : null;

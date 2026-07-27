@@ -2,7 +2,12 @@ import React, { useEffect, useMemo, useState } from "react";
 import { format, parseISO, startOfDay, subDays } from "date-fns";
 import { Check, Download, X } from "lucide-react";
 import { buildProductionRows, filterRows, computeTotals } from "../../lib/productionRows";
-import { demandRowsToCsv, demandDesktopStatus, demandApprovedDemand } from "../../lib/demandRows";
+import {
+  demandApprovedDemand,
+  demandDesktopStatus,
+  demandRowsToCsv,
+  filterWebsiteAcceptedDemandRows,
+} from "../../lib/demandRows";
 import { updateDemandDesktopApproval } from "../../api/demand";
 import "../production/ProductionInputTable.css"; // shared prod-* table/badge/kpi/filter classes
 import "../production/MaintenanceRecordList.css"; // shared mrl__ action-button classes
@@ -44,7 +49,11 @@ export default function DemandInputTable({ cityGate, cityGateId, bundle }) {
     }),
     [cityGate, cityGateId, localInputs, maintenanceRecords, outages, contractedCapacities, startDate, endDate],
   );
-  const visibleRows = useMemo(() => filterRows(rows, { deliveredStatus: "all", requestedStatus }), [rows, requestedStatus]);
+  const websiteAcceptedRows = useMemo(() => filterWebsiteAcceptedDemandRows(rows), [rows]);
+  const visibleRows = useMemo(
+    () => filterRows(websiteAcceptedRows, { deliveredStatus: "all", requestedStatus }),
+    [websiteAcceptedRows, requestedStatus],
+  );
   const totals = useMemo(() => computeTotals(visibleRows), [visibleRows]);
   const requiredTotal = useMemo(() => visibleRows.reduce((s, r) => s + (r.requested ?? 0), 0), [visibleRows]);
 

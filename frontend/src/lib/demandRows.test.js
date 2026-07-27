@@ -1,6 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { demandRowsToCsv, demandDesktopStatus, demandApprovedDemand } from "./demandRows.js";
+import {
+  demandApprovedDemand,
+  demandDesktopStatus,
+  demandRowsToCsv,
+  filterWebsiteAcceptedDemandRows,
+} from "./demandRows.js";
 
 // productionRows-shaped day rows (see buildProductionRows).
 const rows = [
@@ -8,13 +13,13 @@ const rows = [
     iso: "2026-03-03", contracted: 100000, maintenanceLoss: 0, outageLoss: 5000,
     variance: 5000, available: 95000, requested: 80000,
     responsibleUser: "u1", submittedAt: "2026-03-03T08:00:00Z", approvedAt: "2026-03-03T09:00:00Z",
-    input: { id: "d1", desktop_approval_status: "approved", desktop_approved_at: "2026-03-03T10:00:00Z" },
+    input: { id: "d1", submission_status: "approved", desktop_approval_status: "approved", desktop_approved_at: "2026-03-03T10:00:00Z" },
   },
   {
     iso: "2026-03-02", contracted: 100000, maintenanceLoss: 0, outageLoss: 0,
     variance: 0, available: 100000, requested: 70000,
     responsibleUser: "u1", submittedAt: "2026-03-02T08:00:00Z", approvedAt: "2026-03-02T09:00:00Z",
-    input: { id: "d2" },
+    input: { id: "d2", submission_status: "approved" },
   },
   {
     iso: "2026-03-01", contracted: 100000, maintenanceLoss: 0, outageLoss: 0,
@@ -22,6 +27,15 @@ const rows = [
     responsibleUser: null, submittedAt: null, approvedAt: null, input: undefined,
   },
 ];
+
+test("filterWebsiteAcceptedDemandRows: keeps only rows accepted on the website", () => {
+  const mixedRows = [
+    ...rows,
+    { iso: "2026-02-28", input: { id: "d3", submission_status: "submitted" } },
+    { iso: "2026-02-27", input: { id: "d4", submission_status: "rejected" } },
+  ];
+  assert.deepEqual(filterWebsiteAcceptedDemandRows(mixedRows).map((r) => r.iso), ["2026-03-03", "2026-03-02"]);
+});
 
 test("demandDesktopStatus: null day, pending default, explicit status", () => {
   assert.equal(demandDesktopStatus(undefined), null);
