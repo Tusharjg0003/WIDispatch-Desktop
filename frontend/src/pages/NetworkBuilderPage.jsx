@@ -32,6 +32,7 @@ import {
   IconLayers,
   IconMaximize,
   IconMaximize2,
+  IconMinimize2,
   IconMinus,
   IconPipe,
   IconPipelineNetwork,
@@ -508,6 +509,7 @@ export default function NetworkBuilderPage() {
   const [showLabels, setShowLabels] = useState(true);
   const [showGrid, setShowGrid] = useState(true);
   const [showInspector, setShowInspector] = useState(true);
+  const [canvasFocusMode, setCanvasFocusMode] = useState(false);
   const [isolationActive, setIsolationActive] = useState(false);
   const [rightPanelTab, setRightPanelTab] = useState("details");
   const [issuePanelMode, setIssuePanelMode] = useState("issues");
@@ -2223,6 +2225,42 @@ export default function NetworkBuilderPage() {
     else cy.elements().addClass("hide-labels");
   }, [showLabels, cyReady]);
 
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      cyRef.current?.resize();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [canvasFocusMode, showLibrary, showInspector]);
+
+  const handleToggleCanvasFocus = useCallback(() => {
+    setCanvasFocusMode((v) => !v);
+  }, []);
+
+  const handleToggleLibraryPanel = useCallback(() => {
+    if (canvasFocusMode) {
+      setCanvasFocusMode(false);
+      setShowLibrary(true);
+      return;
+    }
+    setShowLibrary((v) => !v);
+  }, [canvasFocusMode]);
+
+  const handleOpenDetailsPanel = useCallback(() => {
+    setCanvasFocusMode(false);
+    setShowInspector(true);
+    setRightPanelTab("details");
+  }, []);
+
+  const handleToggleDetailsPanel = useCallback(() => {
+    setRightPanelTab("details");
+    if (canvasFocusMode) {
+      setCanvasFocusMode(false);
+      setShowInspector(true);
+      return;
+    }
+    setShowInspector((v) => !v);
+  }, [canvasFocusMode]);
+
   // ── Contextual toolbar ────────────────────────────────────────────────────────
   const isPipeSel = selectedEl?._group === "edge";
   const hasPipeSelection = selectedEdgeCount > 0;
@@ -2292,7 +2330,7 @@ export default function NetworkBuilderPage() {
                 </Btn>
                 );
               })}
-              <Btn on={() => setShowLibrary((v) => !v)} icon={IconFolder} active={showLibrary} title="Toggle the asset library panel">Library</Btn>
+              <Btn on={handleToggleLibraryPanel} icon={IconFolder} active={showLibrary && !canvasFocusMode} title="Toggle the asset library panel">Library</Btn>
               <Btn
                 on={() => setModeSafe(mode === "draw-pipe" ? "select" : "draw-pipe")}
                 icon={IconPipe}
@@ -2441,7 +2479,7 @@ export default function NetworkBuilderPage() {
               <Btn on={handleCopySelection} icon={IconCopy} disabled={!hasSelection} title="Copy selection (Ctrl/Cmd+C)">Copy Sel</Btn>
               <Btn on={handleCopyAll} icon={IconCopy} title="Copy all">Copy All</Btn>
               <Btn on={handlePaste} icon={IconClipboard} title="Paste (Ctrl/Cmd+V)">Paste</Btn>
-              <Btn on={() => { setShowInspector(true); setRightPanelTab("details"); }} icon={IconEdit2} disabled={!isPipeSel} title="Edit selected pipe">Edit</Btn>
+              <Btn on={handleOpenDetailsPanel} icon={IconEdit2} disabled={!isPipeSel} title="Edit selected pipe">Edit</Btn>
               <Btn danger icon={IconTrash2} on={handleDelete} disabled={!hasDeletableSelection} title="Delete selected pipe or asset node (Del)">Delete</Btn>
             </div>
             <span className="toolbar-group__label">Edit</span>
@@ -2460,12 +2498,9 @@ export default function NetworkBuilderPage() {
           <div className="toolbar-group toolbar-group--cols-1">
             <div className="toolbar-group__buttons">
               <Btn
-                on={() => {
-                  setShowInspector((v) => !v);
-                  setRightPanelTab("details");
-                }}
-                icon={showInspector && rightPanelTab === "details" ? IconChevronRight : IconChevronLeft}
-                active={showInspector && rightPanelTab === "details"}
+                on={handleToggleDetailsPanel}
+                icon={showInspector && !canvasFocusMode && rightPanelTab === "details" ? IconChevronRight : IconChevronLeft}
+                active={showInspector && !canvasFocusMode && rightPanelTab === "details"}
                 title="Toggle details panel"
               >
                 Details
@@ -2479,8 +2514,9 @@ export default function NetworkBuilderPage() {
   }, [
     mode, pendingEntity, network.name, counts.nodes, counts.edges, realNodeCount, saveStatus,
     selectedEl, hasSelection, isPipeSel, hasPipeSelection, hasDeletableSelection, canUndo, canRedo,
-    showLabels, showGrid, showInspector, showLibrary, findOpen, isolationActive, rightPanelTab,
+    showLabels, showGrid, showInspector, showLibrary, canvasFocusMode, findOpen, isolationActive, rightPanelTab,
     setToolbar, setModeSafe, notImplemented, handleInsertEntity, handleFit, handleResetView,
+    handleToggleLibraryPanel, handleOpenDetailsPanel, handleToggleDetailsPanel,
     handleZoomToSelection, handleSelectAll, handleSelectActive, handleSelectInactive,
     handleMakeSelectionActive, handleMakeSelectionInactive, handleToggleIsolation,
     handleValidateNetwork, handleShowIssues, handleFocusIssues, handleSelectDisconnected,
@@ -2528,7 +2564,7 @@ export default function NetworkBuilderPage() {
   const saveStatusTone = saveStatus === "saved" ? "green" : saveStatus === "saving" ? "blue" : "amber";
 
   return (
-    <div className={`nb-page nb-page--${mode}`}>
+    <div className={`nb-page nb-page--${mode}${canvasFocusMode ? " nb-page--canvas-focus" : ""}`}>
       <input
         ref={fileInputRef}
         type="file"
@@ -2541,21 +2577,23 @@ export default function NetworkBuilderPage() {
       />
 
       {/* Saved networks rail */}
-      <aside className="nb-rail">
-        <WorkspaceRecordSidebar
-          recordLabel="Network"
-          newTitle="New Network"
-          activeId={network.id}
-          api={networkSidebarApi}
-          savedEvent={NETWORK_SAVED_EVENT}
-          getMeta={(n) => `${n.nodeCount} nodes · ${n.edgeCount} pipes`}
-          onNew={handleNew}
-          onSelect={(id) => navigate(`/network-builder/${id}`)}
-        />
-      </aside>
+      {!canvasFocusMode && (
+        <aside className="nb-rail">
+          <WorkspaceRecordSidebar
+            recordLabel="Network"
+            newTitle="New Network"
+            activeId={network.id}
+            api={networkSidebarApi}
+            savedEvent={NETWORK_SAVED_EVENT}
+            getMeta={(n) => `${n.nodeCount} nodes · ${n.edgeCount} pipes`}
+            onNew={handleNew}
+            onSelect={(id) => navigate(`/network-builder/${id}`)}
+          />
+        </aside>
+      )}
 
       {/* Asset library */}
-      {showLibrary && (
+      {showLibrary && !canvasFocusMode && (
         <aside className="nb-library ns2-library">
           <div className="ns2-library-header">
             <span className="ns2-library-title">Asset Library</span>
@@ -2570,22 +2608,24 @@ export default function NetworkBuilderPage() {
       )}
 
       <div className="nb-workspace">
-        <WorkspaceHeader
-          title="Network Builder"
-          subtitle={network.name || "Untitled network"}
-          icon={IconPipelineNetwork}
-          status={saveStatusLabel}
-          statusTone={saveStatusTone}
-          className="workspace-header--network-builder"
-          actions={[
-            <WorkspaceHeaderChip key="nodes" tone={realNodeCount > 0 ? "blue" : "default"}>
-              {realNodeCount} nodes
-            </WorkspaceHeaderChip>,
-            <WorkspaceHeaderChip key="pipes" tone={counts.edges > 0 ? "blue" : "default"}>
-              {counts.edges} pipes
-            </WorkspaceHeaderChip>,
-          ]}
-        />
+        {!canvasFocusMode && (
+          <WorkspaceHeader
+            title="Network Builder"
+            subtitle={network.name || "Untitled network"}
+            icon={IconPipelineNetwork}
+            status={saveStatusLabel}
+            statusTone={saveStatusTone}
+            className="workspace-header--network-builder"
+            actions={[
+              <WorkspaceHeaderChip key="nodes" tone={realNodeCount > 0 ? "blue" : "default"}>
+                {realNodeCount} nodes
+              </WorkspaceHeaderChip>,
+              <WorkspaceHeaderChip key="pipes" tone={counts.edges > 0 ? "blue" : "default"}>
+                {counts.edges} pipes
+              </WorkspaceHeaderChip>,
+            ]}
+          />
+        )}
 
         <div
           ref={canvasWrapRef}
@@ -2594,6 +2634,17 @@ export default function NetworkBuilderPage() {
           onDrop={handleLibraryDrop}
         >
           <div ref={containerRef} className="nb-canvas" />
+
+          <button
+            type="button"
+            className={`nb-canvas-focus-toggle${canvasFocusMode ? " is-active" : ""}`}
+            onClick={handleToggleCanvasFocus}
+            aria-label={canvasFocusMode ? "Exit canvas fullscreen" : "Show only toolbar and canvas"}
+            aria-pressed={canvasFocusMode}
+            title={canvasFocusMode ? "Exit canvas fullscreen" : "Show only toolbar and canvas"}
+          >
+            {canvasFocusMode ? <IconMinimize2 size={13} /> : <IconMaximize2 size={13} />}
+          </button>
 
           {mode === "area-zoom" && (
             <div
@@ -2660,7 +2711,7 @@ export default function NetworkBuilderPage() {
         </div>
       </div>
 
-      {showInspector && (
+      {showInspector && !canvasFocusMode && (
         <aside className="nb-inspector">
           <div className="ns2-right-panel">
             <div className="ns2-panel-tabs">
