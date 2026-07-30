@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { Field, Toggle } from "./AssetFormControls";
+import TransmissionLinePicker from "./TransmissionLinePicker";
+import { lineBelongsToSystem } from "../lib/transmissionLines";
 
 const MATERIALS = [
   { value: "steel", label: "Steel" },
@@ -33,9 +35,18 @@ export default function PipeVariablesModal({ systems, lines, onCancel, onSubmit 
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
   const setChecked = (k) => (v) => setForm((f) => ({ ...f, [k]: v }));
-  const setLineGroupIds = (e) => {
-    const ids = Array.from(e.target.selectedOptions, (o) => o.value);
-    setForm((f) => ({ ...f, lineGroupIds: ids }));
+  const setFormField = (key, value) => setForm((f) => ({ ...f, [key]: value }));
+  const systemLines = form.transmissionSystemId
+    ? lines.filter((line) => lineBelongsToSystem(line, form.transmissionSystemId))
+    : [];
+  const setTransmissionSystem = (e) => {
+    const transmissionSystemId = e.target.value;
+    setForm((f) => ({
+      ...f,
+      transmissionSystemId,
+      lineGroupIds: [],
+      parentLineId: "",
+    }));
   };
 
   const submit = async (e) => {
@@ -103,7 +114,7 @@ export default function PipeVariablesModal({ systems, lines, onCancel, onSubmit 
           <div className="af__section">Transmission System</div>
           <div className="af__grid">
             <Field label="Transmission System">
-              <select value={form.transmissionSystemId} onChange={set("transmissionSystemId")}>
+              <select value={form.transmissionSystemId} onChange={setTransmissionSystem}>
                 <option value="">—</option>
                 {systems.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
@@ -118,37 +129,24 @@ export default function PipeVariablesModal({ systems, lines, onCancel, onSubmit 
           </div>
 
           <div className="af__section">Transmission Lines</div>
-          <div className="af__grid">
-            <Field label="Transmission Lines">
-              <select multiple value={form.lineGroupIds} onChange={setLineGroupIds}>
-                {lines.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
-              </select>
-            </Field>
-            <Field label="New Transmission Line">
-              <input
-                type="text" value={form.newLineName} placeholder="e.g. Line 3"
-                onChange={set("newLineName")}
-              />
-            </Field>
-            {form.newLineName.trim() !== "" && (
-              <>
-                <Toggle label="This line is a branch" checked={form.isBranch} onChange={setChecked("isBranch")} />
-                {form.isBranch && (
-                  <>
-                    <Field label="Branch Of Line">
-                      <select value={form.parentLineId} onChange={set("parentLineId")}>
-                        <option value="">—</option>
-                        {lines.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
-                      </select>
-                    </Field>
-                    <Field label="Branch Name">
-                      <input type="text" value={form.branchName} onChange={set("branchName")} />
-                    </Field>
-                  </>
-                )}
-              </>
-            )}
-          </div>
+          <TransmissionLinePicker
+            lines={systemLines}
+            selectedIds={form.lineGroupIds}
+            onSelectedIdsChange={(ids) => setFormField("lineGroupIds", ids)}
+            newLineName={form.newLineName}
+            onNewLineNameChange={(value) => setFormField("newLineName", value)}
+            isBranch={form.isBranch}
+            onIsBranchChange={(checked) => setFormField("isBranch", checked)}
+            parentLineId={form.parentLineId}
+            onParentLineIdChange={(value) => setFormField("parentLineId", value)}
+            branchName={form.branchName}
+            onBranchNameChange={(value) => setFormField("branchName", value)}
+            emptyMessage={
+              form.transmissionSystemId
+                ? "No saved transmission lines for this system yet."
+                : "Choose an existing system to see its saved lines, or type a new line below."
+            }
+          />
 
           <div className="af__section">Capacity Limitation</div>
           <div className="af__grid">

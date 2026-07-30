@@ -1,7 +1,7 @@
 // Cytoscape stylesheet + entity constants for the Network Builder canvas.
 // Lifted and trimmed from the reference NetworkSimulation2Page.js (entity
-// constants ~132-189, buildCyStyle ~632-1019) — simulation/trace/note/group-box
-// selectors and the base64-SVG card-icon pipeline are dropped. Colors are
+// constants ~132-189, buildCyStyle ~632-1019) — simulation selectors and the
+// base64-SVG card-icon pipeline are dropped. Colors are
 // restyled toward this app's light theme (see MetricDashboard.css / NetworkBuilderPage.css).
 
 // This app's asset categories map straight onto cytoscape node "type".
@@ -117,10 +117,10 @@ export function buildCyStyle() {
         "overlay-opacity": 0.14,
       },
     },
-    // Toolbar isolate mode dims everything outside the current selection.
+    // Isolation mode hides everything outside the focused selection/scope.
     {
-      selector: ".nb-isolate-dim",
-      style: { opacity: 0.14 },
+      selector: ".nb-isolate-hidden",
+      style: { display: "none" },
     },
     // First node picked while drawing a pipe.
     {
@@ -236,6 +236,61 @@ export function buildCyStyle() {
         "overlay-color": "#f59e0b",
         "overlay-padding": 6,
         "overlay-opacity": 0.18,
+      },
+    },
+    {
+      selector: "node.trace-root",
+      style: {
+        "border-color": "#0969da",
+        "border-width": 6,
+        "overlay-color": "#0969da",
+        "overlay-padding": 6,
+        "overlay-opacity": 0.2,
+        "z-index": 1000,
+      },
+    },
+    {
+      selector: "node.trace-up",
+      style: {
+        "border-color": "#2563eb",
+        "border-width": 4,
+        "z-index": 900,
+      },
+    },
+    {
+      selector: "node.trace-down",
+      style: {
+        "border-color": "#16a34a",
+        "border-width": 4,
+        "z-index": 900,
+      },
+    },
+    {
+      selector: "edge.trace-up-edge",
+      style: {
+        "line-color": "#2563eb",
+        "target-arrow-color": "#2563eb",
+        "source-arrow-color": "#2563eb",
+        width: 5,
+        opacity: 1,
+        "z-index": 900,
+      },
+    },
+    {
+      selector: "edge.trace-down-edge",
+      style: {
+        "line-color": "#16a34a",
+        "target-arrow-color": "#16a34a",
+        "source-arrow-color": "#16a34a",
+        width: 5,
+        opacity: 1,
+        "z-index": 900,
+      },
+    },
+    {
+      selector: ".trace-dim",
+      style: {
+        opacity: 0.1,
       },
     },
   ];

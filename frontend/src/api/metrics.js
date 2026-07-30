@@ -115,3 +115,12 @@ export function fetchTransmissionLines() {
 export function createTransmissionLine(payload) {
   return postJson("/api/transmission-lines", payload);
 }
+
+export async function deleteTransmissionLine(id) {
+  const res = await fetch(`${API_BASE}/api/transmission-lines/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+  return data;
+}

@@ -61,6 +61,7 @@ import {
   fetchTransmissionSystems, createTransmissionSystem,
   fetchTransmissionLines, createTransmissionLine,
 } from "../api/metrics";
+import { lineDisplayName, lineSystemId } from "../lib/transmissionLines";
 import NetworkPalette from "../components/NetworkPalette";
 import NetworkNodeDetails from "../components/NetworkNodeDetails";
 import WorkspaceRecordSidebar from "../components/WorkspaceRecordSidebar";
@@ -90,6 +91,7 @@ const ENTITY_TYPES_LIST = [
   { type: "plant", label: "Plant", description: "Production asset" },
   { type: "pump", label: "Pump Station", description: "Pumping asset" },
   { type: "handover_point", label: "Handover Point", description: "City gate / HP" },
+  { type: "node", label: "Node", description: "Junction node" },
 ];
 const ENTITY_ICONS = {
   plant: IconPlant,
@@ -144,6 +146,11 @@ const ANNOTATION_TYPES = ["note", "group-box"];
 const NOTE_SIZES = ["small", "normal", "large", "xlarge"];
 const ACTIVE_STATUSES = new Set(["operational", "maintenance", "under_construction", "planned"]);
 const INACTIVE_STATUSES = new Set(["inactive", "decommissioned"]);
+const TRACE_ROOT_TYPES = new Set(["handover_point", "point", "filling_station", "filling-station", "distribution_point", "distribution-point"]);
+const TRACE_SOURCE_TYPES = new Set(["plant", "stp"]);
+const TRACE_CLASSES = "trace-root trace-up trace-down trace-up-edge trace-down-edge trace-dim";
+const TRANSIENT_CANVAS_CLASSES = `${TRACE_CLASSES} draw-source insert-target nb-isolate-hidden nb-isolate-dim hide-labels`;
+const TRANSIENT_CANVAS_CLASS_SET = new Set(TRANSIENT_CANVAS_CLASSES.split(/\s+/));
 // Pipe spec keys that must stay strings — everything else handleSpecChange
 // coerces to a number, since most pipe spec fields are numeric.
 const STRING_SPEC_FIELDS = new Set(["pipelineMaterial", "infraSource", "capacityLimitationType", "transmissionSystemId"]);
@@ -161,6 +168,176 @@ const emptyEntityForm = (entityType) => ({
 const cloneData = (value) => {
   if (!value || typeof value !== "object") return value;
   return JSON.parse(JSON.stringify(value));
+};
+
+const stripTransientClasses = (json) => {
+  if (!json || !json.classes) return json;
+  const kept = String(json.classes)
+    .split(/\s+/)
+    .filter((cls) => cls && !TRANSIENT_CANVAS_CLASS_SET.has(cls));
+  if (!kept.length) {
+    const { classes, ...rest } = json;
+    return rest;
+  }
+  return { ...json, classes: kept.join(" ") };
+};
+
+const snapshotElements = (cy) => cy.elements().jsons().map(stripTransientClasses);
+
+const edgeSpec = (edge) => edge.data("meta")?.specifications || {};
+
+const isBidirectionalPipe = (edge) => {
+  const spec = edgeSpec(edge);
+  return (
+    edge.data("bidirectional") === true ||
+    edge.data("bidirectional") === "true" ||
+    spec.bidirectional === true ||
+    spec.bidirectional === "true"
+  );
+};
+
+const firstNumeric = (...values) => {
+  for (const value of values) {
+    if (value === "" || value == null) continue;
+    const numeric = Number(value);
+    if (Number.isFinite(numeric)) return numeric;
+  }
+  return null;
+};
+
+const extractEdgeFlowValue = (edge) => {
+  const data = edge.data();
+  const meta = data.meta || {};
+  const spec = meta.specifications || {};
+  return firstNumeric(
+    data.total_flow,
+    data.totalFlow,
+    data.flow,
+    data.flowAmount,
+    meta.total_flow,
+    meta.totalFlow,
+    meta.flow,
+    meta.flowAmount,
+    spec.total_flow,
+    spec.totalFlow,
+    spec.flow,
+    spec.flowAmount,
+    spec.currentFlow
+  );
+};
+
+const buildFlowByEdge = (cy) => {
+  const flowByEdge = {};
+  cy.edges().forEach((edge) => {
+    const flow = extractEdgeFlowValue(edge);
+    if (flow != null) flowByEdge[edge.id()] = flow;
+  });
+  return flowByEdge;
+};
+
+const computeTrace = (cy, rootId, opts = {}) => {
+  const flowByEdge = opts.flowByEdge || {};
+  const requestedMode = opts.mode === "delivered" ? "delivered" : "reachable";
+  const hasFlow = Object.keys(flowByEdge).length > 0;
+  const delivered = requestedMode === "delivered" && hasFlow;
+  const flowAmount = (edge) => Number(flowByEdge[edge.id()] ?? 0);
+  const passable = (edge) => !delivered || flowAmount(edge) > 1e-5;
+
+  const walk = (dir) => {
+    const nodes = new Set();
+    const edges = new Set();
+    const seen = new Set([rootId]);
+    const queue = [rootId];
+
+    while (queue.length) {
+      const current = queue.shift();
+      cy.getElementById(current).connectedEdges().forEach((edge) => {
+        if (!passable(edge)) return;
+        const source = edge.source().id();
+        const target = edge.target().id();
+        let next = null;
+
+        if (dir > 0) {
+          if (source === current) next = target;
+          else if (isBidirectionalPipe(edge) && target === current) next = source;
+        } else {
+          if (target === current) next = source;
+          else if (isBidirectionalPipe(edge) && source === current) next = target;
+        }
+
+        if (!next) return;
+        edges.add(edge.id());
+        if (!seen.has(next)) {
+          seen.add(next);
+          nodes.add(next);
+          queue.push(next);
+        }
+      });
+    }
+
+    return { nodes, edges };
+  };
+
+  return {
+    rootId,
+    down: walk(1),
+    up: walk(-1),
+    hasFlow,
+    requestedMode,
+    mode: delivered ? "delivered" : "reachable",
+    flowAmount,
+  };
+};
+
+const paintTrace = (cy, trace) => {
+  cy.batch(() => {
+    cy.elements().removeClass(TRACE_CLASSES);
+    cy.nodes().forEach((node) => {
+      const id = node.id();
+      if (id === trace.rootId) node.addClass("trace-root");
+      else if (trace.down.nodes.has(id)) node.addClass("trace-down");
+      else if (trace.up.nodes.has(id)) node.addClass("trace-up");
+      else node.addClass("trace-dim");
+    });
+    cy.edges().forEach((edge) => {
+      const id = edge.id();
+      if (trace.down.edges.has(id)) edge.addClass("trace-down-edge");
+      else if (trace.up.edges.has(id)) edge.addClass("trace-up-edge");
+      else edge.addClass("trace-dim");
+    });
+  });
+};
+
+const clearTraceClasses = (cy) => cy?.elements().removeClass(TRACE_CLASSES);
+
+const nodeName = (cy, id) => {
+  const node = cy.getElementById(id);
+  return node?.length ? node.data("label") || node.data("displayLabel") || node.data("name") || id : id;
+};
+
+const traceNeighbours = (cy, trace) => {
+  const sources = [];
+  const dests = [];
+  cy.getElementById(trace.rootId).connectedEdges().forEach((edge) => {
+    const flow = trace.flowAmount(edge);
+    if (trace.mode === "delivered" && flow <= 1e-5) return;
+    const source = edge.source().id();
+    const target = edge.target().id();
+    if (target === trace.rootId) sources.push({ id: source, name: nodeName(cy, source), flow });
+    if (source === trace.rootId) dests.push({ id: target, name: nodeName(cy, target), flow });
+    if (isBidirectionalPipe(edge) && source === trace.rootId) sources.push({ id: target, name: nodeName(cy, target), flow });
+    if (isBidirectionalPipe(edge) && target === trace.rootId) dests.push({ id: source, name: nodeName(cy, source), flow });
+  });
+  const byFlowThenName = (a, b) => b.flow - a.flow || a.name.localeCompare(b.name);
+  return { sources: sources.sort(byFlowThenName), dests: dests.sort(byFlowThenName) };
+};
+
+const formatTraceFlow = (flow, hasFlow) => {
+  if (!hasFlow) return "flow n/a";
+  const value = Number(flow || 0);
+  if (Math.abs(value) >= 1000) return value.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  if (Math.abs(value) >= 10) return value.toLocaleString(undefined, { maximumFractionDigits: 1 });
+  return value.toLocaleString(undefined, { maximumFractionDigits: 3 });
 };
 
 const halveLengthValue = (value) => {
@@ -259,6 +436,13 @@ const csvCell = (v) => {
 };
 
 const toolbarEntityLabel = (type) => INSERT_TOOL_LABELS[type] || ENTITY_TYPE_LABELS[type] || type;
+const pipeIdsForLine = (line) => (line?.pipes || []).map((pipe) => pipe.id);
+const pipeIdsForSystem = (system) => [
+  ...(system?.pipes || []).map((pipe) => pipe.id),
+  ...(system?.lines || []).flatMap((line) => pipeIdsForLine(line)),
+];
+const matchesText = (needle, ...values) =>
+  values.some((value) => value && String(value).toLowerCase().includes(needle));
 
 const isInactiveElement = (el) => {
   const data = el.data();
@@ -299,6 +483,7 @@ export default function NetworkBuilderPage() {
   const restoringRef = useRef(false);
   const commitPendingRef = useRef(false);
   const areaRef = useRef(null);
+  const traceRunRef = useRef(null);
 
   const [cyReady, setCyReady] = useState(false);
   const [mode, setMode] = useState("select");
@@ -328,9 +513,14 @@ export default function NetworkBuilderPage() {
   const [issuePanelMode, setIssuePanelMode] = useState("issues");
   const [validationIssues, setValidationIssues] = useState([]);
   const [panelFindQuery, setPanelFindQuery] = useState("");
+  const [isolationQuery, setIsolationQuery] = useState("");
+  const [activeIsolationLabel, setActiveIsolationLabel] = useState("");
+  const [activeIsolationKey, setActiveIsolationKey] = useState("");
   const [findOpen, setFindOpen] = useState(false);
   const [findQuery, setFindQuery] = useState("");
   const [areaBox, setAreaBox] = useState(null); // {x,y,w,h} while area-zoom dragging
+  const [traceInfo, setTraceInfo] = useState(null);
+  const [traceMode, setTraceMode] = useState("reachable");
   const [, setHistTick] = useState(0); // forces undo/redo enable refresh
 
   // ── Graph → React sync ─────────────────────────────────────────────────────
@@ -379,7 +569,7 @@ export default function NetworkBuilderPage() {
     if (!cy) return;
     const h = historyRef.current;
     if (h.present !== null) h.past.push(h.present);
-    h.present = cy.elements().jsons();
+    h.present = snapshotElements(cy);
     h.future = [];
     if (h.past.length > 80) h.past.shift();
     setHistTick((t) => t + 1);
@@ -396,7 +586,7 @@ export default function NetworkBuilderPage() {
 
   const resetHistory = useCallback(() => {
     const cy = cyRef.current;
-    historyRef.current = { past: [], present: cy ? cy.elements().jsons() : [], future: [] };
+    historyRef.current = { past: [], present: cy ? snapshotElements(cy) : [], future: [] };
     setHistTick((t) => t + 1);
   }, []);
 
@@ -404,9 +594,10 @@ export default function NetworkBuilderPage() {
     (snap) => {
       const cy = cyRef.current;
       if (!cy) return;
+      const cleanSnap = (snap || []).map(stripTransientClasses);
       restoringRef.current = true;
       cy.elements().remove();
-      cy.add(snap);
+      cy.add(cleanSnap);
       restoringRef.current = false;
       syncGraph();
       syncSelection();
@@ -459,6 +650,23 @@ export default function NetworkBuilderPage() {
     cy.$(":selected").unselect();
     edge.select();
   }, []);
+
+  const createJunctionNode = useCallback(
+    (position) => {
+      const cy = cyRef.current;
+      if (!cy) return null;
+      const node = cy.add({
+        group: "nodes",
+        data: { id: rid("n"), type: "node", category: "node", label: "", displayLabel: "", status: "", meta: { specifications: {} } },
+        position,
+      });
+      cy.$(":selected").unselect();
+      node.select();
+      syncSelection();
+      return node;
+    },
+    [syncSelection]
+  );
 
   const clearInsertTarget = useCallback(() => {
     const cy = cyRef.current;
@@ -552,6 +760,57 @@ export default function NetworkBuilderPage() {
     [syncSelection]
   );
 
+  const clearTraceCanvas = useCallback((message) => {
+    const cy = cyRef.current;
+    if (cy) clearTraceClasses(cy);
+    setTraceInfo(null);
+    if (message) setToast(message);
+  }, []);
+
+  const runTrace = useCallback(
+    (node, requestedMode = traceMode) => {
+      const cy = cyRef.current;
+      if (!cy || !node?.length) return;
+      const flowByEdge = buildFlowByEdge(cy);
+      const trace = computeTrace(cy, node.id(), { flowByEdge, mode: requestedMode });
+      paintTrace(cy, trace);
+      const { sources, dests } = traceNeighbours(cy, trace);
+      const ultimateSources = Array.from(trace.up.nodes)
+        .map((nodeId) => cy.getElementById(nodeId))
+        .filter((upstreamNode) => upstreamNode?.length && TRACE_SOURCE_TYPES.has(upstreamNode.data("type")))
+        .map((upstreamNode) => ({
+          id: upstreamNode.id(),
+          name: upstreamNode.data("label") || upstreamNode.data("displayLabel") || upstreamNode.id(),
+          type: upstreamNode.data("type"),
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      setTraceInfo({
+        rootId: trace.rootId,
+        rootName: node.data("label") || node.data("displayLabel") || node.id(),
+        rootType: node.data("type") || node.data("category") || "",
+        upCount: trace.up.nodes.size,
+        downCount: trace.down.nodes.size,
+        upEdgeCount: trace.up.edges.size,
+        downEdgeCount: trace.down.edges.size,
+        sources,
+        dests,
+        hasFlow: trace.hasFlow,
+        mode: trace.mode,
+        requestedMode: trace.requestedMode,
+        ultimateSources,
+      });
+      setShowInspector(true);
+      setRightPanelTab("trace");
+      if (requestedMode === "delivered" && !trace.hasFlow) {
+        setToast("No flow results are attached to these pipes yet, so Trace is showing reachable topology.");
+      }
+    },
+    [traceMode]
+  );
+
+  traceRunRef.current = runTrace;
+
   // ── Cytoscape init (mount once) ──────────────────────────────────────────────
   useEffect(() => {
     const cy = cytoscape({
@@ -593,6 +852,12 @@ export default function NetworkBuilderPage() {
       if (evt.target !== cy) return;
       const m = modeRef.current;
 
+      if (m === "trace") {
+        clearTraceClasses(cy);
+        setTraceInfo(null);
+        return;
+      }
+
       if (m === "place-entity" && pendingEntityRef.current) {
         const type = pendingEntityRef.current;
         if (type === "plant" || type === "pump" || type === "handover_point") {
@@ -609,13 +874,7 @@ export default function NetworkBuilderPage() {
           backToSelect();
           return;
         }
-        const node = cy.add({
-          group: "nodes",
-          data: { id: rid("n"), type, category: type, label: "", displayLabel: "", status: "", meta: { specifications: {} } },
-          position: { x: evt.position.x, y: evt.position.y },
-        });
-        cy.$(":selected").unselect();
-        node.select();
+        createJunctionNode({ x: evt.position.x, y: evt.position.y });
         return; // sticky — keep placing
       }
 
@@ -657,6 +916,16 @@ export default function NetworkBuilderPage() {
 
     // Node tap: two-click pipe drawing.
     cy.on("tap", "node", (evt) => {
+      if (modeRef.current === "trace") {
+        const node = evt.target;
+        const type = node.data("type") || node.data("category");
+        if (!TRACE_ROOT_TYPES.has(type)) {
+          setToast("Trace starts from a handover point or delivery node.");
+          return;
+        }
+        traceRunRef.current?.(node);
+        return;
+      }
       if (modeRef.current !== "draw-pipe") return;
       const node = evt.target;
       if (ANNOTATION_TYPES.includes(node.data("type"))) return;
@@ -699,13 +968,13 @@ export default function NetworkBuilderPage() {
     cy.on("pan zoom resize", updateGridBackground);
     updateGridBackground();
 
-    historyRef.current = { past: [], present: cy.elements().jsons(), future: [] };
+    historyRef.current = { past: [], present: snapshotElements(cy), future: [] };
     setCyReady(true);
     return () => {
       cy.destroy();
       cyRef.current = null;
     };
-  }, [syncGraph, syncSelection, createPipeEdge, scheduleCommit, placeAssetsAt, splitPipeWithNode]);
+  }, [syncGraph, syncSelection, createPipeEdge, createJunctionNode, scheduleCommit, placeAssetsAt, splitPipeWithNode]);
 
   // ── Hydrate from a saved network when the route :id changes ──────────────────
   useEffect(() => {
@@ -725,9 +994,11 @@ export default function NetworkBuilderPage() {
         cy.elements().remove();
         addGraph(cy, doc);
         restoringRef.current = false;
+        clearTraceClasses(cy);
         cy.fit(undefined, 48);
         setNetwork({ id: doc.id, name: doc.name, description: doc.description || "" });
         setSelectedEl(null);
+        setTraceInfo(null);
         syncGraph();
         resetHistory();
       })
@@ -759,9 +1030,11 @@ export default function NetworkBuilderPage() {
     if (cy) {
       cy.$(".draw-source").removeClass("draw-source");
       cy.edges().removeClass("insert-target");
+      if (next !== "trace") clearTraceClasses(cy);
       lineSourceRef.current = null;
       setLineSource(null);
     }
+    if (next !== "trace") setTraceInfo(null);
     insertEdgeRef.current = null;
     insertPositionRef.current = null;
     setInsertModal({ open: false });
@@ -772,6 +1045,11 @@ export default function NetworkBuilderPage() {
     setAreaBox(null);
     modeRef.current = next;
     setMode(next);
+    if (next === "trace") {
+      setShowInspector(true);
+      setRightPanelTab("trace");
+      setToast("Trace mode: click a handover point or delivery node.");
+    }
   }, []);
 
   const handleInsertEntity = useCallback(
@@ -862,17 +1140,26 @@ export default function NetworkBuilderPage() {
     clearInsertTarget();
   }, [clearInsertTarget]);
 
-  const handleInsertTypeChoice = useCallback((entityType) => {
-    setInsertModal({ open: false });
-    setEntityModal({
-      open: true,
-      mode: "insert-on-edge",
-      form: emptyEntityForm(entityType),
-      editId: null,
-      type: entityType,
-      position: insertPositionRef.current || { x: 0, y: 0 },
-    });
-  }, []);
+  const handleInsertTypeChoice = useCallback(
+    (entityType) => {
+      const position = insertPositionRef.current || { x: 0, y: 0 };
+      setInsertModal({ open: false });
+      if (entityType === "node") {
+        const node = createJunctionNode(position);
+        if (node) splitPipeWithNode(node);
+        return;
+      }
+      setEntityModal({
+        open: true,
+        mode: "insert-on-edge",
+        form: emptyEntityForm(entityType),
+        editId: null,
+        type: entityType,
+        position,
+      });
+    },
+    [createJunctionNode, splitPipeWithNode]
+  );
 
   const handleInsertFromLibrary = useCallback(() => {
     setInsertModal({ open: false });
@@ -956,7 +1243,7 @@ export default function NetworkBuilderPage() {
     [selectedEl, syncSelection]
   );
 
-  // Array spec fields (e.g. pipe `lineGroupIds` multi-select) replace the
+  // Array spec fields (e.g. pipe `lineGroupIds` checkbox list) replace the
   // whole array; an empty selection deletes the key.
   const handleSpecArrayChange = useCallback(
     (field, values) => {
@@ -1038,14 +1325,17 @@ export default function NetworkBuilderPage() {
         systemId = created.id;
       }
       if (form.newLineName.trim()) {
+        if (!systemId) throw new Error("Choose or create a transmission system before adding a line.");
         const created = await createTransmissionLine({
           name: form.newLineName.trim(),
+          systemId,
           isBranch: form.isBranch,
           parentLineId: form.isBranch ? form.parentLineId || null : null,
           branchName: form.isBranch ? form.branchName : null,
         });
-        setTransmissionLines((s) => [...s, created]);
-        lineIds = [...lineIds, created.id];
+        const line = { ...created, systemId: created.systemId || systemId };
+        setTransmissionLines((s) => [...s, line]);
+        lineIds = [...lineIds, line.id];
       }
 
       const specs = {};
@@ -1077,6 +1367,13 @@ export default function NetworkBuilderPage() {
     },
     [pipeModal, createPipeEdge]
   );
+
+  const handleCreateLineForInspector = useCallback(async (payload) => {
+    const created = await createTransmissionLine(payload);
+    const line = { ...created, systemId: created.systemId || payload.systemId || "" };
+    setTransmissionLines((lines) => [...lines, line]);
+    return line;
+  }, []);
 
   // ── View ─────────────────────────────────────────────────────────────────────
   const handleFit = useCallback(() => {
@@ -1156,13 +1453,54 @@ export default function NetworkBuilderPage() {
     setToast(editable.length ? `Marked ${editable.length} selected pipe(s) inactive.` : "Select a pipe first.");
   }, [scheduleCommit, syncSelection]);
 
+  const clearIsolation = useCallback((message = "Cleared isolate.") => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    cy.elements().removeClass("nb-isolate-hidden nb-isolate-dim");
+    setIsolationActive(false);
+    setActiveIsolationLabel("");
+    setActiveIsolationKey("");
+    setToast(message);
+  }, []);
+
+  const isolateCollection = useCallback((elements, label = "selection", activeKey = "") => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    if (!elements.length) {
+      setToast(`No canvas elements found for ${label}.`);
+      return;
+    }
+    let keep = elements;
+    const edges = elements.filter((el) => el.isEdge());
+    if (edges.length) keep = keep.union(edges.connectedNodes());
+    const keepIds = new Set(keep.map((el) => el.id()));
+    cy.elements().forEach((el) => {
+      if (keepIds.has(el.id())) el.removeClass("nb-isolate-hidden nb-isolate-dim");
+      else el.addClass("nb-isolate-hidden");
+    });
+    cy.$(":selected").unselect();
+    keep.select();
+    cy.fit(keep, 80);
+    setIsolationActive(true);
+    setActiveIsolationLabel(label);
+    setActiveIsolationKey(activeKey);
+    setToast(`Isolated ${label}.`);
+    syncSelection();
+  }, [syncSelection]);
+
+  const isolatePipeIds = useCallback((pipeIds, label, activeKey = "") => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    const ids = new Set(pipeIds);
+    const edges = cy.edges().filter((edge) => ids.has(edge.id()));
+    isolateCollection(edges, label, activeKey);
+  }, [isolateCollection]);
+
   const handleToggleIsolation = useCallback(() => {
     const cy = cyRef.current;
     if (!cy) return;
-    if (isolationActive || cy.elements(".nb-isolate-dim").length) {
-      cy.elements().removeClass("nb-isolate-dim");
-      setIsolationActive(false);
-      setToast("Cleared isolate.");
+    if (isolationActive || cy.elements(".nb-isolate-hidden, .nb-isolate-dim").length) {
+      clearIsolation();
       return;
     }
     const selected = cy.$(":selected");
@@ -1170,14 +1508,8 @@ export default function NetworkBuilderPage() {
       setToast("Select something to isolate first.");
       return;
     }
-    const keep = selected.union(selected.edges().connectedNodes());
-    const keepIds = new Set(keep.map((el) => el.id()));
-    cy.elements().forEach((el) => {
-      if (!keepIds.has(el.id())) el.addClass("nb-isolate-dim");
-    });
-    setIsolationActive(true);
-    setToast("Isolated current selection.");
-  }, [isolationActive]);
+    isolateCollection(selected, "current selection", "selection");
+  }, [clearIsolation, isolateCollection, isolationActive]);
 
   const handleSelectDisconnected = useCallback(() => {
     selectElementsWhere(
@@ -1198,8 +1530,12 @@ export default function NetworkBuilderPage() {
     const cy = cyRef.current;
     if (!cy) return;
     cy.$(":selected").unselect();
-    cy.elements().removeClass("nb-isolate-dim");
+    cy.elements().removeClass("nb-isolate-hidden nb-isolate-dim");
+    clearTraceClasses(cy);
+    setTraceInfo(null);
     setIsolationActive(false);
+    setActiveIsolationLabel("");
+    setActiveIsolationKey("");
     setFindOpen(false);
     setFindQuery("");
     syncSelection();
@@ -1236,6 +1572,17 @@ export default function NetworkBuilderPage() {
       syncSelection();
     },
     [syncSelection]
+  );
+
+  const handleTraceModeSelect = useCallback(
+    (nextMode) => {
+      setTraceMode(nextMode);
+      const cy = cyRef.current;
+      if (!cy || !traceInfo?.rootId) return;
+      const root = cy.getElementById(traceInfo.rootId);
+      if (root.length) runTrace(root, nextMode);
+    },
+    [runTrace, traceInfo?.rootId]
   );
 
   const handleValidateNetwork = useCallback(() => {
@@ -1406,13 +1753,47 @@ export default function NetworkBuilderPage() {
       });
   }, [panelFindQuery, counts.nodes, counts.edges, selectedEl]);
 
+  const transmissionLinesForCanvas = useMemo(() => {
+    const cy = cyRef.current;
+    if (!cy) return transmissionLines;
+
+    const inferredSystemByLineId = new Map();
+    cy.edges().forEach((edge) => {
+      const spec = edge.data("meta")?.specifications || {};
+      const systemId = spec.transmissionSystemId;
+      const lineIds = Array.isArray(spec.lineGroupIds) ? spec.lineGroupIds : [];
+      if (!systemId || !lineIds.length) return;
+      lineIds.forEach((lineId) => {
+        if (!inferredSystemByLineId.has(lineId)) inferredSystemByLineId.set(lineId, systemId);
+      });
+    });
+
+    return transmissionLines.map((line) => {
+      if (lineSystemId(line)) return line;
+      const canvasSystemId = inferredSystemByLineId.get(line.id);
+      return canvasSystemId ? { ...line, canvasSystemId } : line;
+    });
+  }, [transmissionLines, counts.edges, selectedEl]);
+
   const isolationGroups = useMemo(() => {
     const cy = cyRef.current;
-    const systemsById = new Map(transmissionSystems.map((system) => [system.id, { ...system, lines: [] }]));
-    const linesById = new Map(transmissionLines.map((line) => [line.id, { ...line, pipes: [] }]));
+    const lineNameById = new Map(transmissionLinesForCanvas.map((line) => [line.id, lineDisplayName(line)]));
+    const systemsById = new Map(transmissionSystems.map((system) => [system.id, { ...system, lines: [], pipes: [] }]));
+    const linesById = new Map(
+      transmissionLinesForCanvas.map((line) => [
+        line.id,
+        { ...line, parentLineName: line.parentLineId ? lineNameById.get(line.parentLineId) : "", pipes: [] },
+      ])
+    );
     const ungroupedPipes = [];
 
-    if (!cy) return { systems: Array.from(systemsById.values()), lines: Array.from(linesById.values()), ungroupedPipes };
+    if (!cy) {
+      return {
+        systems: Array.from(systemsById.values()),
+        standaloneLines: Array.from(linesById.values()),
+        ungroupedPipes,
+      };
+    }
 
     cy.edges().forEach((edge) => {
       const data = edge.data();
@@ -1426,30 +1807,72 @@ export default function NetworkBuilderPage() {
       const systemId = spec.transmissionSystemId;
       const lineIds = Array.isArray(spec.lineGroupIds) ? spec.lineGroupIds : [];
       if (!lineIds.length) {
+        if (systemId) {
+          if (!systemsById.has(systemId)) systemsById.set(systemId, { id: systemId, name: systemId, lines: [], pipes: [] });
+          systemsById.get(systemId).pipes.push(pipe);
+          return;
+        }
         ungroupedPipes.push(pipe);
         return;
       }
       lineIds.forEach((lineId) => {
-        if (!linesById.has(lineId)) linesById.set(lineId, { id: lineId, name: lineId, pipes: [] });
+        if (!linesById.has(lineId)) linesById.set(lineId, { id: lineId, name: lineId, parentLineName: "", pipes: [] });
         const line = linesById.get(lineId);
         line.pipes.push(pipe);
-        if (systemId && !line.systemId && !line.transmissionSystemId && !line.parentSystemId) {
+        if (systemId && !lineSystemId(line)) {
           line.canvasSystemId = systemId;
         }
       });
     });
 
     linesById.forEach((line) => {
-      const systemId = line.systemId || line.transmissionSystemId || line.parentSystemId || line.canvasSystemId;
-      if (systemId && systemsById.has(systemId)) systemsById.get(systemId).lines.push(line);
+      const systemId = lineSystemId(line);
+      if (!systemId) return;
+      if (!systemsById.has(systemId)) systemsById.set(systemId, { id: systemId, name: systemId, lines: [], pipes: [] });
+      systemsById.get(systemId).lines.push(line);
+    });
+
+    const standaloneLines = Array.from(linesById.values()).filter((line) => {
+      return !lineSystemId(line) && line.pipes.length > 0;
     });
 
     return {
       systems: Array.from(systemsById.values()),
-      lines: Array.from(linesById.values()),
+      standaloneLines,
       ungroupedPipes,
     };
-  }, [transmissionSystems, transmissionLines, counts.edges, selectedEl]);
+  }, [transmissionSystems, transmissionLinesForCanvas, counts.edges, selectedEl]);
+
+  const filteredIsolationGroups = useMemo(() => {
+    const needle = isolationQuery.trim().toLowerCase();
+    if (!needle) return isolationGroups;
+
+    const pipeMatches = (pipe) => matchesText(needle, pipe.id, pipe.name, pipe.source, pipe.target);
+    const filterLine = (line) => {
+      const lineMatches = matchesText(needle, line.id, line.name, line.branchName, line.parentLineName, lineDisplayName(line));
+      return { ...line, pipes: lineMatches ? line.pipes : line.pipes.filter(pipeMatches), _selfMatch: lineMatches };
+    };
+    const filterSystem = (system) => {
+      const systemMatches = matchesText(needle, system.id, system.name);
+      if (systemMatches) return { ...system, _selfMatch: true };
+      return {
+        ...system,
+        lines: system.lines.map(filterLine).filter((line) => line._selfMatch || line.pipes.length > 0),
+        pipes: system.pipes.filter(pipeMatches),
+        _selfMatch: false,
+      };
+    };
+
+    return {
+      systems: isolationGroups.systems
+        .map(filterSystem)
+        .filter((system) => system._selfMatch || system.lines.length > 0 || system.pipes.length > 0),
+      standaloneLines: isolationGroups.standaloneLines
+        .map(filterLine)
+        .filter((line) => line._selfMatch || line.pipes.length > 0),
+      ungroupedPipes: isolationGroups.ungroupedPipes.filter(pipeMatches),
+    };
+  }, [isolationGroups, isolationQuery]);
 
   // ── Arrange (align / distribute selected nodes) ──────────────────────────────
   const arrange = useCallback(
@@ -1550,14 +1973,14 @@ export default function NetworkBuilderPage() {
       setToast("Nothing selected to copy.");
       return;
     }
-    clipboardRef.current = sel.jsons();
+    clipboardRef.current = sel.jsons().map(stripTransientClasses);
     setToast(`Copied ${sel.length} element${sel.length === 1 ? "" : "s"}.`);
   }, []);
 
   const handleCopyAll = useCallback(() => {
     const cy = cyRef.current;
     if (!cy || !cy.elements().length) return;
-    clipboardRef.current = cy.elements().jsons();
+    clipboardRef.current = snapshotElements(cy);
     setToast("Copied entire canvas.");
   }, []);
 
@@ -1691,10 +2114,12 @@ export default function NetworkBuilderPage() {
           cy.elements().remove();
           addGraph(cy, doc);
           restoringRef.current = false;
+          clearTraceClasses(cy);
           cy.fit(undefined, 48);
           loadedIdRef.current = null;
           setNetwork({ id: null, name: doc.name || "", description: doc.description || "" });
           setSelectedEl(null);
+          setTraceInfo(null);
           syncGraph();
           resetHistory();
           navigate("/network-builder");
@@ -1715,6 +2140,7 @@ export default function NetworkBuilderPage() {
     loadedIdRef.current = null;
     setNetwork({ id: null, name: "", description: "" });
     setSelectedEl(null);
+    setTraceInfo(null);
     setModeSafe("select");
     syncGraph();
     resetHistory();
@@ -1911,7 +2337,15 @@ export default function NetworkBuilderPage() {
               <Btn on={() => setModeSafe(mode === "area-zoom" ? "select" : "area-zoom")} icon={IconMaximize} active={mode === "area-zoom"} title="Drag a rectangle to zoom">Area</Btn>
               <Btn on={() => setShowLabels((v) => !v)} icon={IconTag} active={showLabels} title="Toggle labels">Labels</Btn>
               <Btn on={() => setShowGrid((v) => !v)} icon={IconGrid} active={showGrid} title="Toggle grid">Grid</Btn>
-              <Btn on={() => notImplemented("Trace Delivery")} icon={IconDistributionNetwork} title="Trace delivery paths">Trace HP</Btn>
+              <Btn
+                on={() => setModeSafe(mode === "trace" ? "select" : "trace")}
+                icon={IconDistributionNetwork}
+                active={mode === "trace"}
+                disabled={realNodeCount < 1}
+                title="Trace delivery paths from a handover point"
+              >
+                Trace HP
+              </Btn>
               <Btn on={handleResetView} icon={IconRefresh} title="Reset pan and zoom">Reset</Btn>
             </div>
             <span className="toolbar-group__label">View</span>
@@ -1927,7 +2361,7 @@ export default function NetworkBuilderPage() {
               <Btn on={handleSelectDisconnected} icon={IconAlertTriangle} title="Select disconnected assets">Disconnected</Btn>
               <Btn on={handleSelectMissingCapacity} icon={EmptyIcon} title="Select pipes with missing capacity">No Capacity</Btn>
               <Btn on={handleSelectInactive} icon={IconEyeOff} title="Select inactive assets and pipes">Inactive</Btn>
-              <Btn on={handleClearHighlights} icon={EmptyIcon} title="Clear selection, find results, and isolate dimming">Clear Marks</Btn>
+              <Btn on={handleClearHighlights} icon={EmptyIcon} title="Clear selection, find results, and isolation">Clear Marks</Btn>
             </div>
             <span className="toolbar-group__label">Review</span>
           </div>
@@ -2087,6 +2521,8 @@ export default function NetworkBuilderPage() {
       ? lineSource
         ? "Draw Pipe — click the target node"
         : "Draw Pipe — click the source node"
+      : mode === "trace"
+      ? "Trace HP — click a handover point or delivery node"
       : null;
   const saveStatusLabel = saveStatus === "saving" ? "Saving" : saveStatus === "saved" ? "Saved" : "Unsaved";
   const saveStatusTone = saveStatus === "saved" ? "green" : saveStatus === "saving" ? "blue" : "amber";
@@ -2248,6 +2684,12 @@ export default function NetworkBuilderPage() {
                 Find
               </button>
               <button
+                className={`ns2-panel-tab${rightPanelTab === "trace" ? " ns2-panel-tab--active" : ""}${traceInfo ? " ns2-panel-tab--has-data" : ""}`}
+                onClick={() => setRightPanelTab("trace")}
+              >
+                Trace
+              </button>
+              <button
                 className={`ns2-panel-tab${rightPanelTab === "isolation" ? " ns2-panel-tab--active" : ""}`}
                 onClick={() => setRightPanelTab("isolation")}
               >
@@ -2260,15 +2702,16 @@ export default function NetworkBuilderPage() {
                 <NetworkNodeDetails
                   selected={selectedEl}
                   systems={transmissionSystems}
-                  lines={transmissionLines}
+                  lines={transmissionLinesForCanvas}
                   onLabelChange={handleLabelChange}
                   onSpecChange={handleSpecChange}
                   onSpecBooleanChange={handleSpecBooleanChange}
-                  onSpecArrayChange={handleSpecArrayChange}
-                  onEdgeFieldChange={handleEdgeFieldChange}
-                  onActiveChange={handleEdgeActiveChange}
-                  onDelete={handleDelete}
-                />
+	                  onSpecArrayChange={handleSpecArrayChange}
+	                  onEdgeFieldChange={handleEdgeFieldChange}
+	                  onActiveChange={handleEdgeActiveChange}
+	                  onCreateLine={handleCreateLineForInspector}
+	                  onDelete={handleDelete}
+	                />
               </div>
             )}
 
@@ -2373,61 +2816,254 @@ export default function NetworkBuilderPage() {
               </div>
             )}
 
+            {rightPanelTab === "trace" && (
+              <div className="ns2-panel-body ns2-panel-body--trace">
+                <div className="ns2-adv-toggle">
+                  <button
+                    className={`ns2-adv-toggle-btn${traceMode === "reachable" ? " ns2-adv-toggle-btn--active" : ""}`}
+                    onClick={() => handleTraceModeSelect("reachable")}
+                    disabled={!traceInfo}
+                  >
+                    Reachable
+                  </button>
+                  <button
+                    className={`ns2-adv-toggle-btn${traceMode === "delivered" ? " ns2-adv-toggle-btn--active" : ""}`}
+                    onClick={() => handleTraceModeSelect("delivered")}
+                    disabled={!traceInfo || !traceInfo.hasFlow}
+                    title={traceInfo?.hasFlow ? "Trace only pipes with delivered flow" : "No flow results attached to this canvas yet"}
+                  >
+                    Delivered
+                  </button>
+                </div>
+
+                {!traceInfo ? (
+                  <div className="ns2-panel-hint">Turn on Trace HP, then click a handover point or delivery node.</div>
+                ) : (
+                  <div className="ns2-trace-panel">
+                    <div className="ns2-trace-summary">
+                      <div>
+                        <div className="ns2-trace-root">{traceInfo.rootName}</div>
+                        <div className="ns2-trace-subtitle">
+                          {traceInfo.mode === "delivered" ? "Delivered flow" : "Reachable topology"}
+                          {!traceInfo.hasFlow && traceInfo.requestedMode === "delivered" ? " - no flow results attached" : ""}
+                        </div>
+                      </div>
+                      <button className="ns2-btn ns2-btn--sm" onClick={() => clearTraceCanvas("Cleared trace.")}>
+                        Clear
+                      </button>
+                    </div>
+
+                    <div className="ns2-trace-stats">
+                      <div className="ns2-trace-stat">
+                        <span>Upstream</span>
+                        <strong>{traceInfo.upCount}</strong>
+                        <small>{traceInfo.upEdgeCount} pipes</small>
+                      </div>
+                      <div className="ns2-trace-stat">
+                        <span>Downstream</span>
+                        <strong>{traceInfo.downCount}</strong>
+                        <small>{traceInfo.downEdgeCount} pipes</small>
+                      </div>
+                    </div>
+
+                    <div className="ns2-trace-section">
+                      <div className="ns2-trace-section__title">Immediate Sources</div>
+                      {traceInfo.sources.length ? (
+                        <div className="ns2-trace-list">
+                          {traceInfo.sources.map((item) => (
+                            <button key={`source-${item.id}`} className="ns2-trace-row" onClick={() => focusCanvasElement(item.id)}>
+                              <span className="ns2-trace-row__name">{item.name}</span>
+                              <span className="ns2-trace-row__flow">{formatTraceFlow(item.flow, traceInfo.hasFlow)}</span>
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="ns2-panel-hint">No immediate upstream neighbours found.</div>
+                      )}
+                    </div>
+
+                    <div className="ns2-trace-section">
+                      <div className="ns2-trace-section__title">Immediate Destinations</div>
+                      {traceInfo.dests.length ? (
+                        <div className="ns2-trace-list">
+                          {traceInfo.dests.map((item) => (
+                            <button key={`dest-${item.id}`} className="ns2-trace-row" onClick={() => focusCanvasElement(item.id)}>
+                              <span className="ns2-trace-row__name">{item.name}</span>
+                              <span className="ns2-trace-row__flow">{formatTraceFlow(item.flow, traceInfo.hasFlow)}</span>
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="ns2-panel-hint">No immediate downstream neighbours found.</div>
+                      )}
+                    </div>
+
+                    <div className="ns2-trace-section">
+                      <div className="ns2-trace-section__title">Ultimate Sources</div>
+                      {traceInfo.ultimateSources.length ? (
+                        <div className="ns2-trace-list">
+                          {traceInfo.ultimateSources.map((item) => (
+                            <button key={`ultimate-${item.id}`} className="ns2-trace-row" onClick={() => focusCanvasElement(item.id)}>
+                              <span className="ns2-trace-row__name">{item.name}</span>
+                              <span className="ns2-trace-row__type">{ENTITY_TYPE_LABELS[item.type] || item.type}</span>
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="ns2-panel-hint">No plant or STP nodes found upstream.</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {rightPanelTab === "isolation" && (
               <div className="ns2-panel-body ns2-panel-body--issues">
+                <div className="ns2-isolation-tools">
+                  <label className="ns2-label">Filter Isolation</label>
+                  <input
+                    className="ns2-input"
+                    value={isolationQuery}
+                    onChange={(e) => setIsolationQuery(e.target.value)}
+                    placeholder="Search system, branch, line, pipe..."
+                  />
+                  <div className="ns2-isolation-status">
+                    {isolationActive
+                      ? `Showing ${activeIsolationLabel || "isolated scope"} only`
+                      : "Click a system, line, branch, or pipe to isolate it."}
+                  </div>
+                  {isolationActive && (
+                    <button type="button" className="ns2-btn ns2-btn--sm" onClick={() => clearIsolation()}>
+                      Clear Isolation
+                    </button>
+                  )}
+                </div>
                 <div className="ns2-isolation-tree">
                   <div className="ns2-isolation-tree__title">Transmission Systems</div>
-                  {isolationGroups.systems.length === 0 ? (
+                  {filteredIsolationGroups.systems.length === 0 ? (
                     <div className="ns2-panel-hint">No transmission systems loaded yet.</div>
                   ) : (
-                    isolationGroups.systems.map((system) => (
+                    filteredIsolationGroups.systems.map((system) => {
+                      const systemPipeIds = pipeIdsForSystem(system);
+                      return (
                       <div className="ns2-isolation-tree__system" key={system.id}>
                         <div className="ns2-isolation-tree__row ns2-isolation-tree__row--system">
-                          <button type="button" className="ns2-isolation-tree__focus" disabled>
+	                          <button
+	                            type="button"
+	                            className={`ns2-isolation-tree__focus${activeIsolationKey === `system:${system.id}` ? " ns2-isolation-tree__focus--active" : ""}`}
+	                            onClick={() => isolatePipeIds(systemPipeIds, `system ${system.name || system.id}`, `system:${system.id}`)}
+	                            disabled={systemPipeIds.length === 0}
+	                          >
                             <span className="ns2-isolation-tree__level">SYSTEM</span>
                             <strong>{system.name}</strong>
-                            <small>{system.lines.length} lines</small>
+                            <small>{system.lines.length} lines, {systemPipeIds.length} pipe{systemPipeIds.length === 1 ? "" : "s"}</small>
                           </button>
                         </div>
                         <div className="ns2-isolation-tree__children">
-                          {system.lines.length === 0 ? (
+                          {system.lines.length === 0 && system.pipes.length === 0 ? (
                             <div className="ns2-isolation-tree__empty">No canvas pipes assigned to this system.</div>
                           ) : (
-                            system.lines.map((line) => (
-                              <div className="ns2-isolation-tree__line" key={line.id}>
-                                <div className="ns2-isolation-tree__row ns2-isolation-tree__row--line">
-                                  <button type="button" className="ns2-isolation-tree__focus" disabled>
-                                    <span className="ns2-isolation-tree__level">LINE</span>
-                                    <strong>{line.name}</strong>
-                                    <small>{line.pipes.length} segment{line.pipes.length === 1 ? "" : "s"}</small>
+                            <>
+                              {system.pipes.map((pipe) => (
+                                <div className="ns2-isolation-tree__row ns2-isolation-tree__row--segment" key={`${system.id}-${pipe.id}`}>
+                                  <span className="ns2-isolation-tree__branch-mark">-</span>
+	                                  <button
+	                                    type="button"
+	                                    className={`ns2-isolation-tree__focus${activeIsolationKey === `pipe:${pipe.id}` ? " ns2-isolation-tree__focus--active" : ""}`}
+	                                    onClick={() => isolatePipeIds([pipe.id], `pipe ${pipe.name}`, `pipe:${pipe.id}`)}
+	                                  >
+                                    <span className="ns2-isolation-tree__level">PIPE</span>
+                                    <strong>{pipe.name}</strong>
+                                    <small>{pipe.source} to {pipe.target}</small>
                                   </button>
                                 </div>
-                                {line.pipes.map((pipe) => (
-                                  <div className="ns2-isolation-tree__row ns2-isolation-tree__row--segment" key={`${line.id}-${pipe.id}`}>
-                                    <span className="ns2-isolation-tree__branch-mark">-</span>
-                                    <button type="button" className="ns2-isolation-tree__focus" onClick={() => focusCanvasElement(pipe.id)}>
-                                      <span className="ns2-isolation-tree__level">PIPE</span>
-                                      <strong>{pipe.name}</strong>
-                                      <small>{pipe.source} to {pipe.target}</small>
+                              ))}
+                              {system.lines.map((line) => {
+                                const linePipeIds = pipeIdsForLine(line);
+                                return (
+                                <div className="ns2-isolation-tree__line" key={line.id}>
+                                  <div className="ns2-isolation-tree__row ns2-isolation-tree__row--line">
+                                    <button
+                                      type="button"
+	                                      className={`ns2-isolation-tree__focus${activeIsolationKey === `line:${line.id}` ? " ns2-isolation-tree__focus--active" : ""}`}
+	                                      onClick={() => isolatePipeIds(linePipeIds, `${line.isBranch ? "branch" : "line"} ${lineDisplayName(line)}`, `line:${line.id}`)}
+	                                      disabled={linePipeIds.length === 0}
+                                    >
+                                      <span className="ns2-isolation-tree__level">{line.isBranch ? "BRANCH" : "LINE"}</span>
+                                      <strong>{lineDisplayName(line)}</strong>
+                                      <small>
+                                        {line.isBranch && (line.parentLineName || line.parentLineId)
+                                          ? `Branch of ${line.parentLineName || line.parentLineId} - `
+                                          : ""}
+                                        {line.pipes.length} segment{line.pipes.length === 1 ? "" : "s"}
+                                      </small>
                                     </button>
                                   </div>
-                                ))}
-                              </div>
-                            ))
+                                  {line.pipes.map((pipe) => (
+                                    <div className="ns2-isolation-tree__row ns2-isolation-tree__row--segment" key={`${line.id}-${pipe.id}`}>
+                                      <span className="ns2-isolation-tree__branch-mark">-</span>
+	                                      <button
+	                                        type="button"
+	                                        className={`ns2-isolation-tree__focus${activeIsolationKey === `pipe:${pipe.id}` ? " ns2-isolation-tree__focus--active" : ""}`}
+	                                        onClick={() => isolatePipeIds([pipe.id], `pipe ${pipe.name}`, `pipe:${pipe.id}`)}
+	                                      >
+                                        <span className="ns2-isolation-tree__level">PIPE</span>
+                                        <strong>{pipe.name}</strong>
+                                        <small>{pipe.source} to {pipe.target}</small>
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                                );
+                              })}
+                            </>
                           )}
                         </div>
                       </div>
-                    ))
+                      );
+                    })
                   )}
 
                   <div className="ns2-isolation-tree__ungrouped">
+                    <div className="ns2-isolation-tree__title">Lines Without System</div>
+                    {filteredIsolationGroups.standaloneLines.length === 0 ? (
+                      <div className="ns2-isolation-tree__empty">Every line with canvas pipes is assigned to a system.</div>
+                    ) : (
+                      filteredIsolationGroups.standaloneLines.map((line) => {
+                        const linePipeIds = pipeIdsForLine(line);
+                        return (
+                          <div className="ns2-isolation-tree__line" key={line.id}>
+                            <div className="ns2-isolation-tree__row ns2-isolation-tree__row--line">
+                              <button
+                                type="button"
+	                                className={`ns2-isolation-tree__focus${activeIsolationKey === `line:${line.id}` ? " ns2-isolation-tree__focus--active" : ""}`}
+	                                onClick={() => isolatePipeIds(linePipeIds, `${line.isBranch ? "branch" : "line"} ${lineDisplayName(line)}`, `line:${line.id}`)}
+	                                disabled={linePipeIds.length === 0}
+                              >
+                                <span className="ns2-isolation-tree__level">{line.isBranch ? "BRANCH" : "LINE"}</span>
+                                <strong>{lineDisplayName(line)}</strong>
+                                <small>{line.pipes.length} segment{line.pipes.length === 1 ? "" : "s"}</small>
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  <div className="ns2-isolation-tree__ungrouped">
                     <div className="ns2-isolation-tree__title">Ungrouped Pipes</div>
-                    {isolationGroups.ungroupedPipes.length === 0 ? (
+                    {filteredIsolationGroups.ungroupedPipes.length === 0 ? (
                       <div className="ns2-isolation-tree__empty">Every canvas pipe is assigned to a line.</div>
                     ) : (
-                      isolationGroups.ungroupedPipes.map((pipe) => (
+                      filteredIsolationGroups.ungroupedPipes.map((pipe) => (
                         <div className="ns2-isolation-tree__row ns2-isolation-tree__row--segment" key={pipe.id}>
-                          <button type="button" className="ns2-isolation-tree__focus" onClick={() => focusCanvasElement(pipe.id)}>
+	                          <button
+	                            type="button"
+	                            className={`ns2-isolation-tree__focus${activeIsolationKey === `pipe:${pipe.id}` ? " ns2-isolation-tree__focus--active" : ""}`}
+	                            onClick={() => isolatePipeIds([pipe.id], `pipe ${pipe.name}`, `pipe:${pipe.id}`)}
+	                          >
                             <span className="ns2-isolation-tree__level">PIPE</span>
                             <strong>{pipe.name}</strong>
                             <small>{pipe.source} to {pipe.target}</small>
@@ -2497,7 +3133,7 @@ export default function NetworkBuilderPage() {
       {pipeModal.open && (
         <PipeVariablesModal
           systems={transmissionSystems}
-          lines={transmissionLines}
+          lines={transmissionLinesForCanvas}
           onCancel={() => setPipeModal({ open: false, source: null, target: null })}
           onSubmit={submitPipe}
         />

@@ -7,7 +7,7 @@ import { buildEconomics } from "./economics.js";
 import { listAssets, createAsset, getAssetById, updateAsset, deleteAsset } from "./assetRegistry.js";
 import {
   listTransmissionSystems, createTransmissionSystem,
-  listTransmissionLines, createTransmissionLine,
+  listTransmissionLines, createTransmissionLine, deleteTransmissionLine,
 } from "./transmissionRegistry.js";
 import { listNetworks, getNetwork, createNetwork, updateNetwork, deleteNetwork } from "./networks.js";
 import {
@@ -97,6 +97,15 @@ app.post("/api/transmission-lines", async (req, res) => {
   } catch (err) {
     console.error("transmission line create error:", err);
     res.status(err.statusCode || 500).json({ error: err.message || "Failed to create transmission line" });
+  }
+});
+
+app.delete("/api/transmission-lines/:id", async (req, res) => {
+  try {
+    res.json(await deleteTransmissionLine(req.params.id));
+  } catch (err) {
+    console.error("transmission line delete error:", err);
+    res.status(err.statusCode || 500).json({ error: err.message || "Failed to delete transmission line" });
   }
 });
 

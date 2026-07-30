@@ -1,6 +1,8 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { ENTITY_TYPE_LABELS } from "../cytoscape/buildCyStyle";
+import { lineBelongsToSystem } from "../lib/transmissionLines";
 import { Switch } from "./AssetFormControls";
+import TransmissionLinePicker from "./TransmissionLinePicker";
 import {
   IconDroplet,
   IconPipe,
@@ -138,8 +140,24 @@ function CanvasLegend() {
 export default function NetworkNodeDetails({
   selected, systems, lines,
   onLabelChange, onSpecChange, onSpecBooleanChange, onSpecArrayChange,
-  onEdgeFieldChange, onActiveChange, onDelete,
+  onEdgeFieldChange, onActiveChange, onCreateLine, onDelete,
 }) {
+  const [lineDraft, setLineDraft] = useState({
+    newLineName: "",
+    isBranch: false,
+    parentLineId: "",
+    branchName: "",
+  });
+  const [lineSaving, setLineSaving] = useState(false);
+  const [lineError, setLineError] = useState(null);
+
+  useEffect(() => {
+    setLineDraft({ newLineName: "", isBranch: false, parentLineId: "", branchName: "" });
+    setLineError(null);
+  }, [selected?.id]);
+
+  const setLineDraftField = (key, value) => setLineDraft((draft) => ({ ...draft, [key]: value }));
+
   if (!selected) {
     return (
       <div className="nnd nnd--empty">
@@ -150,6 +168,35 @@ export default function NetworkNodeDetails({
 
   if (selected._group === "edge") {
     const pipeSpec = selected.meta?.specifications || {};
+    const systemLines = pipeSpec.transmissionSystemId
+      ? lines.filter((line) => lineBelongsToSystem(line, pipeSpec.transmissionSystemId))
+      : [];
+    const createLineForPipe = async () => {
+      if (!onCreateLine || !lineDraft.newLineName.trim()) return;
+      if (!pipeSpec.transmissionSystemId) {
+        setLineError("Choose a transmission system before adding a line.");
+        return;
+      }
+      setLineSaving(true);
+      setLineError(null);
+      try {
+        const created = await onCreateLine({
+          name: lineDraft.newLineName.trim(),
+          systemId: pipeSpec.transmissionSystemId,
+          isBranch: lineDraft.isBranch,
+          parentLineId: lineDraft.isBranch ? lineDraft.parentLineId || null : null,
+          branchName: lineDraft.isBranch ? lineDraft.branchName || null : null,
+        });
+        const current = Array.isArray(pipeSpec.lineGroupIds) ? pipeSpec.lineGroupIds : [];
+        onSpecArrayChange("lineGroupIds", current.includes(created.id) ? current : [...current, created.id]);
+        setLineDraft({ newLineName: "", isBranch: false, parentLineId: "", branchName: "" });
+      } catch (err) {
+        setLineError(err.message || "Failed to add line");
+      } finally {
+        setLineSaving(false);
+      }
+    };
+
     return (
       <div className="nnd">
         <header className="nnd__head">
@@ -269,7 +316,12 @@ export default function NetworkNodeDetails({
             Transmission System
             <select
               value={pipeSpec.transmissionSystemId || ""}
-              onChange={(e) => onSpecChange("transmissionSystemId", e.target.value)}
+              onChange={(e) => {
+                onSpecChange("transmissionSystemId", e.target.value);
+                onSpecArrayChange("lineGroupIds", []);
+                setLineDraft({ newLineName: "", isBranch: false, parentLineId: "", branchName: "" });
+                setLineError(null);
+              }}
             >
               <option value="">—</option>
               {systems.map((s) => (
@@ -277,20 +329,27 @@ export default function NetworkNodeDetails({
               ))}
             </select>
           </label>
-          <label className="af__field nnd__field">
-            Transmission Lines
-            <select
-              multiple
-              value={pipeSpec.lineGroupIds || []}
-              onChange={(e) =>
-                onSpecArrayChange("lineGroupIds", Array.from(e.target.selectedOptions, (o) => o.value))
-              }
-            >
-              {lines.map((l) => (
-                <option key={l.id} value={l.id}>{l.name}</option>
-              ))}
-            </select>
-          </label>
+          <TransmissionLinePicker
+            lines={systemLines}
+            selectedIds={pipeSpec.lineGroupIds || []}
+            onSelectedIdsChange={(ids) => onSpecArrayChange("lineGroupIds", ids)}
+            newLineName={lineDraft.newLineName}
+            onNewLineNameChange={(value) => setLineDraftField("newLineName", value)}
+            isBranch={lineDraft.isBranch}
+            onIsBranchChange={(checked) => setLineDraftField("isBranch", checked)}
+            parentLineId={lineDraft.parentLineId}
+            onParentLineIdChange={(value) => setLineDraftField("parentLineId", value)}
+            branchName={lineDraft.branchName}
+            onBranchNameChange={(value) => setLineDraftField("branchName", value)}
+            onCreateLine={createLineForPipe}
+            creating={lineSaving}
+            createError={lineError}
+            emptyMessage={
+              pipeSpec.transmissionSystemId
+                ? "No saved transmission lines for this system yet."
+                : "Choose a transmission system before selecting or adding lines."
+            }
+          />
 
           <div className="af__section">Capacity Limitation</div>
           <label className="af__field nnd__field">
