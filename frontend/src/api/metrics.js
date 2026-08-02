@@ -108,6 +108,14 @@ export function createTransmissionSystem(payload) {
   return postJson("/api/transmission-systems", payload);
 }
 
+export function fetchTransmissionSystemLibrary() {
+  return getJson("/api/transmission-systems/library");
+}
+
+export function fetchTransmissionSystemNetwork(id) {
+  return getJson(`/api/transmission-systems/${encodeURIComponent(id)}/network`);
+}
+
 export function fetchTransmissionLines() {
   return getJson("/api/transmission-lines");
 }

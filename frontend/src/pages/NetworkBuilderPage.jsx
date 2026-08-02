@@ -60,7 +60,7 @@ import { applyCardIcon } from "../cytoscape/nodeCard";
 import { fetchNetwork, fetchNetworks, saveNetwork, updateNetwork, deleteNetwork } from "../api/networks";
 import {
   fetchTransmissionSystems, createTransmissionSystem,
-  fetchTransmissionLines, createTransmissionLine,
+  fetchTransmissionLines, createTransmissionLine, fetchTransmissionSystemNetwork,
 } from "../api/metrics";
 import { lineDisplayName, lineSystemId } from "../lib/transmissionLines";
 import NetworkPalette from "../components/NetworkPalette";
@@ -156,6 +156,7 @@ const TRANSIENT_CANVAS_CLASS_SET = new Set(TRANSIENT_CANVAS_CLASSES.split(/\s+/)
 // coerces to a number, since most pipe spec fields are numeric.
 const STRING_SPEC_FIELDS = new Set(["pipelineMaterial", "infraSource", "capacityLimitationType", "transmissionSystemId"]);
 const LIBRARY_DRAG_TYPE = "application/x-widispatch-assets";
+const TRANSMISSION_SYSTEM_DRAG_TYPE = "application/x-widispatch-transmission-system";
 
 const emptyEntityForm = (entityType) => ({
   category: entityType,
@@ -420,6 +421,13 @@ const addGraph = (cy, g) => {
   });
 };
 
+const elementData = (element) => element?.data || element || {};
+
+const graphPosition = (element, index = 0) => element?.position || {
+  x: (index % 3) * 220,
+  y: Math.floor(index / 3) * 84,
+};
+
 const download = (name, text, mime) => {
   const blob = new Blob([text], { type: mime });
   const url = URL.createObjectURL(blob);
@@ -489,6 +497,7 @@ export default function NetworkBuilderPage() {
   const [cyReady, setCyReady] = useState(false);
   const [mode, setMode] = useState("select");
   const [pendingAsset, setPendingAsset] = useState(null);
+  const [pendingSystem, setPendingSystem] = useState(null);
   const [pendingEntity, setPendingEntity] = useState(null);
   const [lineSource, setLineSource] = useState(null);
   const [selectedEl, setSelectedEl] = useState(null);
@@ -762,6 +771,94 @@ export default function NetworkBuilderPage() {
     [syncSelection]
   );
 
+  const mergeTransmissionBundleCatalog = useCallback((bundle) => {
+    if (bundle?.system?.id) {
+      setTransmissionSystems((prev) => (
+        prev.some((system) => system.id === bundle.system.id) ? prev : [...prev, bundle.system]
+      ));
+    }
+    if (Array.isArray(bundle?.lines) && bundle.lines.length) {
+      setTransmissionLines((prev) => {
+        const seen = new Set(prev.map((line) => line.id));
+        const additions = bundle.lines.filter((line) => line?.id && !seen.has(line.id));
+        return additions.length ? [...prev, ...additions] : prev;
+      });
+    }
+  }, []);
+
+  const placeTransmissionSystemAt = useCallback(
+    (bundle, position) => {
+      const cy = cyRef.current;
+      if (!cy || !bundle) return [];
+      const nodes = Array.isArray(bundle.nodes) ? bundle.nodes : [];
+      const edges = Array.isArray(bundle.edges) ? bundle.edges : [];
+      if (!nodes.length || !edges.length) {
+        setToast(`"${bundle.system?.name || bundle.system?.id || "Transmission system"}" has no saved pipes to place.`);
+        return [];
+      }
+
+      const positions = nodes.map((node, index) => graphPosition(node, index));
+      const minX = Math.min(...positions.map((pos) => pos.x));
+      const maxX = Math.max(...positions.map((pos) => pos.x));
+      const minY = Math.min(...positions.map((pos) => pos.y));
+      const maxY = Math.max(...positions.map((pos) => pos.y));
+      const center = { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
+      const idMap = new Map();
+      const added = [];
+
+      cy.batch(() => {
+        nodes.forEach((node, index) => {
+          const sourceData = cloneData(elementData(node)) || {};
+          const oldId = sourceData.id || node.id;
+          const nextId = rid("n");
+          idMap.set(oldId, nextId);
+          delete sourceData.cardIcon;
+          const pos = positions[index];
+          const addedNode = cy.add({
+            group: "nodes",
+            data: {
+              ...sourceData,
+              id: nextId,
+              importedFromNodeId: sourceData.originalNodeId || oldId,
+              importedFromSystemId: bundle.system?.id || "",
+            },
+            position: {
+              x: position.x + (pos.x - center.x),
+              y: position.y + (pos.y - center.y),
+            },
+          });
+          added.push(addedNode);
+        });
+
+        edges.forEach((edge) => {
+          const sourceData = cloneData(elementData(edge)) || {};
+          const nextSource = idMap.get(sourceData.source);
+          const nextTarget = idMap.get(sourceData.target);
+          if (!nextSource || !nextTarget) return;
+          const addedEdge = cy.add({
+            group: "edges",
+            data: {
+              ...sourceData,
+              id: rid("e"),
+              source: nextSource,
+              target: nextTarget,
+              importedFromEdgeId: sourceData.originalEdgeId || sourceData.id || edge.id,
+              importedFromSystemId: bundle.system?.id || "",
+            },
+          });
+          added.push(addedEdge);
+        });
+      });
+
+      cy.$(":selected").unselect();
+      if (added.length) cy.collection(added).select();
+      syncSelection();
+      setToast(`Placed ${bundle.system?.name || "transmission system"} with ${nodes.length} nodes and ${edges.length} pipes.`);
+      return added;
+    },
+    [syncSelection]
+  );
+
   const clearTraceCanvas = useCallback((message) => {
     const cy = cyRef.current;
     if (cy) clearTraceClasses(cy);
@@ -894,6 +991,14 @@ export default function NetworkBuilderPage() {
 
       if (m === "place-asset" && pendingPlacementRef.current) {
         const pending = pendingPlacementRef.current;
+        if (pending?._type === "transmission-system") {
+          placeTransmissionSystemAt(pending.bundle, { x: evt.position.x, y: evt.position.y });
+          pendingPlacementRef.current = null;
+          setPendingSystem(null);
+          setPendingAsset(null);
+          backToSelect();
+          return;
+        }
         const insertMode = pending?._insertMode === true;
         const assetPayload = insertMode ? pending.asset || pending.assets?.[0] : pending;
         if (insertMode && !assetPayload) {
@@ -976,7 +1081,7 @@ export default function NetworkBuilderPage() {
       cy.destroy();
       cyRef.current = null;
     };
-  }, [syncGraph, syncSelection, createPipeEdge, createJunctionNode, scheduleCommit, placeAssetsAt, splitPipeWithNode]);
+  }, [syncGraph, syncSelection, createPipeEdge, createJunctionNode, scheduleCommit, placeAssetsAt, placeTransmissionSystemAt, splitPipeWithNode]);
 
   // ── Hydrate from a saved network when the route :id changes ──────────────────
   useEffect(() => {
@@ -1042,6 +1147,7 @@ export default function NetworkBuilderPage() {
     setInsertModal({ open: false });
     pendingPlacementRef.current = null;
     setPendingAsset(null);
+    setPendingSystem(null);
     pendingEntityRef.current = null;
     setPendingEntity(null);
     setAreaBox(null);
@@ -1070,6 +1176,7 @@ export default function NetworkBuilderPage() {
     const insertMode = pendingPlacementRef.current?._insertMode === true;
     pendingEntityRef.current = null;
     setPendingEntity(null);
+    setPendingSystem(null);
     pendingPlacementRef.current = insertMode
       ? {
           _insertMode: true,
@@ -1093,26 +1200,41 @@ export default function NetworkBuilderPage() {
     );
   }, []);
 
+  const handlePickTransmissionSystem = useCallback(async (system) => {
+    if (!system?.id) return;
+    try {
+      setToast(`Loading ${system.name || system.id}...`);
+      const bundle = await fetchTransmissionSystemNetwork(system.id);
+      mergeTransmissionBundleCatalog(bundle);
+      pendingPlacementRef.current = { _type: "transmission-system", system, bundle };
+      setPendingAsset(null);
+      setPendingSystem(system);
+      pendingEntityRef.current = null;
+      setPendingEntity(null);
+      modeRef.current = "place-asset";
+      setMode("place-asset");
+      setToast(`Click the canvas to place "${system.name || system.id}".`);
+    } catch (err) {
+      setToast(err.message || "Couldn't load transmission system");
+    }
+  }, [mergeTransmissionBundleCatalog]);
+
   const handleLibraryDragOver = useCallback((event) => {
-    if (Array.from(event.dataTransfer.types).includes(LIBRARY_DRAG_TYPE)) {
+    const types = Array.from(event.dataTransfer.types);
+    if (types.includes(LIBRARY_DRAG_TYPE) || types.includes(TRANSMISSION_SYSTEM_DRAG_TYPE)) {
       event.preventDefault();
       event.dataTransfer.dropEffect = "copy";
     }
   }, []);
 
   const handleLibraryDrop = useCallback(
-    (event) => {
-      const payload = event.dataTransfer.getData(LIBRARY_DRAG_TYPE);
-      if (!payload) return;
+    async (event) => {
+      const assetPayloadText = event.dataTransfer.getData(LIBRARY_DRAG_TYPE);
+      const systemPayloadText = event.dataTransfer.getData(TRANSMISSION_SYSTEM_DRAG_TYPE);
+      if (!assetPayloadText && !systemPayloadText) return;
       event.preventDefault();
       const cy = cyRef.current;
       if (!cy || !containerRef.current) return;
-      let assets;
-      try {
-        assets = JSON.parse(payload);
-      } catch {
-        return;
-      }
       const rect = containerRef.current.getBoundingClientRect();
       const rendered = { x: event.clientX - rect.left, y: event.clientY - rect.top };
       const pan = cy.pan();
@@ -1121,15 +1243,39 @@ export default function NetworkBuilderPage() {
         x: (rendered.x - pan.x) / zoom,
         y: (rendered.y - pan.y) / zoom,
       };
+      if (systemPayloadText) {
+        try {
+          const systemPayload = JSON.parse(systemPayloadText);
+          const bundle = await fetchTransmissionSystemNetwork(systemPayload.id);
+          mergeTransmissionBundleCatalog(bundle);
+          placeTransmissionSystemAt(bundle, position);
+        } catch (err) {
+          setToast(err.message || "Couldn't place transmission system");
+        }
+        pendingPlacementRef.current = null;
+        setPendingSystem(null);
+        setPendingAsset(null);
+        modeRef.current = "select";
+        setMode("select");
+        return;
+      }
+
+      let assets;
+      try {
+        assets = JSON.parse(assetPayloadText);
+      } catch {
+        return;
+      }
       const insertMode = pendingPlacementRef.current?._insertMode === true;
       const added = placeAssetsAt(insertMode ? assets.slice(0, 1) : assets, position);
       if (insertMode && added?.[0]) splitPipeWithNode(added[0]);
       pendingPlacementRef.current = null;
+      setPendingSystem(null);
       setPendingAsset(null);
       modeRef.current = "select";
       setMode("select");
     },
-    [placeAssetsAt, splitPipeWithNode]
+    [mergeTransmissionBundleCatalog, placeAssetsAt, placeTransmissionSystemAt, splitPipeWithNode]
   );
 
   const closeEntityModal = useCallback(() => {
@@ -1168,6 +1314,7 @@ export default function NetworkBuilderPage() {
     setShowLibrary(true);
     pendingPlacementRef.current = { entityType: null, _insertMode: true };
     setPendingAsset(null);
+    setPendingSystem(null);
     modeRef.current = "place-asset";
     setMode("place-asset");
     setToast("Choose an asset from the library, then click the canvas to place it on the selected pipe.");
@@ -2540,7 +2687,9 @@ export default function NetworkBuilderPage() {
 
   const bannerText =
     mode === "place-asset"
-      ? !pendingAsset
+      ? pendingSystem
+        ? `Placing "${pendingSystem.name || pendingSystem.id}" system - click the canvas`
+        : !pendingAsset
         ? "Select an asset from the library for the selected pipe"
         : Array.isArray(pendingAsset)
         ? `Placing ${pendingAsset.length} selected assets — click the canvas`
@@ -2601,8 +2750,10 @@ export default function NetworkBuilderPage() {
           </div>
           <NetworkPalette
             onPick={handlePick}
+            onPickSystem={handlePickTransmissionSystem}
             placedIds={placedIds}
             armedId={Array.isArray(pendingAsset) ? pendingAsset.map((asset) => asset.id) : pendingAsset?.id}
+            armedSystemId={pendingSystem?.id}
           />
         </aside>
       )}

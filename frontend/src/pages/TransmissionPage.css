@@ -159,6 +159,17 @@
   text-transform: uppercase;
 }
 
+.transmission-system-detail__notice {
+  margin: 0 12px 12px;
+  padding: 8px 9px;
+  border: 1px solid #bfdbfe;
+  border-radius: 3px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
 .transmission-system-detail__section {
   padding: 0 12px 12px;
 }

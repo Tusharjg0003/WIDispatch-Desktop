@@ -76,6 +76,59 @@ function removeLineFromEdge(edge, lineId) {
   };
 }
 
+function getLineSystemId(line) {
+  return (
+    line?.systemId ||
+    line?.transmissionSystemId ||
+    line?.parentSystemId ||
+    line?.system_id ||
+    line?.transmission_system_id ||
+    ""
+  );
+}
+
+function getElementData(element) {
+  return element?.data || element || {};
+}
+
+function getEdgeSpec(edge) {
+  return getElementData(edge).meta?.specifications || {};
+}
+
+function normalizeBundleNode(node, network) {
+  const data = getElementData(node);
+  const originalId = data.id || node.id;
+  const id = `${network.id}:${originalId}`;
+  return {
+    ...node,
+    data: {
+      ...data,
+      id,
+      originalNodeId: originalId,
+      sourceNetworkId: network.id,
+      sourceNetworkName: network.name || network.id,
+    },
+    position: node.position || { x: 0, y: 0 },
+  };
+}
+
+function normalizeBundleEdge(edge, network) {
+  const data = getElementData(edge);
+  const originalId = data.id || edge.id;
+  return {
+    ...edge,
+    data: {
+      ...data,
+      id: `${network.id}:${originalId}`,
+      originalEdgeId: originalId,
+      source: `${network.id}:${data.source}`,
+      target: `${network.id}:${data.target}`,
+      sourceNetworkId: network.id,
+      sourceNetworkName: network.name || network.id,
+    },
+  };
+}
+
 export async function listTransmissionSystems() {
   const db = await getDb();
   const systems = await db
@@ -84,6 +137,112 @@ export async function listTransmissionSystems() {
     .sort({ name: 1 })
     .toArray();
   return { systems };
+}
+
+export async function listTransmissionSystemLibrary() {
+  const db = await getDb();
+  const [systems, lines, networks] = await Promise.all([
+    db.collection(SYSTEMS_COLLECTION).find({}, { projection: SYSTEM_PROJECTION }).sort({ name: 1 }).toArray(),
+    db.collection(LINES_COLLECTION).find({}, { projection: LINE_PROJECTION }).toArray(),
+    db.collection(NETWORKS_COLLECTION).find({ edges: { $exists: true } }, { projection: { _id: 0, id: 1, nodes: 1, edges: 1 } }).toArray(),
+  ]);
+
+  const lineById = new Map(lines.map((line) => [line.id, line]));
+  const buckets = new Map(systems.map((system) => [
+    system.id,
+    {
+      ...system,
+      nodeIds: new Set(),
+      lineIds: new Set(),
+      networkIds: new Set(),
+      pipeCount: 0,
+    },
+  ]));
+
+  lines.forEach((line) => {
+    const systemId = getLineSystemId(line);
+    if (buckets.has(systemId)) buckets.get(systemId).lineIds.add(line.id);
+  });
+
+  networks.forEach((network) => {
+    asArray(network.edges).forEach((edge) => {
+      const data = getElementData(edge);
+      const systemId = getEdgeSpec(edge).transmissionSystemId;
+      if (!buckets.has(systemId)) return;
+      const bucket = buckets.get(systemId);
+      bucket.pipeCount += 1;
+      bucket.networkIds.add(network.id);
+      if (data.source) bucket.nodeIds.add(`${network.id}:${data.source}`);
+      if (data.target) bucket.nodeIds.add(`${network.id}:${data.target}`);
+      asArray(getEdgeSpec(edge).lineGroupIds).forEach((lineId) => {
+        const lineSystem = getLineSystemId(lineById.get(lineId));
+        if (!lineSystem || lineSystem === systemId) bucket.lineIds.add(lineId);
+      });
+    });
+  });
+
+  return {
+    systems: Array.from(buckets.values()).map(({ nodeIds, lineIds, networkIds, pipeCount, ...system }) => ({
+      ...system,
+      nodeCount: nodeIds.size,
+      lineCount: lineIds.size,
+      pipeCount,
+      networkCount: networkIds.size,
+    })),
+  };
+}
+
+export async function getTransmissionSystemNetwork(id) {
+  const db = await getDb();
+  const [system, lines, networks] = await Promise.all([
+    db.collection(SYSTEMS_COLLECTION).findOne({ id }, { projection: SYSTEM_PROJECTION }),
+    db.collection(LINES_COLLECTION).find({}, { projection: LINE_PROJECTION }).toArray(),
+    db.collection(NETWORKS_COLLECTION).find({ edges: { $exists: true } }, { projection: { _id: 0, id: 1, name: 1, nodes: 1, edges: 1 } }).toArray(),
+  ]);
+  if (!system) throw notFound("Transmission system not found");
+
+  const systemLines = lines.filter((line) => getLineSystemId(line) === id);
+  const lineById = new Map(lines.map((line) => [line.id, line]));
+  const nodes = [];
+  const edges = [];
+  const usedNodeKeys = new Set();
+  const usedLineIds = new Set(systemLines.map((line) => line.id));
+  const networkIds = new Set();
+
+  networks.forEach((network) => {
+    const nodeById = new Map(asArray(network.nodes).map((node) => {
+      const data = getElementData(node);
+      return [data.id || node.id, node];
+    }));
+
+    asArray(network.edges).forEach((edge) => {
+      const spec = getEdgeSpec(edge);
+      if (spec.transmissionSystemId !== id) return;
+      const data = getElementData(edge);
+      edges.push(normalizeBundleEdge(edge, network));
+      networkIds.add(network.id);
+      asArray(spec.lineGroupIds).forEach((lineId) => {
+        const lineSystem = getLineSystemId(lineById.get(lineId));
+        if (!lineSystem || lineSystem === id) usedLineIds.add(lineId);
+      });
+      [data.source, data.target].filter(Boolean).forEach((nodeId) => {
+        const key = `${network.id}:${nodeId}`;
+        if (usedNodeKeys.has(key)) return;
+        const node = nodeById.get(nodeId);
+        if (!node) return;
+        usedNodeKeys.add(key);
+        nodes.push(normalizeBundleNode(node, network));
+      });
+    });
+  });
+
+  return {
+    system,
+    nodes,
+    edges,
+    lines: lines.filter((line) => usedLineIds.has(line.id)),
+    networkIds: Array.from(networkIds),
+  };
 }
 
 export async function createTransmissionSystem(body = {}) {

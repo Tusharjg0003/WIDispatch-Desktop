@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { fetchAssets } from "../api/metrics";
+import { fetchAssets, fetchTransmissionSystemLibrary } from "../api/metrics";
 import { filterAllowedAssets } from "../lib/assetTypes";
 import {
   CATEGORY_ORDER,
@@ -38,13 +38,18 @@ function chipTone(value) {
 // placement — the page then drops the asset on the next empty-canvas click.
 // `placedIds` is the set of asset ids already on the canvas (shown as disabled).
 const LIBRARY_DRAG_TYPE = "application/x-widispatch-assets";
+const TRANSMISSION_SYSTEM_DRAG_TYPE = "application/x-widispatch-transmission-system";
+const NETWORK_SAVED_EVENT = "widispatch:network-saved";
 
-export default function NetworkPalette({ onPick, placedIds, armedId }) {
+export default function NetworkPalette({ onPick, onPickSystem, placedIds, armedId, armedSystemId }) {
   const [assets, setAssets] = useState(null);
+  const [systems, setSystems] = useState(null);
   const [error, setError] = useState(null);
+  const [systemsError, setSystemsError] = useState(null);
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("all");
   const [region, setRegion] = useState("all");
+  const [activeTab, setActiveTab] = useState("assets");
   const [selectedIds, setSelectedIds] = useState(() => new Set());
 
   useEffect(() => {
@@ -54,6 +59,22 @@ export default function NetworkPalette({ onPick, placedIds, armedId }) {
       .catch((e) => !cancelled && setError(e.message || "Couldn't load assets"));
     return () => {
       cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = () => {
+      setSystemsError(null);
+      fetchTransmissionSystemLibrary()
+        .then((d) => !cancelled && setSystems(d.systems || []))
+        .catch((e) => !cancelled && setSystemsError(e.message || "Couldn't load transmission systems"));
+    };
+    refresh();
+    window.addEventListener(NETWORK_SAVED_EVENT, refresh);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(NETWORK_SAVED_EVENT, refresh);
     };
   }, []);
 
@@ -100,6 +121,16 @@ export default function NetworkPalette({ onPick, placedIds, armedId }) {
     [items, placedIds]
   );
 
+  const systemItems = useMemo(() => {
+    if (!systems) return [];
+    const needle = q.trim().toLowerCase();
+    const filtered = systems.filter((system) => {
+      if (!needle) return true;
+      return [system.name, system.id].filter(Boolean).some((field) => String(field).toLowerCase().includes(needle));
+    });
+    return [...filtered].sort((a, b) => (a.name || a.id || "").localeCompare(b.name || b.id || ""));
+  }, [systems, q]);
+
   const selectedAssets = useMemo(() => {
     if (!assets) return [];
     return filterAllowedAssets(assets).filter((a) => selectedIds.has(a.id) && !placedIds?.has(a.id));
@@ -143,141 +174,231 @@ export default function NetworkPalette({ onPick, placedIds, armedId }) {
     event.dataTransfer.setData("text/plain", dragAssets.map((a) => a.name || a.id).join(", "));
   };
 
+  const startSystemDrag = (event, system) => {
+    if (!system?.nodeCount || !system?.pipeCount) {
+      event.preventDefault();
+      return;
+    }
+    event.dataTransfer.effectAllowed = "copy";
+    event.dataTransfer.setData(TRANSMISSION_SYSTEM_DRAG_TYPE, JSON.stringify({ id: system.id }));
+    event.dataTransfer.setData("text/plain", system.name || system.id);
+  };
+
   return (
     <>
+      <div className="ns2-library-tabs" role="tablist" aria-label="Library sources">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "assets"}
+          className={`ns2-library-tab${activeTab === "assets" ? " ns2-library-tab--active" : ""}`}
+          onClick={() => setActiveTab("assets")}
+        >
+          Assets
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "systems"}
+          className={`ns2-library-tab${activeTab === "systems" ? " ns2-library-tab--active" : ""}`}
+          onClick={() => setActiveTab("systems")}
+        >
+          Systems
+        </button>
+      </div>
+
       <div className="ns2-library-filters">
         <input
           className="ns2-input"
           type="search"
-          placeholder="Search assets…"
+          placeholder={activeTab === "assets" ? "Search assets..." : "Search systems..."}
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
-        <select
-          className="ns2-input"
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-        >
-          <option value="all">All</option>
-          {CATEGORY_ORDER.map((cat) => (
-            <option key={cat} value={cat}>
-              {ENTITY_TYPE_LABELS[cat] || cat}
-            </option>
-          ))}
-        </select>
-        <select
-          className="ns2-input"
-          value={region}
-          onChange={(e) => setRegion(e.target.value)}
-        >
-          <option value="all">All regions</option>
-          {regions.map((r) => (
-            <option key={r} value={r}>
-              {r}
-            </option>
-          ))}
-        </select>
+        {activeTab === "assets" && (
+          <>
+            <select
+              className="ns2-input"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+            >
+              <option value="all">All</option>
+              {CATEGORY_ORDER.map((cat) => (
+                <option key={cat} value={cat}>
+                  {ENTITY_TYPE_LABELS[cat] || cat}
+                </option>
+              ))}
+            </select>
+            <select
+              className="ns2-input"
+              value={region}
+              onChange={(e) => setRegion(e.target.value)}
+            >
+              <option value="all">All regions</option>
+              {regions.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
+          </>
+        )}
       </div>
 
-      <div className="ns2-library-selection">
-        <div className="ns2-library-selection-count">
-          {selectedCount ? `${selectedCount} selected` : "Select assets to place together"}
+      {activeTab === "assets" && (
+        <div className="ns2-library-selection">
+          <div className="ns2-library-selection-count">
+            {selectedCount ? `${selectedCount} selected` : "Select assets to place together"}
+          </div>
+          <div className="ns2-library-selection-actions">
+            <button
+              type="button"
+              className="ns2-btn ns2-btn--sm"
+              onClick={selectAllVisible}
+              disabled={!availableItems.length}
+            >
+              Select all
+            </button>
+            <button
+              type="button"
+              className="ns2-btn ns2-btn--sm"
+              onClick={clearSelected}
+              disabled={!selectedIds.size}
+            >
+              Clear
+            </button>
+            <button
+              type="button"
+              className="ns2-btn ns2-btn--sm"
+              onClick={placeSelected}
+              disabled={!selectedCount}
+            >
+              Place selected
+            </button>
+          </div>
         </div>
-        <div className="ns2-library-selection-actions">
-          <button
-            type="button"
-            className="ns2-btn ns2-btn--sm"
-            onClick={selectAllVisible}
-            disabled={!availableItems.length}
-          >
-            Select all
-          </button>
-          <button
-            type="button"
-            className="ns2-btn ns2-btn--sm"
-            onClick={clearSelected}
-            disabled={!selectedIds.size}
-          >
-            Clear
-          </button>
-          <button
-            type="button"
-            className="ns2-btn ns2-btn--sm"
-            onClick={placeSelected}
-            disabled={!selectedCount}
-          >
-            Place selected
-          </button>
-        </div>
-      </div>
+      )}
 
       <div className="ns2-library-body">
-        {error && <div className="ns2-library-empty">{error}</div>}
-        {!assets && !error && <div className="ns2-library-empty">Loading assets…</div>}
-        {assets && items.length === 0 && !error && (
-          <div className="ns2-library-empty">No matching assets.</div>
+        {activeTab === "assets" && (
+          <>
+            {error && <div className="ns2-library-empty">{error}</div>}
+            {!assets && !error && <div className="ns2-library-empty">Loading assets...</div>}
+            {assets && items.length === 0 && !error && (
+              <div className="ns2-library-empty">No matching assets.</div>
+            )}
+
+            {items.map((a) => {
+              const placed = placedIds?.has(a.id);
+              const selected = selectedIds.has(a.id) && !placed;
+              const armed = armedId === a.id || (Array.isArray(armedId) && armedId.includes(a.id));
+              const typeColor = ENTITY_TYPE_COLORS[a.category] || "#3b82f6";
+              const typeTag = ENTITY_TYPE_ABBREVIATIONS[a.category] || "AS";
+              const metaItems = [
+                a.region,
+                a.activity,
+                a.asset_type,
+                a.status,
+              ].filter(Boolean);
+              const capacity = formatCapacity(a);
+              return (
+                <div
+                  key={`${a.category}-${a.id}`}
+                  className={`ns2-library-item${armed || selected ? " ns2-library-item--selected" : ""}${placed ? " ns2-library-item--placed" : ""}`}
+                  onClick={() => !placed && onPick(a)}
+                  draggable={!placed}
+                  onDragStart={(e) => startDrag(e, a)}
+                  onKeyDown={(e) => {
+                    if (!placed && (e.key === "Enter" || e.key === " ")) {
+                      e.preventDefault();
+                      onPick(a);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={placed ? -1 : 0}
+                  title={placed ? "Already on canvas" : "Click, then click the canvas to place"}
+                  aria-disabled={placed}
+                >
+                  <div className="ns2-library-item-header">
+                    <input
+                      className="ns2-library-item-checkbox"
+                      type="checkbox"
+                      checked={selected}
+                      disabled={placed}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={() => toggleSelected(a.id)}
+                      aria-label={`Select ${a.name || a.id}`}
+                    />
+                    <span
+                      className="ns2-library-type-badge"
+                      style={{ backgroundColor: typeColor, borderColor: typeColor }}
+                      title={ENTITY_TYPE_LABELS[a.category] || a.category}
+                    >
+                      {typeTag}
+                    </span>
+                    <span className="ns2-library-item-name">{a.name || a.id}</span>
+                    {placed && <span className="ns2-placed-badge">on canvas</span>}
+                  </div>
+                  <div className="ns2-library-item-meta">
+                    {metaItems.map((meta) => (
+                      <span key={meta} data-tone={chipTone(meta) || undefined}>{meta}</span>
+                    ))}
+                  </div>
+                  {capacity && <div className="ns2-library-item-capacity">{capacity}</div>}
+                </div>
+              );
+            })}
+          </>
         )}
 
-        {items.map((a) => {
-          const placed = placedIds?.has(a.id);
-          const selected = selectedIds.has(a.id) && !placed;
-          const armed = armedId === a.id || (Array.isArray(armedId) && armedId.includes(a.id));
-          const typeColor = ENTITY_TYPE_COLORS[a.category] || "#3b82f6";
-          const typeTag = ENTITY_TYPE_ABBREVIATIONS[a.category] || "AS";
-          const metaItems = [
-            a.region,
-            a.activity,
-            a.asset_type,
-            a.status,
-          ].filter(Boolean);
-          const capacity = formatCapacity(a);
-          return (
-            <div
-              key={`${a.category}-${a.id}`}
-              className={`ns2-library-item${armed || selected ? " ns2-library-item--selected" : ""}${placed ? " ns2-library-item--placed" : ""}`}
-              onClick={() => !placed && onPick(a)}
-              draggable={!placed}
-              onDragStart={(e) => startDrag(e, a)}
-              onKeyDown={(e) => {
-                if (!placed && (e.key === "Enter" || e.key === " ")) {
-                  e.preventDefault();
-                  onPick(a);
-                }
-              }}
-              role="button"
-              tabIndex={placed ? -1 : 0}
-              title={placed ? "Already on canvas" : "Click, then click the canvas to place"}
-              aria-disabled={placed}
-            >
-              <div className="ns2-library-item-header">
-                <input
-                  className="ns2-library-item-checkbox"
-                  type="checkbox"
-                  checked={selected}
-                  disabled={placed}
-                  onClick={(e) => e.stopPropagation()}
-                  onChange={() => toggleSelected(a.id)}
-                  aria-label={`Select ${a.name || a.id}`}
-                />
-                <span
-                  className="ns2-library-type-badge"
-                  style={{ backgroundColor: typeColor, borderColor: typeColor }}
-                  title={ENTITY_TYPE_LABELS[a.category] || a.category}
+        {activeTab === "systems" && (
+          <>
+            {systemsError && <div className="ns2-library-empty">{systemsError}</div>}
+            {!systems && !systemsError && <div className="ns2-library-empty">Loading systems...</div>}
+            {systems && systemItems.length === 0 && !systemsError && (
+              <div className="ns2-library-empty">No matching systems.</div>
+            )}
+
+            {systemItems.map((system) => {
+              const armed = armedSystemId === system.id;
+              const canPlace = !!system.nodeCount && !!system.pipeCount;
+              const metaItems = [
+                `${system.nodeCount || 0} saved nodes`,
+                `${system.pipeCount || 0} saved pipes`,
+                `${system.lineCount || 0} registered lines`,
+              ];
+              return (
+                <div
+                  key={system.id}
+                  className={`ns2-library-item ns2-library-item--system${armed ? " ns2-library-item--selected" : ""}${!canPlace ? " ns2-library-item--disabled" : ""}`}
+                  onClick={() => canPlace && onPickSystem?.(system)}
+                  draggable={canPlace}
+                  onDragStart={(e) => startSystemDrag(e, system)}
+                  onKeyDown={(e) => {
+                    if (canPlace && (e.key === "Enter" || e.key === " ")) {
+                      e.preventDefault();
+                      onPickSystem?.(system);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={canPlace ? 0 : -1}
+                  title={canPlace ? "Click, then click the canvas to place" : "Save pipes for this system before placing it on the canvas"}
+                  aria-disabled={!canPlace}
                 >
-                  {typeTag}
-                </span>
-                <span className="ns2-library-item-name">{a.name || a.id}</span>
-                {placed && <span className="ns2-placed-badge">on canvas</span>}
-              </div>
-              <div className="ns2-library-item-meta">
-                {metaItems.map((meta) => (
-                  <span key={meta} data-tone={chipTone(meta) || undefined}>{meta}</span>
-                ))}
-              </div>
-              {capacity && <div className="ns2-library-item-capacity">{capacity}</div>}
-            </div>
-          );
-        })}
+                  <div className="ns2-library-item-header">
+                    <span className="ns2-library-type-badge ns2-library-type-badge--system">SYS</span>
+                    <span className="ns2-library-item-name">{system.name || system.id}</span>
+                  </div>
+                  <div className="ns2-library-item-meta">
+                    {metaItems.map((meta) => <span key={meta}>{meta}</span>)}
+                    {!!system.networkCount && <span>{system.networkCount} saved networks</span>}
+                  </div>
+                  {!canPlace && <div className="ns2-library-item-capacity">No saved canvas structure yet.</div>}
+                </div>
+              );
+            })}
+          </>
+        )}
       </div>
     </>
   );

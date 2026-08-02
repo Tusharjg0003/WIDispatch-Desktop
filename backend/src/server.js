@@ -8,6 +8,7 @@ import { listAssets, createAsset, getAssetById, updateAsset, deleteAsset } from 
 import {
   listTransmissionSystems, createTransmissionSystem,
   listTransmissionLines, createTransmissionLine, deleteTransmissionLine,
+  listTransmissionSystemLibrary, getTransmissionSystemNetwork,
 } from "./transmissionRegistry.js";
 import { listNetworks, getNetwork, createNetwork, updateNetwork, deleteNetwork } from "./networks.js";
 import {
@@ -83,6 +84,24 @@ app.post("/api/transmission-systems", async (req, res) => {
   } catch (err) {
     console.error("transmission system create error:", err);
     res.status(err.statusCode || 500).json({ error: err.message || "Failed to create transmission system" });
+  }
+});
+
+app.get("/api/transmission-systems/library", async (_req, res) => {
+  try {
+    res.json(await listTransmissionSystemLibrary());
+  } catch (err) {
+    console.error("transmission system library error:", err);
+    res.status(500).json({ error: "Failed to list transmission system library" });
+  }
+});
+
+app.get("/api/transmission-systems/:id/network", async (req, res) => {
+  try {
+    res.json(await getTransmissionSystemNetwork(req.params.id));
+  } catch (err) {
+    console.error(`transmission system network error (id=${req.params.id}):`, err);
+    res.status(err.statusCode || 500).json({ error: err.message || "Failed to fetch transmission system network" });
   }
 });
 

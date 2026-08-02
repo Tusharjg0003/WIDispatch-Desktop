@@ -417,8 +417,8 @@ export default function TransmissionPage() {
                       <th>System ID</th>
                       <th>Transmission System</th>
                       <th className="ta-r">Networks</th>
-                      <th className="ta-r">Lines</th>
-                      <th className="ta-r">Pipes</th>
+                      <th className="ta-r">Registered Lines</th>
+                      <th className="ta-r">Saved Pipes</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -462,15 +462,21 @@ export default function TransmissionPage() {
 
                     <div className="transmission-system-kpis">
                       <div><strong>{selectedSystem.networkIds.size}</strong><span>Networks</span></div>
-                      <div><strong>{selectedSystem.lineIds.size}</strong><span>Lines</span></div>
-                      <div><strong>{selectedSystem.pipes.length}</strong><span>Pipes</span></div>
+                      <div><strong>{selectedSystem.lineIds.size}</strong><span>Registered Lines</span></div>
+                      <div><strong>{selectedSystem.pipes.length}</strong><span>Saved Pipes</span></div>
                       <div><strong>{selectedSystem.totalLength.toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong><span>km</span></div>
                     </div>
 
+                    {selectedSystem.lineIds.size > 0 && selectedSystem.pipes.length === 0 && (
+                      <div className="transmission-system-detail__notice">
+                        This system has registered lines, but no saved network pipes yet.
+                      </div>
+                    )}
+
                     <section className="transmission-system-detail__section">
-                      <h3>Lines / Branches</h3>
+                      <h3>Registered Lines / Branches</h3>
                       {selectedSystem.lineIds.size === 0 ? (
-                        <div className="transmission-system-detail__empty">No lines assigned in saved network pipes.</div>
+                        <div className="transmission-system-detail__empty">No registered lines for this transmission system.</div>
                       ) : (
                         <div className="transmission-line-chip-list">
                           {Array.from(selectedSystem.lineIds).map((lineId) => {
@@ -499,7 +505,7 @@ export default function TransmissionPage() {
                     </section>
 
                     <section className="transmission-system-detail__section">
-                      <h3>Pipes</h3>
+                      <h3>Saved Pipes</h3>
                       {selectedSystem.pipes.length === 0 ? (
                         <div className="transmission-system-detail__empty">No saved network pipes reference this system yet.</div>
                       ) : (
