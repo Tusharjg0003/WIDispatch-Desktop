@@ -179,7 +179,9 @@ export default function AssetDetailFields({ asset }) {
         <div className="form-section">
           <h3>Asset Specifications</h3>
           <div className="form-grid">
-            <Field label="Capacity (m³/day)" value={spec.design_capacity} />
+            <Field label="Contracted Capacity (m³/day)" value={spec.contracted_capacity} />
+            <Field label="Design Capacity (m³/day)" value={spec.design_capacity} />
+            <Field label="Maximum Capacity (m³/day)" value={spec.maximum_capacity} />
             <Field
               label="Capacity Limitation"
               value={

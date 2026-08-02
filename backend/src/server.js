@@ -18,6 +18,11 @@ import {
 } from "./production.js";
 import { listPumpStations, getPumpStationBundle } from "./pumpStations.js";
 import { listCityGates, getCityGateBundle, updateDemandDesktopApproval } from "./demand.js";
+import {
+  listSimulationConfigs, getSimulationConfig, createSimulationConfig,
+  updateSimulationConfig, deleteSimulationConfig, runSimulationConfig,
+  getDispatchPlan, publishDispatchPlan,
+} from "./simulationConfigs.js";
 
 const app = express();
 const PORT = Number(process.env.PORT ?? 4000);
@@ -308,6 +313,80 @@ app.patch("/api/production/maintenance/:recordId/desktop-approval", async (req, 
   } catch (err) {
     console.error(`maintenance desktop approval error (id=${req.params.recordId}):`, err);
     res.status(err.statusCode || 500).json({ error: err.message || "Failed to update desktop approval" });
+  }
+});
+
+// ── Simulation Config: saved dispatch configurations and their runs ──────────
+app.get("/api/simulation-configs", async (_req, res) => {
+  try {
+    res.json(await listSimulationConfigs());
+  } catch (err) {
+    console.error("simulation configs list error:", err);
+    res.status(500).json({ error: "Failed to list simulation configurations" });
+  }
+});
+
+app.get("/api/simulation-configs/:id", async (req, res) => {
+  try {
+    res.json(await getSimulationConfig(req.params.id));
+  } catch (err) {
+    console.error(`simulation config get error (id=${req.params.id}):`, err);
+    res.status(err.statusCode || 500).json({ error: err.message || "Failed to fetch simulation configuration" });
+  }
+});
+
+app.post("/api/simulation-configs", async (req, res) => {
+  try {
+    res.status(201).json(await createSimulationConfig(req.body || {}));
+  } catch (err) {
+    console.error("simulation config create error:", err);
+    res.status(err.statusCode || 500).json({ error: err.message || "Failed to create simulation configuration" });
+  }
+});
+
+app.put("/api/simulation-configs/:id", async (req, res) => {
+  try {
+    res.json(await updateSimulationConfig(req.params.id, req.body || {}));
+  } catch (err) {
+    console.error(`simulation config update error (id=${req.params.id}):`, err);
+    res.status(err.statusCode || 500).json({ error: err.message || "Failed to update simulation configuration" });
+  }
+});
+
+app.delete("/api/simulation-configs/:id", async (req, res) => {
+  try {
+    await deleteSimulationConfig(req.params.id);
+    res.status(204).end();
+  } catch (err) {
+    console.error(`simulation config delete error (id=${req.params.id}):`, err);
+    res.status(err.statusCode || 500).json({ error: err.message || "Failed to delete simulation configuration" });
+  }
+});
+
+app.post("/api/simulation-configs/:id/run", async (req, res) => {
+  try {
+    res.json(await runSimulationConfig(req.params.id, req.body || {}));
+  } catch (err) {
+    console.error(`simulation run error (id=${req.params.id}):`, err);
+    res.status(err.statusCode || 500).json({ error: err.message || "Failed to run simulation" });
+  }
+});
+
+app.get("/api/dispatch-plans/:id", async (req, res) => {
+  try {
+    res.json(await getDispatchPlan(req.params.id));
+  } catch (err) {
+    console.error(`dispatch plan get error (id=${req.params.id}):`, err);
+    res.status(err.statusCode || 500).json({ error: err.message || "Failed to fetch dispatch plan" });
+  }
+});
+
+app.post("/api/dispatch-plans/:id/publish", async (req, res) => {
+  try {
+    res.json(await publishDispatchPlan(req.params.id));
+  } catch (err) {
+    console.error(`dispatch plan publish error (id=${req.params.id}):`, err);
+    res.status(err.statusCode || 500).json({ error: err.message || "Failed to publish dispatch plan" });
   }
 });
 

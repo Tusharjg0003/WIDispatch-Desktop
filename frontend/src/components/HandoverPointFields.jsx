@@ -19,10 +19,24 @@ export default function HandoverPointFields({ spec, set }) {
       <div className="form-section">
         <h3>Asset Specifications</h3>
         <div className="form-grid af__grid">
-          <Field label="Capacity (m³/day)">
+          {/* Contracted capacity is what the dispatch engine allocates against
+              (see getContractedCapacityForDate), so it leads. */}
+          <Field label="Contracted Capacity (m³/day)">
             <input
-              type="number" min="0" step="any" placeholder="e.g. 50000"
+              type="number" min="0" step="any" placeholder="e.g. 380000"
+              value={spec.contracted_capacity ?? ""} onChange={set("contracted_capacity")}
+            />
+          </Field>
+          <Field label="Design Capacity (m³/day)">
+            <input
+              type="number" min="0" step="any" placeholder="e.g. 420000"
               value={spec.design_capacity ?? ""} onChange={set("design_capacity")}
+            />
+          </Field>
+          <Field label="Maximum Capacity (m³/day)">
+            <input
+              type="number" min="0" step="any" placeholder="e.g. 480000"
+              value={spec.maximum_capacity ?? ""} onChange={set("maximum_capacity")}
             />
           </Field>
         </div>

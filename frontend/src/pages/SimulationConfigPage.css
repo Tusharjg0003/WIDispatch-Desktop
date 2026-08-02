@@ -1,0 +1,159 @@
+/* Simulation Config page shell: the setup form, readiness checks and the
+   Configuration/Results/Decisions tab strip. Everything else on the page is
+   MetricDashboard.css (.sheet / .ledger / .kpi) or the panel-specific files. */
+
+.scp__picker {
+  min-width: 220px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 0.8rem;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+/* ---- Setup ---- */
+.scp__setup {
+  margin-bottom: 18px;
+}
+
+.scp__setup-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px 18px;
+  padding: 18px 22px;
+}
+
+.scp__wide {
+  grid-column: span 2;
+}
+
+.scp__setup-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.scp__setup-grid label > span {
+  font-size: 0.66rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-dim);
+}
+
+.scp__setup-grid input,
+.scp__setup-grid select {
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 0.82rem;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.scp__setup-grid input:focus,
+.scp__setup-grid select:focus,
+.scp__picker:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.scp__delete {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  font: inherit;
+  font-size: 0.74rem;
+  color: var(--bad);
+  background: var(--surface);
+  border: 1px solid rgba(220, 38, 38, 0.3);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.scp__delete:hover {
+  background: rgba(220, 38, 38, 0.06);
+}
+
+/* ---- Readiness checks ---- */
+.scp__checks {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 22px 18px;
+}
+
+.scp__check {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  border: 1px solid transparent;
+}
+
+/* Blockers disable Run; warnings only inform. */
+.scp__check--block {
+  color: var(--bad);
+  border-color: rgba(220, 38, 38, 0.3);
+  background: rgba(220, 38, 38, 0.06);
+}
+
+.scp__check--warn {
+  color: var(--warn);
+  border-color: rgba(217, 119, 6, 0.3);
+  background: rgba(217, 119, 6, 0.06);
+}
+
+/* ---- Tabs ---- */
+.scp__tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.scp__tab {
+  padding: 9px 16px;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--ink-dim);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+
+.scp__tab:hover {
+  color: var(--ink);
+}
+
+.scp__tab--active {
+  color: var(--accent);
+  font-weight: 600;
+  border-bottom-color: var(--accent);
+}
+
+.scp__runmeta {
+  margin-left: auto;
+  padding-right: 4px;
+  font-size: 0.72rem;
+  color: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 900px) {
+  .scp__wide {
+    grid-column: auto;
+  }
+
+  .scp__runmeta {
+    display: none;
+  }
+}

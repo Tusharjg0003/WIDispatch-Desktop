@@ -14,6 +14,7 @@ import EconomicsPage from "./pages/EconomicsPage";
 import AssetRegistryPage from "./pages/AssetRegistryPage";
 import AssetDetailPage from "./pages/AssetDetailPage";
 import NetworkBuilderPage from "./pages/NetworkBuilderPage";
+import SimulationConfigPage from "./pages/SimulationConfigPage";
 import "./App.css";
 
 export default function App() {
@@ -46,6 +47,8 @@ export default function App() {
             <Route path="/economics" element={<EconomicsPage />} />
             <Route path="/network-builder" element={<NetworkBuilderPage />} />
             <Route path="/network-builder/:id" element={<NetworkBuilderPage />} />
+            <Route path="/simulation-config" element={<SimulationConfigPage />} />
+            <Route path="/simulation-config/:id" element={<SimulationConfigPage />} />
             <Route path="/asset-registry" element={<AssetRegistryPage mode="list" />} />
             <Route path="/asset-registry/create" element={<AssetRegistryPage mode="create" />} />
             <Route path="/asset-registry/edit/:id" element={<AssetRegistryPage mode="edit" />} />

@@ -1,0 +1,217 @@
+/* Simulation Config tables. Layout, typography and colour come from
+   MetricDashboard.css (.sheet / .ledger / .num / .mono and the --ink/--line
+   custom properties); this file only adds the bits those tables do not have —
+   inline override inputs, provenance badges and the disabled-row treatment. */
+
+.simt__hint {
+  font-size: 0.72rem;
+  color: var(--ink-dim);
+}
+
+.simt__name {
+  display: block;
+  font-weight: 600;
+}
+
+.simt__sub {
+  display: block;
+  font-size: 0.68rem;
+  color: var(--ink-dim);
+}
+
+.simt__tick {
+  width: 40px;
+  text-align: center;
+}
+
+.simt__active {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* A row switched off still shows its portal values, so the operator can see
+   what they are excluding rather than having it disappear. */
+.simt__row--off > td {
+  opacity: 0.45;
+}
+
+.simt__short {
+  color: var(--bad);
+  font-weight: 600;
+}
+
+.simt__empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--ink-dim);
+}
+
+/* ---- Override cells ---- */
+.simt__override {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.simt__override-input {
+  width: 96px;
+  padding: 5px 8px;
+  font: inherit;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.simt__override-input::placeholder {
+  color: #94a3b8;
+}
+
+.simt__override-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* A filled override is the one thing on the row that is not portal data. */
+.simt__override-input:not(:placeholder-shown) {
+  border-color: var(--warn);
+  background: rgba(217, 119, 6, 0.06);
+  font-weight: 600;
+}
+
+.simt__override-suffix {
+  font-size: 0.66rem;
+  color: var(--ink-dim);
+  white-space: nowrap;
+}
+
+/* ---- Per-day breakdown ---- */
+.simt__expand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  color: var(--ink-dim);
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.simt__expand:hover {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.simt__detail-row > td {
+  padding: 0;
+  background: var(--surface-subtle);
+  white-space: normal;
+}
+
+.simt__breakdown {
+  padding: 12px 16px 16px 48px;
+  overflow-x: auto;
+}
+
+.simt__days {
+  border-collapse: collapse;
+  font-size: 0.76rem;
+  min-width: 520px;
+}
+
+.simt__days th,
+.simt__days td {
+  padding: 6px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--line-soft);
+  white-space: nowrap;
+}
+
+.simt__days thead th {
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-dim);
+}
+
+.simt__days .num {
+  text-align: right;
+}
+
+.simt__days tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* The days that actually bind the dispatch. */
+.simt__day--derated td {
+  background: rgba(217, 119, 6, 0.06);
+}
+
+.simt__chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 30px;
+  font-size: 0.66rem;
+  font-weight: 600;
+  border: 1px solid var(--line);
+  color: var(--ink-dim);
+  background: var(--surface-subtle);
+  white-space: nowrap;
+}
+
+.simt__chip--warn {
+  color: var(--warn);
+  border-color: rgba(217, 119, 6, 0.32);
+  background: rgba(217, 119, 6, 0.08);
+}
+
+/* ---- Provenance badges ---- */
+.simt__badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 30px;
+  font-size: 0.64rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border: 1px solid var(--line);
+  color: var(--ink-dim);
+  background: var(--surface-subtle);
+}
+
+.simt__badge--economics {
+  color: var(--good);
+  border-color: rgba(5, 150, 105, 0.3);
+  background: rgba(5, 150, 105, 0.08);
+}
+
+.simt__badge--plant_spec {
+  color: var(--accent);
+  border-color: rgba(26, 74, 138, 0.28);
+  background: var(--accent-soft);
+}
+
+.simt__badge--default,
+.simt__badge--warn {
+  color: var(--warn);
+  border-color: rgba(217, 119, 6, 0.32);
+  background: rgba(217, 119, 6, 0.08);
+}
+
+.simt__badge--override {
+  color: var(--warn);
+  border-color: rgba(217, 119, 6, 0.45);
+  background: rgba(217, 119, 6, 0.14);
+}
+
+@media (max-width: 900px) {
+  .simt__override-input {
+    width: 74px;
+  }
+}

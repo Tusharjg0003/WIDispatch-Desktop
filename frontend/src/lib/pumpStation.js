@@ -6,8 +6,11 @@ export function stationPumps(specifications) {
   ];
 }
 
+// `||` rather than `??` so a pump carrying `design_capacity: 0` alongside a real
+// `capacity_m3_day` falls through instead of reading as zero. Matches the
+// transmission website's own normalisation.
 export function pumpCapacity(pump) {
-  const value = pump?.design_capacity ?? pump?.capacity_m3_day ?? pump?.capacity;
+  const value = pump?.design_capacity || pump?.capacity_m3_day || pump?.capacity;
   const number = Number(value);
   return Number.isFinite(number) ? number : 0;
 }
@@ -32,12 +35,14 @@ export function activeFunctionalPumps(specifications) {
   return functionalPumps(specifications).filter((pump) => pump.active !== false);
 }
 
+// The pump list wins over a station-level figure: it is the one the transmission
+// website maintains and derates against, whereas `design_capacity` is often a
+// stale aggregate left behind by migration. Matches that site's own ordering.
 export function totalDesignCapacity(specifications) {
-  const stationCapacity = Number(specifications?.design_capacity ?? specifications?.capacity_m3_day);
-  if (Number.isFinite(stationCapacity)) return stationCapacity;
   const pumps = activeFunctionalPumps(specifications);
   if (pumps.length) return pumps.reduce((sum, pump) => sum + pumpCapacity(pump), 0);
-  return 0;
+  const stationCapacity = Number(specifications?.design_capacity || specifications?.capacity_m3_day);
+  return Number.isFinite(stationCapacity) ? stationCapacity : 0;
 }
 
 export function findPump(specifications, id) {

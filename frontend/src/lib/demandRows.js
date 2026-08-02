@@ -3,7 +3,14 @@ import { toCsv } from "./csvCell.js";
 
 // Desktop approval status for a day's underlying demand record.
 // null when the day has no demand record; "pending" until a decision is made.
-export const demandDesktopStatus = (input) => (input ? (input.desktop_approval_status || "pending") : null);
+//
+// `desktop_decision_status` is preferred: the dispatch simulation writes the
+// richer vocabulary the Demand portal reads (approved | adjusted | shortfall),
+// while `desktop_approval_status` carries the coarser approved/rejected that a
+// manual per-row decision sets. Both are written on publish, so preferring the
+// richer one loses nothing.
+export const demandDesktopStatus = (input) =>
+  input ? (input.desktop_decision_status || input.desktop_approval_status || "pending") : null;
 
 export const isWebsiteAcceptedDemandRow = (row) => row?.input?.submission_status === "approved";
 
@@ -11,8 +18,13 @@ export function filterWebsiteAcceptedDemandRows(rows) {
   return rows.filter(isWebsiteAcceptedDemandRow);
 }
 
-// Approved Demand = the required_m3 once the desktop operator has approved the record.
+// Approved Demand. The dispatch simulation records the volume it could actually
+// deliver in `desktop_approved_m3`, which is the whole point of a revised
+// decision — so that value wins wherever it exists. A manual per-row approval
+// sets no volume, and there the approved demand is simply what was requested.
 export function demandApprovedDemand(row) {
+  const approved = row.input?.desktop_approved_m3;
+  if (approved != null) return approved;
   return demandDesktopStatus(row.input) === "approved" ? row.requested : null;
 }
 

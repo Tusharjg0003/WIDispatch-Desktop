@@ -43,6 +43,9 @@ const TYPE_ALIASES = new Map(
     ["Handover point / city gate", ASSET_TYPES.HANDOVER_POINT_CITY_GATE],
     ["Handover Point / City Gate", ASSET_TYPES.HANDOVER_POINT_CITY_GATE],
     ["Handover point city gate", ASSET_TYPES.HANDOVER_POINT_CITY_GATE],
+    // What the `cityGates` documents actually store.
+    ["City Gate", ASSET_TYPES.HANDOVER_POINT_CITY_GATE],
+    ["Handover Point", ASSET_TYPES.HANDOVER_POINT_CITY_GATE],
     [ASSET_TYPES.WATER_PURIFICATION, ASSET_TYPES.WATER_PURIFICATION],
     ["Water Purification", ASSET_TYPES.WATER_PURIFICATION],
     ["water_purification", ASSET_TYPES.WATER_PURIFICATION],

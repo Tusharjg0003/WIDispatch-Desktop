@@ -1,0 +1,187 @@
+/* Verdict lists and the publish action. Table chrome comes from
+   MetricDashboard.css; this adds the decision badges, the affected-gate
+   drill-down and the publish banner. */
+
+.dp__name {
+  display: block;
+  font-weight: 600;
+}
+
+.dp__sub {
+  display: block;
+  font-size: 0.68rem;
+  color: var(--ink-dim);
+}
+
+.dp__bad {
+  color: var(--bad);
+  font-weight: 600;
+}
+
+.dp__reason {
+  white-space: normal;
+  max-width: 34ch;
+  font-size: 0.76rem;
+  color: var(--ink-dim);
+}
+
+.dp__empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--ink-dim);
+}
+
+/* ---- Decision badges ---- */
+.dp__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 30px;
+  font-size: 0.66rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border: 1px solid var(--line);
+  background: var(--surface-subtle);
+  color: var(--ink-dim);
+}
+
+.dp__badge--good {
+  color: var(--good);
+  border-color: rgba(5, 150, 105, 0.3);
+  background: rgba(5, 150, 105, 0.08);
+}
+
+.dp__badge--warn {
+  color: var(--warn);
+  border-color: rgba(217, 119, 6, 0.32);
+  background: rgba(217, 119, 6, 0.08);
+}
+
+.dp__badge--bad {
+  color: var(--bad);
+  border-color: rgba(220, 38, 38, 0.3);
+  background: rgba(220, 38, 38, 0.08);
+}
+
+/* ---- Per-table tally ---- */
+.dp__tally {
+  display: inline-flex;
+  gap: 12px;
+  font-size: 0.72rem;
+}
+
+.dp__tally-item--good { color: var(--good); }
+.dp__tally-item--warn { color: var(--warn); }
+.dp__tally-item--bad { color: var(--bad); }
+
+/* ---- Affected-gate drill-down ---- */
+.dp__row--click {
+  cursor: pointer;
+}
+
+.dp__detail-row > td {
+  background: var(--surface-subtle);
+  white-space: normal;
+}
+
+.dp__detail {
+  padding: 6px 4px 10px;
+}
+
+.dp__detail h4 {
+  margin: 0 0 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-dim);
+}
+
+.dp__gates {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dp__gates li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 0.8rem;
+}
+
+.dp__gates .dp__name {
+  display: inline;
+}
+
+.dp__suggest {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 12px 0 0;
+  font-size: 0.78rem;
+  color: var(--warn);
+}
+
+/* ---- Publish banner ---- */
+.dp__publish {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  padding: 18px 22px;
+  margin-bottom: 18px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.dp__publish--done {
+  border-color: rgba(5, 150, 105, 0.35);
+  background: rgba(5, 150, 105, 0.06);
+}
+
+.dp__publish-copy h2 {
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.dp__publish-copy p {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--ink-dim);
+  max-width: 70ch;
+}
+
+.dp__publish-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 18px;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 7px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.dp__publish-btn:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.dp__publish-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

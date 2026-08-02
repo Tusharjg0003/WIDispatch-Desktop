@@ -1,0 +1,154 @@
+/* Results view. Cards, KPIs and table chrome come from MetricDashboard.css;
+   this adds the chart frame, the shortfall drill-down and the wide allocation
+   grid, whose first column stays put while the day columns scroll. */
+
+.rp__chart {
+  padding: 16px 12px 8px;
+}
+
+.rp__hint {
+  font-size: 0.72rem;
+  color: var(--ink-dim);
+}
+
+.rp__name {
+  display: block;
+  font-weight: 600;
+}
+
+.rp__sub {
+  display: block;
+  font-size: 0.68rem;
+  color: var(--ink-dim);
+}
+
+.rp__bad {
+  color: var(--bad);
+  font-weight: 600;
+}
+
+.rp__total {
+  font-weight: 600;
+}
+
+.kpi--bad .kpi__value {
+  color: var(--bad);
+}
+
+/* ---- Shortfall drill-down ---- */
+.rp__row--click {
+  cursor: pointer;
+}
+
+.rp__detail-row > td {
+  background: var(--surface-subtle);
+  white-space: normal;
+}
+
+.rp__detail {
+  padding: 6px 4px 10px;
+}
+
+.rp__detail h4 {
+  margin: 0 0 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-dim);
+}
+
+.rp__binding {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rp__binding--inline {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+}
+
+.rp__binding li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+}
+
+.rp__binding .rp__sub {
+  display: inline;
+}
+
+.rp__chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 30px;
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-dim);
+}
+
+.rp__chip--plant_supply {
+  color: var(--accent);
+  border-color: rgba(26, 74, 138, 0.28);
+  background: var(--accent-soft);
+}
+
+.rp__chip--pipe,
+.rp__chip--pump {
+  color: var(--warn);
+  border-color: rgba(217, 119, 6, 0.32);
+  background: rgba(217, 119, 6, 0.08);
+}
+
+/* ---- Allocation grid ---- */
+.rp__grid .rp__sticky {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+}
+
+.rp__grid thead .rp__sticky {
+  background: var(--surface-subtle);
+  z-index: 2;
+}
+
+.rp__grid tbody tr:hover .rp__sticky {
+  background: var(--surface-subtle);
+}
+
+.rp__grid tfoot td {
+  font-weight: 600;
+  background: var(--surface-subtle);
+  border-top: 1px solid var(--line);
+}
+
+.rp__export {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  font: inherit;
+  font-size: 0.74rem;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.rp__export:hover {
+  background: var(--surface-subtle);
+  border-color: #cbd5e1;
+}

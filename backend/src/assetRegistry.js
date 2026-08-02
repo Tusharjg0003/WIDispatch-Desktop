@@ -3,10 +3,16 @@ import { finite } from "./assets.js";
 import { assertAllowedAssetType, normalizeAllowedAsset } from "./assetTypes.js";
 
 // Maps the singular category used by the UI/API to its MongoDB collection.
+//
+// `handover_point` resolves to `cityGates` — the same collection the Demand tab
+// reads and the dispatch engine resolves canvas gates against. The older
+// `handover-points` collection holds only id/name stubs that nothing references;
+// sourcing the registry and the Network Builder palette from it meant a gate
+// placed on the canvas could never match a demand record.
 export const ASSET_CATEGORIES = {
   plant: "plants",
   pump: "pumps",
-  handover_point: "handover-points",
+  handover_point: "cityGates",
 };
 
 const LIST_PROJECTION = {
@@ -15,6 +21,8 @@ const LIST_PROJECTION = {
   activity: 1, asset_type: 1, region: 1, cluster: 1, governorate: 1, city: 1,
   latitude: 1, longitude: 1, end_latitude: 1, end_longitude: 1, status: 1,
   commissioning_date: 1, decommissioning_date: 1, specifications: 1,
+  // City gates carry a top-level `capacity` alongside their specifications.
+  capacity: 1,
   active: 1, entity_category: 1,
 };
 

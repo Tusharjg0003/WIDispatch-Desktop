@@ -43,10 +43,32 @@ test("demandDesktopStatus: null day, pending default, explicit status", () => {
   assert.equal(demandDesktopStatus({ desktop_approval_status: "rejected" }), "rejected");
 });
 
+test("demandDesktopStatus: the simulation's richer decision wins over the coarse one", () => {
+  // Publishing writes both; `adjusted` is the one that tells the operator the
+  // volume was revised rather than accepted outright.
+  assert.equal(
+    demandDesktopStatus({ desktop_decision_status: "adjusted", desktop_approval_status: "approved" }),
+    "adjusted",
+  );
+  assert.equal(demandDesktopStatus({ desktop_decision_status: "shortfall" }), "shortfall");
+});
+
 test("demandApprovedDemand: only when desktop-approved", () => {
   assert.equal(demandApprovedDemand(rows[0]), 80000);
   assert.equal(demandApprovedDemand(rows[1]), null);
   assert.equal(demandApprovedDemand(rows[2]), null);
+});
+
+test("demandApprovedDemand: a revised decision reports the volume actually allocated", () => {
+  const revised = {
+    requested: 80000,
+    input: { desktop_decision_status: "adjusted", desktop_approved_m3: 52000 },
+  };
+  assert.equal(demandApprovedDemand(revised), 52000);
+
+  // A shortfall is a real zero, not "no decision".
+  const shortfall = { requested: 80000, input: { desktop_decision_status: "shortfall", desktop_approved_m3: 0 } };
+  assert.equal(demandApprovedDemand(shortfall), 0);
 });
 
 test("demandRowsToCsv: header includes approval columns", () => {

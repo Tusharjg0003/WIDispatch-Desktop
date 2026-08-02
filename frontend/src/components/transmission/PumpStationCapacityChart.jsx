@@ -12,7 +12,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { findPump, pumpCapacity, totalDesignCapacity } from "../../lib/pumpStation";
+import { findPump, isFunctionalPump, pumpCapacity, totalDesignCapacity } from "../../lib/pumpStation";
 import "../production/ProductionCapacityChart.css";
 
 const ACTIVE_MAINTENANCE_STATUSES = ["submitted", "under_revision", "revised", "approved"];
@@ -30,12 +30,22 @@ const overlapsDay = (record, dateStart, dateEnd) => {
   return start <= dateEnd && end >= dateStart;
 };
 
+// Window span in days (at least 1) — the legacy total-loss fields are totals
+// across the window, not daily rates, so they must be spread across it.
+const recordDaySpan = (record) => {
+  const from = Date.parse(String(record?.start_datetime || "").slice(0, 10));
+  const to = Date.parse(String(record?.end_datetime || "").slice(0, 10));
+  if (Number.isNaN(from) || Number.isNaN(to) || to < from) return 1;
+  return Math.floor((to - from) / 86400000) + 1;
+};
+
 const dayLoss = (record, isoDate) => {
   if (Array.isArray(record.daily_losses) && record.daily_losses.length) {
     const entry = record.daily_losses.find((row) => row.date === isoDate);
     return Number(entry?.loss_m3 || 0);
   }
-  return Number(record.expected_loss_m3 ?? record.expected_impact_m3 ?? record.actual_loss_m3 ?? record.estimated_loss_m3 ?? 0) || 0;
+  const total = Number(record.expected_loss_m3 ?? record.expected_impact_m3 ?? record.actual_loss_m3 ?? record.estimated_loss_m3 ?? 0) || 0;
+  return total / recordDaySpan(record);
 };
 
 const substitutionMap = (record) => {
@@ -47,10 +57,14 @@ const substitutionMap = (record) => {
   return map;
 };
 
+// Only functional pumps count: the transmission website writes every ticked pump
+// into pumps_under_maintenance, including standby units it labels "no capacity
+// impact" and excludes from its own reduction.
 const pumpReduction = (record, specifications, pumpIds) => {
   const substitutions = substitutionMap(record);
   return (pumpIds || []).reduce((sum, pumpId) => {
     const downPump = findPump(specifications, pumpId);
+    if (!downPump || !isFunctionalPump(downPump)) return sum;
     const standbyPump = substitutions.get(pumpId) ? findPump(specifications, substitutions.get(pumpId)) : null;
     return sum + Math.max(0, pumpCapacity(downPump) - pumpCapacity(standbyPump));
   }, 0);
@@ -91,18 +105,23 @@ export default function PumpStationCapacityChart({ station, bundle }) {
         overlapsDay(outage, dateStart, dateEnd)
       ));
 
+      // The pump list is authoritative for a station: the loss is whichever
+      // functional pumps are down, less whatever a standby covers. daily_losses
+      // is a snapshot taken at submission time and does not follow later edits
+      // to the station's pumps, so it is only the fallback.
       const outaged = overlappingOutages.some((outage) => outage.outage_scope !== "partial");
       const outageLoss = overlappingOutages.reduce((sum, outage) => {
         if (outage.outage_scope !== "partial") return sum;
-        if (Array.isArray(outage.daily_losses) && outage.daily_losses.length) return sum + dayLoss(outage, isoDate);
-        return sum + pumpReduction(outage, specifications, outage.pumps_out);
+        if (Array.isArray(outage.pumps_out) && outage.pumps_out.length) {
+          return sum + pumpReduction(outage, specifications, outage.pumps_out);
+        }
+        return sum + dayLoss(outage, isoDate);
       }, 0);
 
       const maintenanceLoss = maintenanceRecords.reduce((sum, record) => {
         if (record.plant_id !== stationId) return sum;
         if (!ACTIVE_MAINTENANCE_STATUSES.includes(record.submission_status)) return sum;
         if (!overlapsDay(record, dateStart, dateEnd)) return sum;
-        if (Array.isArray(record.daily_losses) && record.daily_losses.length) return sum + dayLoss(record, isoDate);
         if (Array.isArray(record.pumps_under_maintenance) && record.pumps_under_maintenance.length) {
           return sum + pumpReduction(record, specifications, record.pumps_under_maintenance);
         }
