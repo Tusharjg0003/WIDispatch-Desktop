@@ -174,6 +174,18 @@ export function allocationsToCsv(grid) {
   return toCsv(headers, body);
 }
 
+// Prose for the shortage causes the engine attaches to a gate. Kept here rather
+// than in a component so the Results table and the Canvas detail panel cannot
+// drift into describing the same cause two different ways.
+const CAUSE_LABEL = {
+  isolated: "Not connected to a producing plant",
+  insufficient_capacity: "Production capacity exhausted",
+  transmission_bottleneck: "Transmission bottleneck",
+  intake_limited: "Gate intake capacity",
+};
+
+export const causeLabel = (cause) => CAUSE_LABEL[cause] || "—";
+
 /**
  * Collapse the per-gate-per-day demand verdicts into one row per gate. The
  * gate's overall status is its worst day — an operator needs to see that a

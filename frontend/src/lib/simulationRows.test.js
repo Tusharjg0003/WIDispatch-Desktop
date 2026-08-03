@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   allocationGrid,
   allocationsToCsv,
+  causeLabel,
   chartSeries,
   countOverrides,
   groupDemandVerdicts,
@@ -331,4 +332,17 @@ test("validateConfig: a network with no city gates says so instead", () => {
 test("countOverrides: empty override objects do not count", () => {
   assert.equal(countOverrides({ a: { available: 5 }, b: {}, c: null, d: { active: false } }), 2);
   assert.equal(countOverrides(), 0);
+});
+
+test("causeLabel: maps every cause the engine emits", () => {
+  assert.equal(causeLabel("isolated"), "Not connected to a producing plant");
+  assert.equal(causeLabel("insufficient_capacity"), "Production capacity exhausted");
+  assert.equal(causeLabel("transmission_bottleneck"), "Transmission bottleneck");
+  assert.equal(causeLabel("intake_limited"), "Gate intake capacity");
+});
+
+test("causeLabel: an absent or unknown cause renders as an em dash", () => {
+  assert.equal(causeLabel(null), "—");
+  assert.equal(causeLabel(undefined), "—");
+  assert.equal(causeLabel("something_new"), "—");
 });

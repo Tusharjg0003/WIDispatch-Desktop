@@ -3,7 +3,7 @@ import { Download } from "lucide-react";
 import {
   Area, CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
-import { allocationGrid, allocationsToCsv, chartSeries, summariseGates } from "../../lib/simulationRows";
+import { allocationGrid, allocationsToCsv, causeLabel, chartSeries, summariseGates } from "../../lib/simulationRows";
 import { downloadCsv } from "../../lib/exportCsv";
 import "./ResultsPanel.css";
 
@@ -14,13 +14,6 @@ const fmt = (v) => (v == null ? "—" : nf.format(Math.round(v)));
 // the same colours they are used to.
 const satisfactionTone = (pct) => (pct == null ? "" : pct >= 80 ? "kpi--good" : pct >= 50 ? "kpi--warn" : "kpi--bad");
 const utilisationTone = (pct) => (pct == null ? "" : pct >= 90 ? "kpi--bad" : pct >= 70 ? "kpi--warn" : "");
-
-const CAUSE_LABEL = {
-  isolated: "Not connected to a producing plant",
-  insufficient_capacity: "Production capacity exhausted",
-  transmission_bottleneck: "Transmission bottleneck",
-  intake_limited: "Gate intake capacity",
-};
 
 function Kpi({ eyebrow, value, sub, tone = "" }) {
   return (
@@ -142,7 +135,7 @@ export default function ResultsPanel({ plan }) {
                       <td className="num mono">{fmt(gate.deliveredM3)}</td>
                       <td className="num mono rp__bad">{fmt(gate.shortageM3)}</td>
                       <td className="num mono">{gate.shortDays}</td>
-                      <td>{CAUSE_LABEL[gate.worstDay?.cause] || "—"}</td>
+                      <td>{causeLabel(gate.worstDay?.cause)}</td>
                     </tr>
                     {expandedGate === gate.nodeId && (
                       <tr className="rp__detail-row">
