@@ -1195,7 +1195,8 @@ Append inside the returned array. Keep every colour here — nothing in the adap
     },
     // An element the displayed run never saw, because the canvas was edited
     // after the plan was produced.
-    { selector: ".sim-stale", style: { opacity: 0.25, "line-style": "dotted", "border-style": "dotted" } },
+    { selector: "edge.sim-stale", style: { opacity: 0.25, "line-style": "dotted", width: 1.5 } },
+    { selector: "node.sim-stale", style: { opacity: 0.25, "border-style": "dotted" } },
     // A per-run override is operator input, not portal data — always visible.
     { selector: "node.sim-overridden", style: { "background-color": "#fffbeb" } },
 ```
@@ -2198,9 +2199,8 @@ This is what makes a delivery path visibly appear and disappear across the horiz
     if (!cy || !traceInfo?.rootId) return;
     const root = cy.getElementById(traceInfo.rootId);
     if (root.length) runTrace(root, traceMode);
-    // runTrace is intentionally omitted: it closes over the overlay this effect
-    // is already keyed on, and including it would re-trace on every repaint.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Keyed on the day and the mode only. runTrace closes over the overlay this
+    // effect already reacts to, so listing it would re-trace on every repaint.
   }, [dayIdx, traceMode]);
 ```
 
