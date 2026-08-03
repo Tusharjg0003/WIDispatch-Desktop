@@ -296,5 +296,79 @@ export function buildCyStyle() {
         opacity: 0.1,
       },
     },
+    // ── Simulation overlay ───────────────────────────────────────────────────
+    // Applied by cytoscape/simulationOverlay.js on the Simulation Canvas tab.
+    // Bucket classes carry colour; width is data-driven because it varies
+    // continuously with utilisation. Only line-dash-offset is written inline,
+    // since it changes ~16x/second to animate flow.
+    { selector: "edge[simWidth]", style: { width: "data(simWidth)" } },
+    {
+      selector: "edge.sim-edge--idle",
+      style: { "line-color": "#6b7280", "target-arrow-color": "#6b7280", "line-style": "solid", opacity: 0.55 },
+    },
+    {
+      selector: "edge.sim-edge--low, edge.sim-edge--unconstrained",
+      style: {
+        "line-color": "#22c55e", "target-arrow-color": "#22c55e",
+        "line-style": "dashed", "line-dash-pattern": [10, 6],
+      },
+    },
+    {
+      selector: "edge.sim-edge--medium",
+      style: {
+        "line-color": "#f59e0b", "target-arrow-color": "#f59e0b",
+        "line-style": "dashed", "line-dash-pattern": [10, 6],
+      },
+    },
+    {
+      selector: "edge.sim-edge--high",
+      style: {
+        "line-color": "#7c3aed", "target-arrow-color": "#7c3aed",
+        "line-style": "dashed", "line-dash-pattern": [10, 6],
+      },
+    },
+    {
+      selector: "edge.sim-edge--bottleneck",
+      style: {
+        "line-color": "#dc2626", "target-arrow-color": "#dc2626",
+        "line-style": "dashed", "line-dash-pattern": [10, 6], "z-index": 950,
+      },
+    },
+    // Plants: how hard the solver ran them.
+    { selector: "node.sim-plant--idle", style: { "border-color": "#cbd5e1", "border-width": 2 } },
+    { selector: "node.sim-plant--partial", style: { "border-color": "#22c55e", "border-width": 3 } },
+    { selector: "node.sim-plant--at-capacity", style: { "border-color": "#7c3aed", "border-width": 4 } },
+    {
+      selector: "node.sim-plant--no-capacity",
+      style: { "border-color": "#94a3b8", "border-width": 3, "border-style": "dotted", opacity: 0.7 },
+    },
+    // City gates: whether they were served.
+    { selector: "node.sim-gate--no-demand", style: { "border-color": "#cbd5e1", "border-width": 2, opacity: 0.7 } },
+    { selector: "node.sim-gate--met", style: { "border-color": "#22c55e", "border-width": 3 } },
+    { selector: "node.sim-gate--adjusted", style: { "border-color": "#f59e0b", "border-width": 4 } },
+    {
+      selector: "node.sim-gate--shortfall",
+      style: {
+        "border-color": "#dc2626", "border-width": 4,
+        "overlay-color": "#dc2626", "overlay-padding": 5, "overlay-opacity": 0.12,
+      },
+    },
+    // Pump stations.
+    { selector: "node.sim-pump--normal", style: { "border-color": "#cbd5e1", "border-width": 2 } },
+    { selector: "node.sim-pump--unconstrained", style: { "border-color": "#94a3b8", "border-width": 2, "border-style": "dotted" } },
+    { selector: "node.sim-pump--offline", style: { "border-color": "#94a3b8", "border-width": 3, "border-style": "dashed", opacity: 0.6 } },
+    {
+      selector: "node.sim-pump--binding",
+      style: {
+        "border-color": "#dc2626", "border-width": 4,
+        "overlay-color": "#dc2626", "overlay-padding": 5, "overlay-opacity": 0.12,
+      },
+    },
+    // An element the displayed run never saw, because the canvas was edited
+    // after the plan was produced.
+    { selector: "edge.sim-stale", style: { opacity: 0.25, "line-style": "dotted", width: 1.5 } },
+    { selector: "node.sim-stale", style: { opacity: 0.25, "border-style": "dotted" } },
+    // A per-run override is operator input, not portal data — always visible.
+    { selector: "node.sim-overridden", style: { "background-color": "#fffbeb" } },
   ];
 }
