@@ -5,6 +5,7 @@ import WorkspaceHeader, { WorkspaceHeaderButton, WorkspaceHeaderChip } from "../
 import SimulationTables from "../components/simulation/SimulationTables";
 import ResultsPanel from "../components/simulation/ResultsPanel";
 import DecisionsPanel from "../components/simulation/DecisionsPanel";
+import CanvasPanel from "../components/simulation/CanvasPanel";
 import { countOverrides, validateConfig } from "../lib/simulationRows";
 import {
   createSimulationConfig, deleteSimulationConfig, fetchDispatchPlan, fetchSimulationConfig,
@@ -18,6 +19,7 @@ const TABS = [
   { key: "configuration", label: "Configuration" },
   { key: "results", label: "Results" },
   { key: "decisions", label: "Decisions" },
+  { key: "canvas", label: "Canvas" },
 ];
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
@@ -340,6 +342,7 @@ export default function SimulationConfigPage() {
                   published={published}
                 />
               )}
+              {tab === "canvas" && <CanvasPanel plan={plan} />}
             </>
           )}
         </>

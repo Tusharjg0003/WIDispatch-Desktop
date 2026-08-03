@@ -1,0 +1,33 @@
+.simcanvas {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Local rather than an addition to MetricDashboard.css, which four other
+   pages depend on: this modifier only exists for the Canvas tab's staleness
+   notices. Amber sibling of the shared .metric__notice--error rule. */
+.simcanvas .metric__notice--warn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  border-style: solid;
+  border-color: #fcd34d;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.simcanvas__stage {
+  position: relative;
+  height: clamp(420px, 62vh, 760px);
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  overflow: hidden;
+}
+
+.simcanvas__cy {
+  position: absolute;
+  inset: 0;
+}
