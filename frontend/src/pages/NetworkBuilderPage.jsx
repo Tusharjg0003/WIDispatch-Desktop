@@ -67,6 +67,8 @@ import {
   paintTrace,
   traceNeighbours,
 } from "../cytoscape/trace";
+import { addGraph } from "../cytoscape/graph";
+import { applyIsolation, clearIsolation as clearIsolationClasses, isIsolated } from "../cytoscape/isolate";
 import { fetchNetwork, fetchNetworks, saveNetwork, updateNetwork, deleteNetwork } from "../api/networks";
 import {
   fetchTransmissionSystems, createTransmissionSystem,
@@ -290,42 +292,6 @@ const serializeGraph = (cy) => ({
   }),
   edges: cy.edges().map((e) => ({ data: { ...e.data() } })),
 });
-
-const addGraph = (cy, g) => {
-  cy.batch(() => {
-    (g.nodes || []).forEach((n) => {
-      const data = n.data
-        ? n.data
-        : {
-            id: n.id,
-            assetId: n.assetId,
-            category: n.category,
-            type: n.type || n.category,
-            label: n.label,
-            displayLabel: n.label,
-            status: n.status || "",
-            meta: n.meta || {},
-          };
-      cy.add({ group: "nodes", data, position: n.position || { x: 0, y: 0 } });
-    });
-    (g.edges || []).forEach((e) => {
-      const data = e.data
-        ? e.data
-        : {
-            id: e.id,
-            source: e.source,
-            target: e.target,
-            kind: e.kind || "pipe",
-            assetId: e.assetId || null,
-            label: e.label || "",
-            displayLabel: e.label || "",
-            status: e.status || "",
-            meta: e.meta || {},
-          };
-      cy.add({ group: "edges", data });
-    });
-  });
-};
 
 const elementData = (element) => element?.data || element || {};
 
@@ -1528,7 +1494,7 @@ export default function NetworkBuilderPage() {
   const clearIsolation = useCallback((message = "Cleared isolate.") => {
     const cy = cyRef.current;
     if (!cy) return;
-    cy.elements().removeClass("nb-isolate-hidden nb-isolate-dim");
+    clearIsolationClasses(cy);
     setIsolationActive(false);
     setActiveIsolationLabel("");
     setActiveIsolationKey("");
@@ -1538,21 +1504,10 @@ export default function NetworkBuilderPage() {
   const isolateCollection = useCallback((elements, label = "selection", activeKey = "") => {
     const cy = cyRef.current;
     if (!cy) return;
-    if (!elements.length) {
+    if (!applyIsolation(cy, elements)) {
       setToast(`No canvas elements found for ${label}.`);
       return;
     }
-    let keep = elements;
-    const edges = elements.filter((el) => el.isEdge());
-    if (edges.length) keep = keep.union(edges.connectedNodes());
-    const keepIds = new Set(keep.map((el) => el.id()));
-    cy.elements().forEach((el) => {
-      if (keepIds.has(el.id())) el.removeClass("nb-isolate-hidden nb-isolate-dim");
-      else el.addClass("nb-isolate-hidden");
-    });
-    cy.$(":selected").unselect();
-    keep.select();
-    cy.fit(keep, 80);
     setIsolationActive(true);
     setActiveIsolationLabel(label);
     setActiveIsolationKey(activeKey);
@@ -1571,7 +1526,7 @@ export default function NetworkBuilderPage() {
   const handleToggleIsolation = useCallback(() => {
     const cy = cyRef.current;
     if (!cy) return;
-    if (isolationActive || cy.elements(".nb-isolate-hidden, .nb-isolate-dim").length) {
+    if (isolationActive || isIsolated(cy)) {
       clearIsolation();
       return;
     }
