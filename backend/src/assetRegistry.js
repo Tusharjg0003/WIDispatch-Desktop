@@ -13,6 +13,7 @@ export const ASSET_CATEGORIES = {
   plant: "plants",
   pump: "pumps",
   handover_point: "cityGates",
+  tank: "tanks",
 };
 
 const LIST_PROJECTION = {
@@ -24,6 +25,13 @@ const LIST_PROJECTION = {
   // City gates carry a top-level `capacity` alongside their specifications.
   capacity: 1,
   active: 1, entity_category: 1,
+  // CSV-imported tanks currently keep their source column names in Mongo.
+  StorageID: 1, ExternalID: 1, StorageDescriptionEN: 1, StorageDescriptionAR: 1,
+  Cluster: 1, Region: 1, Governorate: 1, City: 1, XCoordinate: 1, YCoordinate: 1,
+  TransmissionSystemID: 1, TransmissionSystemName: 1, Entity: 1, EntityType: 1,
+  OperationalStatus: 1, CommissioningDate: 1, DecommissioningDate: 1,
+  StorageMaterial: 1, "TotalCapacity (m3)": 1, NumberTanks: 1, Source: 1,
+  IsActive: 1, CreatedDate: 1, ModifiedDate: 1,
 };
 
 const TOP_LEVEL_FIELDS = [
@@ -36,7 +44,128 @@ const TOP_LEVEL_FIELDS = [
 // plant fields, pump configuration arrays, etc.), so rather than an allowlist
 // of scalar fields we store `specifications` mostly as given and only coerce
 // keys that are unambiguously numeric by name.
-const NUMERIC_SPEC_PATTERN = /(_capacity|_percentage|_absolute|capex|ccr|_om)$/i;
+const NUMERIC_SPEC_PATTERN = /(_capacity|_percentage|_absolute|_tanks|capex|ccr|_om)$/i;
+
+const STATUS_ALIASES = new Map([
+  ["inoperation", "operational"],
+  ["operational", "operational"],
+  ["maintenance", "maintenance"],
+  ["underconstruction", "under_construction"],
+  ["planned", "planned"],
+  ["decommissioned", "decommissioned"],
+  ["inactive", "inactive"],
+]);
+
+const clean = (value) => (value == null || value === "" || value === "NULL" ? null : value);
+const normalizeKey = (value) => String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+const normalizeStatus = (value) => STATUS_ALIASES.get(normalizeKey(value)) || clean(value);
+
+const parseCsvDate = (value) => {
+  const v = clean(value);
+  if (!v) return null;
+  if (/^\d{4}-\d{2}-\d{2}/.test(v)) return v.slice(0, 10);
+  const match = String(v).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!match) return v;
+  const [, month, day, year] = match;
+  return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+};
+
+const asBool = (value) => {
+  if (value == null || value === "") return null;
+  if (typeof value === "boolean") return value;
+  return ["1", "true", "yes", "active"].includes(String(value).toLowerCase());
+};
+
+const tankCapacity = (doc) => finite(Number(doc["TotalCapacity (m3)"] ?? doc.specifications?.total_capacity_m3 ?? doc.capacity));
+
+function normalizeTankAsset(doc = {}) {
+  const specifications = {
+    ...(doc.specifications || {}),
+    storage_material: clean(doc.StorageMaterial) ?? doc.specifications?.storage_material,
+    total_capacity_m3: tankCapacity(doc),
+    number_tanks: finite(Number(doc.NumberTanks ?? doc.specifications?.number_tanks)),
+    source: clean(doc.Source) ?? doc.specifications?.source,
+    transmission_system_id: clean(doc.specifications?.transmission_system_id),
+    transmission_system_name: clean(doc.specifications?.transmission_system_name),
+  };
+  Object.keys(specifications).forEach((key) => {
+    if (specifications[key] == null || specifications[key] === "") delete specifications[key];
+  });
+
+  const { TransmissionSystemID, TransmissionSystemName, ...safeDoc } = doc;
+
+  return {
+    ...safeDoc,
+    category: "tank",
+    id: clean(doc.id) ?? clean(doc.StorageID),
+    external_id: clean(doc.external_id) ?? clean(doc.ExternalID),
+    name: clean(doc.name) ?? clean(doc.StorageDescriptionEN),
+    asset_name_ar: clean(doc.asset_name_ar) ?? clean(doc.StorageDescriptionAR),
+    entity: clean(doc.entity) ?? clean(doc.Entity),
+    entity_type: clean(doc.entity_type) ?? clean(doc.EntityType),
+    activity: clean(doc.activity) ?? "Water transmission",
+    asset_type: clean(doc.asset_type) ?? "Storage tank",
+    region: clean(doc.region) ?? clean(doc.Region),
+    cluster: clean(doc.cluster) ?? clean(doc.Cluster),
+    governorate: clean(doc.governorate) ?? clean(doc.Governorate),
+    city: clean(doc.city) ?? clean(doc.City),
+    latitude: doc.latitude ?? finite(Number(doc.YCoordinate)),
+    longitude: doc.longitude ?? finite(Number(doc.XCoordinate)),
+    status: normalizeStatus(doc.status ?? doc.OperationalStatus),
+    commissioning_date: clean(doc.commissioning_date) ?? parseCsvDate(doc.CommissioningDate),
+    decommissioning_date: clean(doc.decommissioning_date) ?? parseCsvDate(doc.DecommissioningDate),
+    capacity: doc.capacity ?? tankCapacity(doc),
+    active: doc.active ?? asBool(doc.IsActive),
+    created_at: clean(doc.created_at) ?? parseCsvDate(doc.CreatedDate),
+    updated_at: clean(doc.updated_at) ?? parseCsvDate(doc.ModifiedDate),
+    specifications,
+  };
+}
+
+function normalizeAssetForCategory(category, doc) {
+  const withCategory = category === "tank" ? normalizeTankAsset(doc) : { category, ...doc };
+  return normalizeAllowedAsset(withCategory);
+}
+
+function buildAssetMatch(category, { status, region, q } = {}) {
+  const match = {};
+  if (category === "tank") {
+    if (status) {
+      const rawByStatus = {
+        operational: "In Operation",
+        under_construction: "Under Construction",
+      };
+      match.$or = [{ status }, { OperationalStatus: rawByStatus[status] || status }];
+    }
+    if (region) {
+      match.$and = [...(match.$and || []), { $or: [{ region }, { Region: region }] }];
+    }
+    if (q) {
+      match.$and = [
+        ...(match.$and || []),
+        {
+          $or: [
+            { name: { $regex: q, $options: "i" } },
+            { id: { $regex: q, $options: "i" } },
+            { StorageDescriptionEN: { $regex: q, $options: "i" } },
+            { StorageID: { $regex: q, $options: "i" } },
+          ],
+        },
+      ];
+    }
+    return match;
+  }
+
+  if (status) match.status = status;
+  if (region) match.region = region;
+  if (q) {
+    match.$or = [
+      { name: { $regex: q, $options: "i" } },
+      { id: { $regex: q, $options: "i" } },
+    ];
+  }
+  return match;
+}
 
 export async function listAssets(filters = {}) {
   const db = await getDb();
@@ -46,23 +175,13 @@ export async function listAssets(filters = {}) {
     ? [category]
     : Object.keys(ASSET_CATEGORIES);
 
-  const match = {};
-  if (status) match.status = status;
-  if (region) match.region = region;
-  if (q) {
-    match.$or = [
-      { name: { $regex: q, $options: "i" } },
-      { id: { $regex: q, $options: "i" } },
-    ];
-  }
-
   let assets = [];
   for (const cat of cats) {
     const rows = await db
       .collection(ASSET_CATEGORIES[cat])
-      .find(match, { projection: LIST_PROJECTION })
+      .find(buildAssetMatch(cat, { status, region, q }), { projection: LIST_PROJECTION })
       .toArray();
-    assets.push(...rows.map((r) => normalizeAllowedAsset({ category: cat, ...r })).filter(Boolean));
+    assets.push(...rows.map((r) => normalizeAssetForCategory(cat, r)).filter(Boolean));
   }
   assets.sort((a, b) => (a.name || a.id || "").localeCompare(b.name || b.id || ""));
   const total = assets.length;
@@ -72,9 +191,9 @@ export async function listAssets(filters = {}) {
   // per-category status breakdown for the registry's KPI cards.
   const kpis = { total: 0, byCategory: {}, operational: 0, statusByCategory: {} };
   for (const [cat, coll] of Object.entries(ASSET_CATEGORIES)) {
-    const rows = await db.collection(coll).find({}, { projection: { _id: 0, asset_type: 1, status: 1 } }).toArray();
+    const rows = await db.collection(coll).find({}, { projection: LIST_PROJECTION }).toArray();
     const statuses = {};
-    for (const r of rows.map((row) => normalizeAllowedAsset({ category: cat, ...row })).filter(Boolean)) {
+    for (const r of rows.map((row) => normalizeAssetForCategory(cat, row)).filter(Boolean)) {
       const status = r.status || "unknown";
       statuses[status] = (statuses[status] || 0) + 1;
     }
@@ -91,8 +210,9 @@ export async function listAssets(filters = {}) {
 export async function getAssetById(id) {
   const db = await getDb();
   for (const [cat, collection] of Object.entries(ASSET_CATEGORIES)) {
-    const doc = await db.collection(collection).findOne({ id }, { projection: { _id: 0 } });
-    if (doc) return normalizeAllowedAsset({ category: cat, ...doc });
+    const query = cat === "tank" ? { $or: [{ id }, { StorageID: id }] } : { id };
+    const doc = await db.collection(collection).findOne(query, { projection: { _id: 0 } });
+    if (doc) return normalizeAssetForCategory(cat, doc);
   }
   return null;
 }
@@ -138,7 +258,8 @@ export async function createAsset(category, body = {}) {
   doc.updated_at = now;
 
   // Guard against duplicate ids.
-  const existing = await db.collection(collection).findOne({ id: doc.id });
+  const existingQuery = category === "tank" ? { $or: [{ id: doc.id }, { StorageID: doc.id }] } : { id: doc.id };
+  const existing = await db.collection(collection).findOne(existingQuery);
   if (existing) {
     const err = new Error(`An asset with id "${doc.id}" already exists`);
     err.statusCode = 409;
@@ -188,23 +309,25 @@ export async function updateAsset(id, patch = {}) {
   const db = await getDb();
   let found = null;
   for (const [cat, collection] of Object.entries(ASSET_CATEGORIES)) {
-    const doc = await db.collection(collection).findOne({ id }, { projection: { _id: 0, id: 1 } });
+    const query = cat === "tank" ? { $or: [{ id }, { StorageID: id }] } : { id };
+    const doc = await db.collection(collection).findOne(query, { projection: { _id: 0, id: 1, StorageID: 1 } });
     if (doc) {
-      found = { category: cat, collection };
+      found = { category: cat, collection, query };
       break;
     }
   }
   if (!found) return null;
 
-  await db.collection(found.collection).updateOne({ id }, { $set: buildAssetUpdate(patch, found.category) });
-  const updated = await db.collection(found.collection).findOne({ id }, { projection: { _id: 0 } });
-  return { category: found.category, ...updated };
+  await db.collection(found.collection).updateOne(found.query, { $set: buildAssetUpdate(patch, found.category) });
+  const updated = await db.collection(found.collection).findOne(found.query, { projection: { _id: 0 } });
+  return normalizeAssetForCategory(found.category, updated);
 }
 
 export async function deleteAsset(id) {
   const db = await getDb();
-  for (const collection of Object.values(ASSET_CATEGORIES)) {
-    const result = await db.collection(collection).deleteOne({ id });
+  for (const [cat, collection] of Object.entries(ASSET_CATEGORIES)) {
+    const query = cat === "tank" ? { $or: [{ id }, { StorageID: id }] } : { id };
+    const result = await db.collection(collection).deleteOne(query);
     if (result.deletedCount > 0) return true;
   }
   return false;

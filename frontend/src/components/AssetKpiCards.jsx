@@ -8,7 +8,7 @@ const STATUS_LABEL = {
   planned: "Planned",
   decommissioned: "Decommissioned",
 };
-const CATEGORY_LABEL = { plant: "Plants", pump: "Pump Stations", handover_point: "Handover Points" };
+const CATEGORY_LABEL = { plant: "Plants", pump: "Pump Stations", tank: "Tanks", handover_point: "Handover Points" };
 
 function Breakdown({ statuses }) {
   const breakdown = STATUS_ORDER.filter((s) => statuses[s] > 0);

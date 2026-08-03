@@ -4,15 +4,17 @@ import { Field, Toggle } from "./AssetFormControls";
 import PlantQuickFields from "./PlantQuickFields";
 import PumpStationFields from "./PumpStationFields";
 import HandoverPointFields from "./HandoverPointFields";
+import TankFields from "./TankFields";
 import { allowedAssetTypesForCategory } from "../lib/assetTypes";
 
 const STATUSES = ["operational", "maintenance", "under_construction", "planned", "decommissioned"];
 const HANDOVER_STATUSES = ["planned", "under_construction", "operational", "decommissioned", "inactive"];
 const statusLabel = (s) => s.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
-const TITLES = { plant: "Add Plant", pump: "Add Pump Station", handover_point: "Add Handover Point" };
+const TITLES = { plant: "Add Plant", pump: "Add Pump Station", tank: "Add Tank", handover_point: "Add Handover Point" };
 const DEFAULT_ACTIVITY_BY_CATEGORY = {
   plant: "Water production",
   pump: "Water transmission",
+  tank: "Water transmission",
   handover_point: "Water distribution",
 };
 
@@ -60,6 +62,7 @@ export default function NetworkEntityCreateModal({ type, initialForm = null, onC
   const setSpecField = (k) => (e) => setSpec((s) => ({ ...s, [k]: e.target.value }));
   const isPlant = type === "plant";
   const isPump = type === "pump";
+  const isTank = type === "tank";
   const isHandover = type === "handover_point";
   const assetTypeOptions = allowedAssetTypesForCategory(type);
 
@@ -89,6 +92,18 @@ export default function NetworkEntityCreateModal({ type, initialForm = null, onC
               ? null
               : Number(spec.capacity_limitation_value),
         }
+      : isTank
+      ? {
+          ...spec,
+          total_capacity_m3:
+            spec.total_capacity_m3 === "" || spec.total_capacity_m3 == null
+              ? null
+              : Number(spec.total_capacity_m3),
+          number_tanks:
+            spec.number_tanks === "" || spec.number_tanks == null
+              ? null
+              : Number(spec.number_tanks),
+        }
       : {
           ...spec,
           design_capacity: spec.design_capacity === "" || spec.design_capacity == null ? null : spec.design_capacity,
@@ -106,7 +121,7 @@ export default function NetworkEntityCreateModal({ type, initialForm = null, onC
       active: form.active,
       activity: form.activity,
       asset_type: form.asset_type,
-      ...(isPlant || isHandover
+      ...(isPlant || isTank || isHandover
         ? { region: form.region, entity_category: form.entity_category }
         : {}),
       specifications,
@@ -148,6 +163,11 @@ export default function NetworkEntityCreateModal({ type, initialForm = null, onC
               </>
             )}
             {isHandover && (
+              <Field label="Region">
+                <input value={form.region} onChange={set("region")} />
+              </Field>
+            )}
+            {isTank && (
               <Field label="Region">
                 <input value={form.region} onChange={set("region")} />
               </Field>
@@ -204,6 +224,7 @@ export default function NetworkEntityCreateModal({ type, initialForm = null, onC
 
           {isPlant && <PlantQuickFields spec={spec} set={setSpecField} />}
           {isPump && <PumpStationFields pumps={pumps} setPumps={setPumps} spec={spec} setSpec={setSpecField} />}
+          {isTank && <TankFields spec={spec} set={setSpecField} setSpec={setSpec} />}
           {isHandover && <HandoverPointFields spec={spec} set={setSpecField} />}
 
           {error && <div className="af__error">{error}</div>}
@@ -211,7 +232,7 @@ export default function NetworkEntityCreateModal({ type, initialForm = null, onC
           <div className="af__footer">
             <button type="button" className="af__btn af__btn--ghost" onClick={onCancel}>Cancel</button>
             <button type="submit" className="af__btn af__btn--primary" disabled={saving}>
-              {saving ? "Saving…" : `Add ${isPlant ? "plant" : isHandover ? "handover point" : "pump station"}`}
+              {saving ? "Saving…" : `Add ${isPlant ? "plant" : isTank ? "tank" : isHandover ? "handover point" : "pump station"}`}
             </button>
           </div>
         </form>

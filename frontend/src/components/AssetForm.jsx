@@ -5,12 +5,14 @@ import MapLocationPicker from "./MapLocationPicker";
 import PlantFields from "./PlantFields";
 import PumpStationFields from "./PumpStationFields";
 import HandoverPointFields from "./HandoverPointFields";
+import TankFields from "./TankFields";
 import { allowedAssetTypesForCategory, canonicalizeAssetType } from "../lib/assetTypes";
 import "./AssetForm.css";
 
 const CATEGORIES = [
   { value: "plant", label: "Plant" },
   { value: "pump", label: "Pump Station" },
+  { value: "tank", label: "Tank" },
   { value: "handover_point", label: "Handover Point" },
 ];
 const CATEGORY_LABEL = Object.fromEntries(CATEGORIES.map((c) => [c.value, c.label]));
@@ -22,12 +24,13 @@ const statusLabel = (s) => s.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperC
 const DEFAULT_ACTIVITY_BY_CATEGORY = {
   plant: "Water production",
   pump: "Water transmission",
+  tank: "Water transmission",
   handover_point: "Water distribution",
 };
 
 const ACTIVITY_ASSET_TYPES = {
   "Water production": ["Seawater desalination", "Water purification"],
-  "Water transmission": ["Pumping station"],
+  "Water transmission": ["Pumping station", "Storage tank"],
   "Water distribution": ["Handover point/city gate"],
 };
 
@@ -186,6 +189,18 @@ export default function AssetForm({ mode = "create", defaultCategory = "plant", 
               ? null
               : Number(spec.capacity_limitation_value),
         }
+      : category === "tank"
+      ? {
+          ...spec,
+          total_capacity_m3:
+            spec.total_capacity_m3 === "" || spec.total_capacity_m3 == null
+              ? null
+              : Number(spec.total_capacity_m3),
+          number_tanks:
+            spec.number_tanks === "" || spec.number_tanks == null
+              ? null
+              : Number(spec.number_tanks),
+        }
       : spec;
     const payload = { category, ...top, latitude, longitude, end_latitude, end_longitude, specifications };
     try {
@@ -212,6 +227,7 @@ export default function AssetForm({ mode = "create", defaultCategory = "plant", 
   };
 
   const isPump = form.category === "pump";
+  const isTank = form.category === "tank";
   const isHandover = form.category === "handover_point";
   const statusOptions = isHandover ? HANDOVER_STATUSES : STATUSES;
   const activityOptions = Object.entries(ACTIVITY_ASSET_TYPES)
@@ -360,6 +376,7 @@ export default function AssetForm({ mode = "create", defaultCategory = "plant", 
               />
             )}
             {hasSelectedAssetType && isPump && <PumpStationFields pumps={pumps} setPumps={setPumps} spec={spec} setSpec={setSpecField} />}
+            {hasSelectedAssetType && isTank && <TankFields spec={spec} set={setSpecField} setSpec={setSpec} />}
             {hasSelectedAssetType && isHandover && <HandoverPointFields spec={spec} set={setSpecField} />}
           </div>
         </div>

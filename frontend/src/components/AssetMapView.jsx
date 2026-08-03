@@ -13,14 +13,22 @@ const STATUS_COLOR = {
 const statusLabel = (s) => (s ? s.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase()) : "Unknown");
 const gov = (a) => (a.governorate && a.governorate !== "NULL" ? a.governorate : "Unknown");
 
-// Pump stations render as a status-colored triangle and handover points as a
-// square to set each asset category apart on the registry map.
+// Pump stations render as a status-colored triangle, tanks as a diamond, and
+// handover points as a square to set each asset category apart on the map.
 const triangleIcon = (color) =>
   L.divIcon({
     className: "asset-triangle-marker",
     html: `<svg width="18" height="18" viewBox="0 0 18 18"><polygon points="9,1 17,16 1,16" fill="${color}" stroke="#ffffff" stroke-width="1.5" /></svg>`,
     iconSize: [18, 18],
     iconAnchor: [9, 11],
+  });
+
+const diamondIcon = (color) =>
+  L.divIcon({
+    className: "asset-diamond-marker",
+    html: `<svg width="18" height="18" viewBox="0 0 18 18"><rect x="4" y="4" width="10" height="10" transform="rotate(45 9 9)" fill="${color}" stroke="#ffffff" stroke-width="1.5" /></svg>`,
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
   });
 
 const squareIcon = (color) =>
@@ -96,6 +104,10 @@ export default function AssetMapView({ assets, onView, onEdit }) {
               const key = `${a.category}-${a.id}`;
               return a.category === "pump" ? (
                 <Marker key={key} position={[a.latitude, a.longitude]} icon={triangleIcon(color)}>
+                  {body}
+                </Marker>
+              ) : a.category === "tank" ? (
+                <Marker key={key} position={[a.latitude, a.longitude]} icon={diamondIcon(color)}>
                   {body}
                 </Marker>
               ) : a.category === "handover_point" ? (

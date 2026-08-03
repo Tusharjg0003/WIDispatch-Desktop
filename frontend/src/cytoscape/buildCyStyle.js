@@ -9,6 +9,7 @@
 export const ENTITY_TYPE_COLORS = {
   plant: "#567cff",
   pump: "#ec4899",
+  tank: "#0ea5e9",
   handover_point: "#14b8a6",
   node: "#8b93a7",
 };
@@ -16,6 +17,7 @@ export const ENTITY_TYPE_COLORS = {
 export const ENTITY_TYPE_ABBREVIATIONS = {
   plant: "PL",
   pump: "PU",
+  tank: "TK",
   handover_point: "HP",
   node: "ND",
 };
@@ -23,12 +25,13 @@ export const ENTITY_TYPE_ABBREVIATIONS = {
 export const ENTITY_TYPE_LABELS = {
   plant: "Plant",
   pump: "Pump Station",
+  tank: "Tank",
   handover_point: "Handover Point",
   node: "Junction",
 };
 
 // Category order for the palette + any grouped UI.
-export const CATEGORY_ORDER = ["plant", "pump", "handover_point"];
+export const CATEGORY_ORDER = ["plant", "pump", "tank", "handover_point"];
 
 // Statuses that should read as "not in service" → dashed node border.
 const INACTIVE_STATUSES = new Set(["decommissioned", "inactive"]);

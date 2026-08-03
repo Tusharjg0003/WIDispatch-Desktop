@@ -28,6 +28,11 @@ test("normalizeAllowedAsset: infers handover point type from collection category
   assert.equal(out.asset_type, "Handover point/city gate");
 });
 
+test("normalizeAllowedAsset: infers tank type from collection category", () => {
+  const out = normalizeAllowedAsset({ category: "tank", id: "T1", name: "Tank" });
+  assert.equal(out.asset_type, "Storage tank");
+});
+
 test("buildAssetUpdate: coerces coordinates, blank -> null", () => {
   assert.equal(buildAssetUpdate({ latitude: "24.5" }).latitude, 24.5);
   assert.equal(buildAssetUpdate({ longitude: "" }).longitude, null);

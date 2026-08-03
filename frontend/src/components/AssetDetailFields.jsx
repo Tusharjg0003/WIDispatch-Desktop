@@ -175,6 +175,20 @@ export default function AssetDetailFields({ asset }) {
         </div>
       )}
 
+      {asset.category === "tank" && (
+        <div className="form-section">
+          <h3>Tank Specifications</h3>
+          <div className="form-grid">
+            <Field label="Total Capacity (m³)" value={spec.total_capacity_m3} />
+            <Field label="Number of Tanks" value={spec.number_tanks} />
+            <Field label="Storage Material" value={spec.storage_material} />
+            <Field label="Source" value={spec.source} />
+            <Field label="Transmission System ID" value={spec.transmission_system_id} />
+            <Field label="Transmission System Name" value={spec.transmission_system_name} />
+          </div>
+        </div>
+      )}
+
       {asset.category === "handover_point" && (
         <div className="form-section">
           <h3>Asset Specifications</h3>

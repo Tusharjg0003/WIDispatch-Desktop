@@ -57,7 +57,7 @@ export function applyAssetFilters(assets, { activity = "", assetType = "", regio
   return data;
 }
 
-const KPI_CATEGORIES = ["plant", "pump", "handover_point"];
+const KPI_CATEGORIES = ["plant", "pump", "tank", "handover_point"];
 
 export function computeCategoryKpis(assets) {
   const byCategory = {};

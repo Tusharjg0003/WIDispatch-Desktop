@@ -6,6 +6,7 @@ const SAMPLE = [
   { category: "plant", id: "P1", name: "Alpha Plant", activity: "Water production", asset_type: "Seawater desalination", region: "Riyadh", governorate: "Riyadh City", status: "operational" },
   { category: "plant", id: "P2", name: "Beta Plant", activity: "Water production", asset_type: "Water Purification", region: "Makkah", governorate: "Jeddah", status: "planned" },
   { category: "pump", id: "PS1", name: "Pump One", activity: "Water transmission", asset_type: "Transmission pipeline", region: "Riyadh", governorate: "NULL", status: "operational" },
+  { category: "tank", id: "T1", name: "Tank One", activity: "Water transmission", asset_type: "Storage tank", region: "Riyadh", governorate: "Riyadh City", status: "planned" },
   { category: "handover_point", id: "H1", name: "Gate One", activity: "Water distribution", asset_type: "Handover point / city gate", region: "Riyadh", governorate: "Diriyah", status: "under_construction" },
 ];
 
@@ -47,8 +48,8 @@ test("applyAssetFilters: governorate substring match", () => {
 
 test("computeCategoryKpis: per-category counts, status breakdown, and totals", () => {
   const k = computeCategoryKpis(SAMPLE);
-  assert.deepEqual(k.byCategory, { plant: 2, pump: 1, handover_point: 1 });
-  assert.equal(k.total, 4);
+  assert.deepEqual(k.byCategory, { plant: 2, pump: 1, tank: 1, handover_point: 1 });
+  assert.equal(k.total, 5);
   assert.deepEqual(k.statusByCategory.plant, { operational: 1, planned: 1 });
-  assert.deepEqual(k.totalStatus, { operational: 2, planned: 1, under_construction: 1 });
+  assert.deepEqual(k.totalStatus, { operational: 2, planned: 2, under_construction: 1 });
 });

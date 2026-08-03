@@ -7,6 +7,7 @@ import {
   IconDroplet,
   IconPipe,
   IconPlant,
+  IconStorageTank,
   IconTarget,
 } from "./IconAssets";
 
@@ -50,6 +51,7 @@ const LIFECYCLE_LEGEND = [
 
 const ASSET_LEGEND = [
   { key: "plant", label: "Plant", icon: IconPlant },
+  { key: "tank", label: "Tank", icon: IconStorageTank },
   { key: "handover", label: "Handover point", icon: IconTarget },
   { key: "pump", label: "Pump station", icon: IconDroplet },
   { key: "junction", label: "Junction", dot: true },
@@ -140,7 +142,7 @@ function CanvasLegend() {
 export default function NetworkNodeDetails({
   selected, systems, lines,
   onLabelChange, onSpecChange, onSpecBooleanChange, onSpecArrayChange,
-  onEdgeFieldChange, onActiveChange, onCreateLine, onDelete,
+  onEdgeFieldChange, onActiveChange, onCreateLine, onDelete, onNodeSpecChange,
 }) {
   const [lineDraft, setLineDraft] = useState({
     newLineName: "",
@@ -409,6 +411,11 @@ export default function NetworkNodeDetails({
 
   const spec = selected.meta?.specifications || {};
   const meta = selected.meta || {};
+  const setTankTransmissionSystem = (id) => {
+    const system = systems.find((candidate) => candidate.id === id);
+    onNodeSpecChange?.("transmission_system_id", system?.id || "");
+    onNodeSpecChange?.("transmission_system_name", system?.name || "");
+  };
   const coords =
     Number.isFinite(meta.latitude) && Number.isFinite(meta.longitude)
       ? `${meta.latitude}, ${meta.longitude}`
@@ -467,6 +474,34 @@ export default function NetworkNodeDetails({
                   value={`${p.capacity_m3_day ?? "—"} m³/day · ${p.role === "backup" ? "Backup" : "Functional"} · ${p.active ? "On" : "Off"}`}
                 />
               ))}
+            </dl>
+          </>
+        )}
+
+        {selected.category === "tank" && (
+          <>
+            <div className="af__section">Tank Specifications</div>
+            {onNodeSpecChange && (
+              <label className="af__field nnd__field">
+                Transmission System
+                <select
+                  value={spec.transmission_system_id || ""}
+                  onChange={(e) => setTankTransmissionSystem(e.target.value)}
+                >
+                  <option value="">Unassigned</option>
+                  {systems.map((system) => (
+                    <option key={system.id} value={system.id}>{system.name || system.id}</option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <dl className="adr__list">
+              <Row label="Total capacity (m³)" value={spec.total_capacity_m3} />
+              <Row label="Number of tanks" value={spec.number_tanks} />
+              <Row label="Storage material" value={spec.storage_material} />
+              <Row label="Source" value={spec.source} />
+              <Row label="Transmission system ID" value={spec.transmission_system_id} />
+              <Row label="Transmission system name" value={spec.transmission_system_name} />
             </dl>
           </>
         )}

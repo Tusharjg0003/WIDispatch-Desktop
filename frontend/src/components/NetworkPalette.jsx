@@ -14,6 +14,10 @@ function firstPresent(...values) {
 
 function formatCapacity(asset) {
   const spec = asset.specifications || {};
+  if (asset.category === "tank") {
+    const capacity = Number(firstPresent(spec.total_capacity_m3, spec.capacity, asset.capacity));
+    return Number.isFinite(capacity) ? `${capacity.toLocaleString()} m3 storage` : "";
+  }
   const value = firstPresent(
     spec.design_capacity,
     spec.maximum_capacity,

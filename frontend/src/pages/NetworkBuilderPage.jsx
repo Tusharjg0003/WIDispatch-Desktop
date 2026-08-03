@@ -29,7 +29,6 @@ import {
   IconGitBranch,
   IconGrid,
   IconItalic,
-  IconLayers,
   IconMaximize,
   IconMaximize2,
   IconMinimize2,
@@ -47,6 +46,7 @@ import {
   IconSelect,
   IconSquare,
   IconStop,
+  IconStorageTank,
   IconTag,
   IconTarget,
   IconTreatmentPlant,
@@ -79,24 +79,30 @@ const rid = (p) => `${p}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}
 const INSERT_TOOL_LABELS = {
   plant: "Plant",
   handover_point: "Handover Point / City Gate",
+  tank: "Tank",
   node: "Node",
   pump: "Pump Station",
 };
 const INSERT_ENTITY_BUTTONS = [
   { type: "plant", implemented: true },
+  { type: "tank", implemented: true },
   { type: "handover_point", implemented: true },
   { type: "node", implemented: true },
   { type: "pump", implemented: true },
 ];
+const INSERT_ASSET_ENTITY_TYPES = new Set(INSERT_ENTITY_BUTTONS
+  .filter(({ type }) => type !== "node")
+  .map(({ type }) => type));
 const ENTITY_TYPES_LIST = [
   { type: "plant", label: "Plant", description: "Production asset" },
   { type: "pump", label: "Pump Station", description: "Pumping asset" },
+  { type: "tank", label: "Tank", description: "Storage asset" },
   { type: "handover_point", label: "Handover Point", description: "City gate / HP" },
   { type: "node", label: "Node", description: "Junction node" },
 ];
 const ENTITY_ICONS = {
   plant: IconPlant,
-  tank: IconLayers,
+  tank: IconStorageTank,
   handover_point: IconTarget,
   node: EmptyIcon,
   pump: IconDroplet,
@@ -959,7 +965,7 @@ export default function NetworkBuilderPage() {
 
       if (m === "place-entity" && pendingEntityRef.current) {
         const type = pendingEntityRef.current;
-        if (type === "plant" || type === "pump" || type === "handover_point") {
+        if (INSERT_ASSET_ENTITY_TYPES.has(type)) {
           pendingEntityRef.current = null;
           setPendingEntity(null);
           setEntityModal({
@@ -1404,6 +1410,23 @@ export default function NetworkBuilderPage() {
       const specs = { ...(meta.specifications || {}) };
       if (!values.length) delete specs[field];
       else specs[field] = values;
+      meta.specifications = specs;
+      el.data("meta", meta);
+      syncSelection();
+    },
+    [selectedEl, syncSelection]
+  );
+
+  const handleNodeSpecChange = useCallback(
+    (field, value) => {
+      const cy = cyRef.current;
+      if (!cy || !selectedEl) return;
+      const el = cy.getElementById(selectedEl.id);
+      if (!el.isNode()) return;
+      const meta = { ...(el.data("meta") || {}) };
+      const specs = { ...(meta.specifications || {}) };
+      if (value === "" || value == null) delete specs[field];
+      else specs[field] = value;
       meta.specifications = specs;
       el.data("meta", meta);
       syncSelection();
@@ -2911,6 +2934,7 @@ export default function NetworkBuilderPage() {
 	                  onSpecArrayChange={handleSpecArrayChange}
 	                  onEdgeFieldChange={handleEdgeFieldChange}
 	                  onActiveChange={handleEdgeActiveChange}
+	                  onNodeSpecChange={handleNodeSpecChange}
 	                  onCreateLine={handleCreateLineForInspector}
 	                  onDelete={handleDelete}
 	                />
