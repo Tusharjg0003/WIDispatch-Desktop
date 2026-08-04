@@ -1,8 +1,8 @@
 import React, { useMemo } from "react";
 import {
-  Bar, BarChart, CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis,
+  CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
-import { bottleneckSeries, costTrendSeries, plantMixSeries } from "../../lib/simulationRows";
+import { costTrendSeries, plantMixSeries } from "../../lib/simulationRows";
 import SupplyDemandChart from "./SupplyDemandChart";
 import "./SimulationGraphGrid.css";
 
@@ -11,12 +11,6 @@ const money = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
 const rate = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
 
 const PLANT_COLORS = ["#1a4a8a", "#10b981", "#d97706", "#7c3aed", "#0891b2", "#64748b"];
-const BOTTLENECKS = [
-  { key: "pipe", name: "Pipe", color: "#d97706" },
-  { key: "pump", name: "Pump", color: "#0891b2" },
-  { key: "gateIntake", name: "Gate intake", color: "#dc2626" },
-  { key: "plantSupply", name: "Plant supply", color: "#7c3aed" },
-];
 
 function ChartShell({ title, children }) {
   return (
@@ -61,17 +55,26 @@ function DispatchCostChart({ plan }) {
             />
             <Tooltip
               formatter={(value, name) => {
-                if (name === "Avg SAR/m3") return [`${rate.format(value)} SAR/m3`, name];
+                if (name === "Variable O&M") return [`${rate.format(value)} SAR/m3`, name];
                 return [`${money.format(Math.round(value))} SAR`, name];
               }}
             />
             <Legend />
-            <Bar yAxisId="cost" dataKey="cost" name="Variable O&M" fill="#1a4a8a" radius={[3, 3, 0, 0]} />
+            <Line
+              yAxisId="cost"
+              type="monotone"
+              dataKey="cost"
+              name="Production Cost"
+              stroke="#1a4a8a"
+              strokeWidth={2}
+              dot={{ r: 2 }}
+              isAnimationActive={false}
+            />
             <Line
               yAxisId="rate"
               type="monotone"
               dataKey="avgCost"
-              name="Avg SAR/m3"
+              name="Variable O&M"
               stroke="#d97706"
               strokeWidth={2}
               dot={{ r: 2 }}
@@ -94,81 +97,39 @@ function PlantDispatchMixChart({ plan }) {
         <EmptyChart>No plant allocation recorded.</EmptyChart>
       ) : (
         <ResponsiveContainer width="100%" height={220}>
-          <BarChart data={mix.series}>
+          <ComposedChart data={mix.series}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
             <XAxis dataKey="label" tick={{ fill: "#4b5563", fontSize: 11 }} />
             <YAxis tick={{ fill: "#4b5563", fontSize: 11 }} tickFormatter={(v) => nf.format(v)} width={74} />
             <Tooltip formatter={(value, name) => [`${nf.format(Math.round(value))} m3`, name]} />
             <Legend />
             {mix.plants.map((plant, index) => (
-              <Bar
+              <Line
                 key={plant.key}
+                type="monotone"
                 dataKey={plant.key}
                 name={plant.name}
-                stackId="dispatch"
-                fill={PLANT_COLORS[index % PLANT_COLORS.length]}
+                stroke={PLANT_COLORS[index % PLANT_COLORS.length]}
+                strokeWidth={2}
+                dot={{ r: 2 }}
+                activeDot={{ r: 4 }}
                 isAnimationActive={false}
               />
             ))}
-          </BarChart>
+          </ComposedChart>
         </ResponsiveContainer>
       )}
     </ChartShell>
   );
 }
 
-function BottleneckDriversChart({ plan }) {
-  const series = useMemo(() => bottleneckSeries(plan?.days || []), [plan?.days]);
-  const hasBottlenecks = series.some((d) => BOTTLENECKS.some((b) => d[b.key] > 0) || d.shortage > 0);
-
+function TankUtilizationPlaceholder() {
   return (
-    <ChartShell title="Bottleneck Drivers">
-      {!hasBottlenecks ? (
-        <EmptyChart>No binding constraints recorded.</EmptyChart>
-      ) : (
-        <ResponsiveContainer width="100%" height={220}>
-          <ComposedChart data={series}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-            <XAxis dataKey="label" tick={{ fill: "#4b5563", fontSize: 11 }} />
-            <YAxis yAxisId="count" allowDecimals={false} tick={{ fill: "#4b5563", fontSize: 11 }} width={42} />
-            <YAxis
-              yAxisId="shortage"
-              orientation="right"
-              tick={{ fill: "#4b5563", fontSize: 11 }}
-              tickFormatter={(v) => nf.format(v)}
-              width={74}
-            />
-            <Tooltip
-              formatter={(value, name) => {
-                if (name === "Shortfall") return [`${nf.format(Math.round(value))} m3`, name];
-                return [value, name];
-              }}
-            />
-            <Legend />
-            {BOTTLENECKS.map((item) => (
-              <Bar
-                key={item.key}
-                yAxisId="count"
-                dataKey={item.key}
-                name={item.name}
-                stackId="constraints"
-                fill={item.color}
-                isAnimationActive={false}
-              />
-            ))}
-            <Line
-              yAxisId="shortage"
-              type="monotone"
-              dataKey="shortage"
-              name="Shortfall"
-              stroke="#111827"
-              strokeWidth={2}
-              dot={false}
-              isAnimationActive={false}
-            />
-          </ComposedChart>
-        </ResponsiveContainer>
-      )}
+    <ChartShell title="Tank Utilization">
+      <div className="simgraph__placeholder">
+        <span className="simgraph__placeholder-value">Pending</span>
+        <span className="simgraph__placeholder-copy">Tank storage, drawdown, and refill utilization will appear here.</span>
+      </div>
     </ChartShell>
   );
 }
@@ -179,7 +140,7 @@ export default function SimulationGraphGrid({ plan }) {
       <SupplyDemandChart plan={plan} compact className="simgraph" />
       <DispatchCostChart plan={plan} />
       <PlantDispatchMixChart plan={plan} />
-      <BottleneckDriversChart plan={plan} />
+      <TankUtilizationPlaceholder />
     </div>
   );
 }

@@ -32,6 +32,35 @@
   border-radius: 6px;
 }
 
+.simgraph__placeholder {
+  height: 220px;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 8px;
+  color: var(--ink-dim);
+  background:
+    linear-gradient(180deg, rgba(26, 74, 138, 0.06), rgba(16, 185, 129, 0.05)),
+    var(--surface-subtle);
+  border: 1px dashed var(--line);
+  border-radius: 6px;
+  text-align: center;
+}
+
+.simgraph__placeholder-value {
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+
+.simgraph__placeholder-copy {
+  max-width: 280px;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
 .simgraph .recharts-default-legend {
   display: flex;
   flex-wrap: wrap;

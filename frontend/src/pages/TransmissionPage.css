@@ -134,7 +134,7 @@
 
 .transmission-system-kpis {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   padding: 12px;
 }
@@ -452,57 +452,6 @@
   color: #b91c1c;
   font-size: 0.72rem;
   font-weight: 700;
-}
-
-.transmission-pipe-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-height: 360px;
-  overflow: auto;
-}
-
-.transmission-pipe-card {
-  padding: 9px;
-  border: 1px solid #e5e7eb;
-  border-radius: 2px;
-  background: #ffffff;
-}
-
-.transmission-pipe-card strong {
-  display: block;
-  color: #111827;
-  font-size: 0.82rem;
-}
-
-.transmission-pipe-card small {
-  display: block;
-  margin-top: 2px;
-  color: #6b7280;
-  font-size: 0.72rem;
-}
-
-.transmission-pipe-card dl {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
-  margin: 8px 0 0;
-}
-
-.transmission-pipe-card dt {
-  color: #6b7280;
-  font-size: 0.64rem;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.transmission-pipe-card dd {
-  margin: 2px 0 0;
-  overflow: hidden;
-  color: #111827;
-  font-size: 0.72rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .kpi--bad::before { background: var(--bad); }

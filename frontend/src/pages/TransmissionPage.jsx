@@ -182,7 +182,7 @@ function TransmissionSystemSnapshot({ system }) {
       <div className="transmission-snapshot__canvas" ref={containerRef} aria-label="Transmission system network snapshot" />
       <div className="transmission-snapshot__meta">
         <span>{graph.nodes.length} saved nodes</span>
-        <span>{graph.edges.length} saved pipes</span>
+        <span>{graph.edges.length} pipe segments</span>
         <span>{graph.usedSavedPositions ? "saved positions" : "import layout preview"}</span>
       </div>
     </div>
@@ -491,7 +491,7 @@ export default function TransmissionPage() {
   const handleDeleteSystemLine = async (line) => {
     if (!line?.id || deletingLineId) return;
     const label = lineDisplayName(line);
-    if (!window.confirm(`Delete "${label}"? This removes it from saved network pipes too.`)) return;
+    if (!window.confirm(`Delete "${label}"? This removes it from canvas segments too.`)) return;
 
     setDeletingLineId(line.id);
     setLineDeleteError(null);
@@ -638,7 +638,6 @@ export default function TransmissionPage() {
                       <th>Transmission System</th>
                       <th className="ta-r">Networks</th>
                       <th className="ta-r">Registered Lines</th>
-                      <th className="ta-r">Saved Pipes</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -656,13 +655,12 @@ export default function TransmissionPage() {
                           </td>
                           <td className="ta-r mono">{breakdown?.networkIds.size || 0}</td>
                           <td className="ta-r mono">{breakdown?.lineIds.size || 0}</td>
-                          <td className="ta-r mono">{breakdown?.pipes.length || 0}</td>
                         </tr>
                       );
                     })}
                     {filteredSystems.length === 0 && (
                       <tr>
-                        <td colSpan={5} className="ppl__empty">No transmission systems found.</td>
+                        <td colSpan={4} className="ppl__empty">No transmission systems found.</td>
                       </tr>
                     )}
                   </tbody>
@@ -683,13 +681,12 @@ export default function TransmissionPage() {
                     <div className="transmission-system-kpis">
                       <div><strong>{selectedSystem.networkIds.size}</strong><span>Networks</span></div>
                       <div><strong>{selectedSystem.lineIds.size}</strong><span>Registered Lines</span></div>
-                      <div><strong>{selectedSystem.pipes.length}</strong><span>Saved Pipes</span></div>
                       <div><strong>{selectedSystem.totalLength.toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong><span>km</span></div>
                     </div>
 
                     {selectedSystem.lineIds.size > 0 && selectedSystem.pipes.length === 0 && (
                       <div className="transmission-system-detail__notice">
-                        This system has registered lines, but no saved network pipes yet.
+                        This system has registered lines, but no canvas segments yet.
                       </div>
                     )}
 
@@ -701,14 +698,14 @@ export default function TransmissionPage() {
                     <section className="transmission-system-detail__section">
                       <h3>System Structure</h3>
                       {selectedSystem.lineIds.size === 0 && selectedSystem.pipes.length === 0 ? (
-                        <div className="transmission-system-detail__empty">No registered lines or saved pipe segments for this transmission system.</div>
+                        <div className="transmission-system-detail__empty">No registered lines or canvas segments for this transmission system.</div>
                       ) : (
                         <div className="transmission-line-tree">
                           <div className="transmission-structure-row transmission-structure-row--system">
                             <span className="transmission-line-kind transmission-line-kind--system">System</span>
                             <div className="transmission-line-row__copy">
                               <strong>{selectedSystem.system.name || selectedSystem.system.id}</strong>
-                              <small>{selectedSystem.lineIds.size} registered lines, {selectedSystem.pipes.length} saved segment{selectedSystem.pipes.length === 1 ? "" : "s"}</small>
+                              <small>{selectedSystem.lineIds.size} registered lines, {selectedSystem.pipes.length} canvas segment{selectedSystem.pipes.length === 1 ? "" : "s"}</small>
                             </div>
                           </div>
                           {selectedLineGroups.systemPipes.map((pipe) => (
@@ -789,14 +786,14 @@ export default function TransmissionPage() {
                                             </div>
                                           ))}
                                           {branchPipes.length === 0 && (
-                                            <div className="transmission-structure-empty">No saved pipe segments under this branch.</div>
+                                            <div className="transmission-structure-empty">No canvas segments under this branch.</div>
                                           )}
                                         </div>
                                       </div>
                                     );
                                   })}
                                   {pipes.length === 0 && branches.length === 0 && (
-                                    <div className="transmission-structure-empty">No saved pipe segments under this line.</div>
+                                    <div className="transmission-structure-empty">No canvas segments under this line.</div>
                                   )}
                                 </div>
                               </div>
@@ -837,7 +834,7 @@ export default function TransmissionPage() {
                                     </div>
                                   ))}
                                   {pipes.length === 0 && (
-                                    <div className="transmission-structure-empty">No saved pipe segments under this branch.</div>
+                                    <div className="transmission-structure-empty">No canvas segments under this branch.</div>
                                   )}
                                 </div>
                               </div>
@@ -846,27 +843,6 @@ export default function TransmissionPage() {
                         </div>
                       )}
                       {lineDeleteError && <div className="transmission-system-detail__error">{lineDeleteError}</div>}
-                    </section>
-
-                    <section className="transmission-system-detail__section">
-                      <h3>Saved Pipes</h3>
-                      {selectedSystem.pipes.length === 0 ? (
-                        <div className="transmission-system-detail__empty">No saved network pipes reference this system yet.</div>
-                      ) : (
-                        <div className="transmission-pipe-list">
-                          {selectedSystem.pipes.map((pipe) => (
-                            <div className="transmission-pipe-card" key={`${pipe.networkId}-${pipe.id}`}>
-                              <strong>{pipe.name}</strong>
-                              <small>{pipe.source} to {pipe.target}</small>
-                              <dl>
-                                <div><dt>Network</dt><dd>{pipe.networkName}</dd></div>
-                                <div><dt>Length</dt><dd>{pipe.length == null ? "-" : `${pipe.length.toLocaleString()} km`}</dd></div>
-                                <div><dt>Capacity</dt><dd>{pipe.capacity == null ? "-" : `${pipe.capacity.toLocaleString()} m3/day`}</dd></div>
-                              </dl>
-                            </div>
-                          ))}
-                        </div>
-                      )}
                     </section>
                   </>
                 )}

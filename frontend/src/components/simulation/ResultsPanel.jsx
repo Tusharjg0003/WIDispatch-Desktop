@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from "react";
-import { Download } from "lucide-react";
-import { allocationGrid, allocationsToCsv, causeLabel, summariseGates } from "../../lib/simulationRows";
-import { downloadCsv } from "../../lib/exportCsv";
+import { bottleneckSeries, causeLabel, summariseGates } from "../../lib/simulationRows";
+import SimulationGraphGrid from "./SimulationGraphGrid";
 import "./ResultsPanel.css";
 
 const nf = new Intl.NumberFormat("en-US");
@@ -26,12 +25,14 @@ export default function ResultsPanel({ plan }) {
   const [expandedGate, setExpandedGate] = useState(null);
   const k = plan.kpis;
 
-  const grid = useMemo(() => allocationGrid(plan), [plan]);
   const gates = useMemo(() => summariseGates(plan.days), [plan.days]);
   const shortGates = gates.filter((g) => g.shortageM3 > 0);
-
-  // Only days that actually bound the answer are worth showing.
-  const constrainedDays = plan.days.filter((d) => d.bindingConstraints.length && d.totalShortage > 0);
+  const bottleneckRows = useMemo(() => {
+    const byDate = new Map((plan.days || []).map((day) => [day.date, day]));
+    return bottleneckSeries(plan.days)
+      .map((row) => ({ ...row, constraints: byDate.get(row.date)?.bindingConstraints || [] }))
+      .filter((row) => row.shortage > 0 || row.constraints.length > 0);
+  }, [plan.days]);
 
   return (
     <>
@@ -54,9 +55,9 @@ export default function ResultsPanel({ plan }) {
           sub="Of available capacity"
           tone={utilisationTone(k.plantUtilisationPct)}
         />
-        <Kpi eyebrow="Variable O&M" value={fmt(k.totalVariableOmCost)} sub="SAR over the range" />
+        <Kpi eyebrow="Production cost" value={fmt(k.totalVariableOmCost)} sub="SAR over the range" />
         <Kpi
-          eyebrow="Avg cost"
+          eyebrow="Variable O&M"
           value={k.avgCostPerM3 == null ? "—" : k.avgCostPerM3.toFixed(2)}
           sub="SAR per m³ delivered"
         />
@@ -67,6 +68,8 @@ export default function ResultsPanel({ plan }) {
           tone={k.bottleneckDays > 0 ? "kpi--warn" : ""}
         />
       </section>
+
+      <SimulationGraphGrid plan={plan} />
 
       {shortGates.length > 0 && (
         <section className="sheet">
@@ -127,25 +130,39 @@ export default function ResultsPanel({ plan }) {
         </section>
       )}
 
-      {constrainedDays.length > 0 && (
+      {bottleneckRows.length > 0 && (
         <section className="sheet">
           <header className="sheet__head sheet__head--simple">
             <h2 className="sheet__name sheet__name--sm">
-              Binding Constraints by Day<span className="sheet__count">{constrainedDays.length}</span>
+              Bottleneck Drivers<span className="sheet__count">{bottleneckRows.length}</span>
             </h2>
-            <span className="rp__hint">The minimum cut — relieving any of these is what raises delivery.</span>
+            <span className="rp__hint">Daily constraint counts from the solver.</span>
           </header>
           <div className="sheet__table-wrap">
             <table className="ledger">
               <thead>
-                <tr><th>Date</th><th className="num">Shortfall</th><th>Constraints</th></tr>
+                <tr>
+                  <th>Date</th>
+                  <th className="num">Shortfall</th>
+                  <th className="num">Plant</th>
+                  <th className="num">Pipe</th>
+                  <th className="num">Pump</th>
+                  <th className="num">Gate intake</th>
+                  <th>Constraints</th>
+                </tr>
               </thead>
               <tbody>
-                {constrainedDays.map((day) => (
-                  <tr key={day.date}>
-                    <td className="mono">{day.date}</td>
-                    <td className="num mono rp__bad">{fmt(day.totalShortage)}</td>
-                    <td><BindingList constraints={day.bindingConstraints} inline /></td>
+                {bottleneckRows.map((row) => (
+                  <tr key={row.date}>
+                    <td className="mono">{row.date}</td>
+                    <td className={`num mono ${row.shortage > 0 ? "rp__bad" : ""}`.trim()}>
+                      {row.shortage > 0 ? fmt(row.shortage) : "—"}
+                    </td>
+                    <td className="num mono">{row.plantSupply || "—"}</td>
+                    <td className="num mono">{row.pipe || "—"}</td>
+                    <td className="num mono">{row.pump || "—"}</td>
+                    <td className="num mono">{row.gateIntake || "—"}</td>
+                    <td><BindingList constraints={row.constraints} inline /></td>
                   </tr>
                 ))}
               </tbody>
@@ -154,56 +171,6 @@ export default function ResultsPanel({ plan }) {
         </section>
       )}
 
-      <section className="sheet">
-        <header className="sheet__head sheet__head--simple">
-          <h2 className="sheet__name sheet__name--sm">
-            Production Allocation<span className="sheet__count">{grid.rows.length}</span>
-          </h2>
-          <button
-            className="rp__export"
-            onClick={() => downloadCsv(`dispatch-allocation-${plan.from}-to-${plan.to}.csv`, allocationsToCsv(grid))}
-          >
-            <Download size={13} /> Export CSV
-          </button>
-        </header>
-        <div className="sheet__table-wrap">
-          <table className="ledger rp__grid">
-            <thead>
-              <tr>
-                <th className="rp__sticky">Plant</th>
-                {grid.dates.map((date) => <th key={date} className="num">{date.slice(5)}</th>)}
-                <th className="num">Total</th>
-                <th className="num">Cost (SAR)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {grid.rows.map((row) => (
-                <tr key={row.assetId}>
-                  <td className="rp__sticky">
-                    <span className="rp__name">{row.name}</span>
-                    <span className="rp__sub mono">{row.assetId}</span>
-                  </td>
-                  {grid.dates.map((date) => (
-                    <td key={date} className="num mono">{fmt(row.byDate[date] ?? 0)}</td>
-                  ))}
-                  <td className="num mono rp__total">{fmt(row.totalM3)}</td>
-                  <td className="num mono">{fmt(row.costSar)}</td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr>
-                <td className="rp__sticky">Total</td>
-                {grid.dates.map((date) => (
-                  <td key={date} className="num mono">{fmt(grid.totalsByDate[date])}</td>
-                ))}
-                <td className="num mono">{fmt(k.totalDeliveredM3)}</td>
-                <td className="num mono">{fmt(k.totalVariableOmCost)}</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      </section>
     </>
   );
 }

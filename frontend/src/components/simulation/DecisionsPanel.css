@@ -18,6 +18,10 @@
   font-weight: 600;
 }
 
+.dp__total {
+  font-weight: 600;
+}
+
 .dp__reason {
   white-space: normal;
   max-width: 34ch;
@@ -184,4 +188,47 @@
 .dp__publish-btn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+/* ---- Allocation grid ---- */
+.dp__allocation-grid .dp__sticky {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+}
+
+.dp__allocation-grid thead .dp__sticky {
+  background: var(--surface-subtle);
+  z-index: 2;
+}
+
+.dp__allocation-grid tbody tr:hover .dp__sticky {
+  background: var(--surface-subtle);
+}
+
+.dp__allocation-grid tfoot td {
+  font-weight: 600;
+  background: var(--surface-subtle);
+  border-top: 1px solid var(--line);
+}
+
+.dp__export {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  font: inherit;
+  font-size: 0.74rem;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.dp__export:hover {
+  background: var(--surface-subtle);
+  border-color: #cbd5e1;
 }

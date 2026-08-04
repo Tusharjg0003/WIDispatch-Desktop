@@ -1,10 +1,5 @@
 /* Results view. Cards, KPIs and table chrome come from MetricDashboard.css;
-   this adds the chart frame, the shortfall drill-down and the wide allocation
-   grid, whose first column stays put while the day columns scroll. */
-
-.rp__chart {
-  padding: 16px 12px 8px;
-}
+   this adds the shortfall and bottleneck drill-down details. */
 
 .rp__hint {
   font-size: 0.72rem;
@@ -24,10 +19,6 @@
 
 .rp__bad {
   color: var(--bad);
-  font-weight: 600;
-}
-
-.rp__total {
   font-weight: 600;
 }
 
@@ -108,47 +99,4 @@
   color: var(--warn);
   border-color: rgba(217, 119, 6, 0.32);
   background: rgba(217, 119, 6, 0.08);
-}
-
-/* ---- Allocation grid ---- */
-.rp__grid .rp__sticky {
-  position: sticky;
-  left: 0;
-  z-index: 1;
-  background: var(--surface);
-  border-right: 1px solid var(--line);
-}
-
-.rp__grid thead .rp__sticky {
-  background: var(--surface-subtle);
-  z-index: 2;
-}
-
-.rp__grid tbody tr:hover .rp__sticky {
-  background: var(--surface-subtle);
-}
-
-.rp__grid tfoot td {
-  font-weight: 600;
-  background: var(--surface-subtle);
-  border-top: 1px solid var(--line);
-}
-
-.rp__export {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 12px;
-  font: inherit;
-  font-size: 0.74rem;
-  color: var(--ink);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.rp__export:hover {
-  background: var(--surface-subtle);
-  border-color: #cbd5e1;
 }

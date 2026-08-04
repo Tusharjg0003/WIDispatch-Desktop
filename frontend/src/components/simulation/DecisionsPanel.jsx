@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
-import { CheckCircle2, Send, XCircle, CalendarClock, AlertTriangle } from "lucide-react";
-import { groupDemandVerdicts } from "../../lib/simulationRows";
+import { AlertTriangle, CalendarClock, CheckCircle2, Download, Send, XCircle } from "lucide-react";
+import { allocationGrid, allocationsToCsv, groupDemandVerdicts } from "../../lib/simulationRows";
+import { downloadCsv } from "../../lib/exportCsv";
 import "./DecisionsPanel.css";
 
 // The three decisions the desktop hands back to the portals, and the single
@@ -50,6 +51,7 @@ export default function DecisionsPanel({ plan, onPublish, publishing, publishErr
   const [expanded, setExpanded] = useState(null);
   const maintenance = plan.maintenanceVerdicts || [];
   const demandByGate = useMemo(() => groupDemandVerdicts(plan.demandVerdicts), [plan.demandVerdicts]);
+  const grid = useMemo(() => allocationGrid(plan), [plan]);
 
   const allocationCount = (plan.plantAllocations || []).length;
   const isPublished = published || plan.status === "published";
@@ -193,6 +195,62 @@ export default function DecisionsPanel({ plan, onPublish, publishing, publishErr
                 <tr><td colSpan={6} className="dp__empty">No approved demand in this range.</td></tr>
               )}
             </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="sheet">
+        <header className="sheet__head sheet__head--simple">
+          <h2 className="sheet__name sheet__name--sm">
+            Production Allocation<span className="sheet__count">{grid.rows.length}</span>
+          </h2>
+          <button
+            className="dp__export"
+            onClick={() => downloadCsv(`dispatch-allocation-${plan.from}-to-${plan.to}.csv`, allocationsToCsv(grid))}
+          >
+            <Download size={13} /> Export CSV
+          </button>
+        </header>
+        <div className="sheet__table-wrap">
+          <table className="ledger dp__allocation-grid">
+            <thead>
+              <tr>
+                <th className="dp__sticky">Plant</th>
+                {grid.dates.map((date) => <th key={date} className="num">{date.slice(5)}</th>)}
+                <th className="num">Total</th>
+                <th className="num">Cost (SAR)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {grid.rows.map((row) => (
+                <tr key={row.assetId}>
+                  <td className="dp__sticky">
+                    <span className="dp__name">{row.name}</span>
+                    <span className="dp__sub mono">{row.assetId}</span>
+                  </td>
+                  {grid.dates.map((date) => (
+                    <td key={date} className="num mono">{fmt(row.byDate[date] ?? 0)}</td>
+                  ))}
+                  <td className="num mono dp__total">{fmt(row.totalM3)}</td>
+                  <td className="num mono">{fmt(row.costSar)}</td>
+                </tr>
+              ))}
+              {!grid.rows.length && (
+                <tr><td colSpan={grid.dates.length + 3} className="dp__empty">No production allocation in this run.</td></tr>
+              )}
+            </tbody>
+            {grid.rows.length > 0 && (
+              <tfoot>
+                <tr>
+                  <td className="dp__sticky">Total</td>
+                  {grid.dates.map((date) => (
+                    <td key={date} className="num mono">{fmt(grid.totalsByDate[date])}</td>
+                  ))}
+                  <td className="num mono">{fmt(plan.kpis.totalDeliveredM3)}</td>
+                  <td className="num mono">{fmt(plan.kpis.totalVariableOmCost)}</td>
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
       </section>
