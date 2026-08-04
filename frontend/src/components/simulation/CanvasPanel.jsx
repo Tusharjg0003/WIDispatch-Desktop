@@ -3,17 +3,22 @@ import cytoscape from "cytoscape";
 import { buildCyStyle } from "../../cytoscape/buildCyStyle";
 import { applyCardIcon } from "../../cytoscape/nodeCard";
 import { addGraph } from "../../cytoscape/graph";
-import { canvasStaleness } from "../../lib/simulationCanvas";
+import { applyOverlay, clearOverlay, startFlowAnimation, stopFlowAnimation } from "../../cytoscape/simulationOverlay";
+import { canvasStaleness, dayOverlay } from "../../lib/simulationCanvas";
 import { fetchNetwork } from "../../api/networks";
 import "./CanvasPanel.css";
 
 export default function CanvasPanel({ plan }) {
   const containerRef = useRef(null);
   const cyRef = useRef(null);
+  const animationRef = useRef(null);
 
   const [topology, setTopology] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const [cyReady, setCyReady] = useState(false);
+  const [dayIdx, setDayIdx] = useState(0);
+  const [animate, setAnimate] = useState(true);
+  const [showLegend, setShowLegend] = useState(true);
 
   // ── Mount the instance once ───────────────────────────────────────────────
   useEffect(() => {
@@ -74,6 +79,37 @@ export default function CanvasPanel({ plan }) {
     [topology, plan],
   );
 
+  // A re-run can have a shorter horizon, so a plan swap must not leave dayIdx
+  // pointing past the end of the new plan's days.
+  useEffect(() => { setDayIdx(0); }, [plan?.id]);
+
+  const overlay = useMemo(() => dayOverlay(plan, dayIdx), [plan, dayIdx]);
+
+  // Paint. Hydration must have happened first, so this depends on `topology`.
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy || !cyReady || !topology) return;
+    if (!overlay) {
+      clearOverlay(cy);
+      return;
+    }
+    applyOverlay(cy, overlay, { staleIds: stale.unknownToRun });
+  }, [overlay, stale, topology, cyReady]);
+
+  // Animate separately from painting, so toggling the animation off does not
+  // repaint and toggling days does not restart from a jarring offset.
+  useEffect(() => {
+    const cy = cyRef.current;
+    stopFlowAnimation(animationRef.current, cy);
+    animationRef.current = null;
+    if (!cy || !cyReady || !animate || !overlay) return undefined;
+    animationRef.current = startFlowAnimation(cy, overlay.flowByEdge);
+    return () => {
+      stopFlowAnimation(animationRef.current, cyRef.current);
+      animationRef.current = null;
+    };
+  }, [animate, overlay, cyReady]);
+
   const emptyRun = plan?.kpis?.totalRequiredM3 === 0;
 
   return (
@@ -100,6 +136,25 @@ export default function CanvasPanel({ plan }) {
 
       <div className="simcanvas__stage">
         <div ref={containerRef} className="simcanvas__cy" />
+
+        {showLegend && (
+          <div className="simcanvas__legend">
+            <span className="simcanvas__legend-title">Pipe utilisation</span>
+            {[
+              ["low", "Below 70%"],
+              ["medium", "70–90%"],
+              ["high", "90%+"],
+              ["bottleneck", "Binding constraint"],
+              ["unconstrained", "No capacity on record"],
+              ["idle", "No flow"],
+            ].map(([key, label]) => (
+              <span key={key} className="simcanvas__legend-row">
+                <i className={`simcanvas__swatch simcanvas__swatch--${key}`} />
+                {label}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );

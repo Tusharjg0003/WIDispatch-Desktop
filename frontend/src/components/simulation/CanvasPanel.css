@@ -31,3 +31,45 @@
   position: absolute;
   inset: 0;
 }
+
+.simcanvas__legend {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
+  font-size: 11px;
+  color: #475569;
+}
+
+.simcanvas__legend-title {
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 2px;
+}
+
+.simcanvas__legend-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.simcanvas__swatch {
+  width: 18px;
+  height: 3px;
+  border-radius: 2px;
+  background: #6b7280;
+}
+
+.simcanvas__swatch--low { background: #22c55e; }
+.simcanvas__swatch--medium { background: #f59e0b; }
+.simcanvas__swatch--high { background: #7c3aed; }
+.simcanvas__swatch--bottleneck { background: #dc2626; }
+.simcanvas__swatch--unconstrained { background: repeating-linear-gradient(90deg, #22c55e 0 6px, transparent 6px 10px); }
+.simcanvas__swatch--idle { background: #6b7280; }
