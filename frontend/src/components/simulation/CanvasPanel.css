@@ -73,3 +73,61 @@
 .simcanvas__swatch--bottleneck { background: #dc2626; }
 .simcanvas__swatch--unconstrained { background: repeating-linear-gradient(90deg, #22c55e 0 6px, transparent 6px 10px); }
 .simcanvas__swatch--idle { background: #6b7280; }
+
+.simscrub {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.simscrub__controls { display: flex; gap: 4px; }
+
+.simscrub__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #475569;
+  cursor: pointer;
+}
+
+.simscrub__btn:disabled { opacity: 0.4; cursor: default; }
+.simscrub__btn:not(:disabled):hover { background: #f1f5f9; }
+
+.simscrub__track { display: flex; flex-direction: column; gap: 2px; }
+
+.simscrub__bars { display: flex; gap: 2px; height: 18px; align-items: flex-end; }
+
+.simscrub__bar {
+  flex: 1;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 2px 2px 0 0;
+  background: linear-gradient(to top, #dc2626 var(--fill), #e2e8f0 var(--fill));
+  cursor: pointer;
+}
+
+.simscrub__bar--active { outline: 2px solid #1a4a8a; outline-offset: 1px; }
+
+.simscrub__range { width: 100%; accent-color: #1a4a8a; }
+
+.simscrub__readout {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  color: #475569;
+  white-space: nowrap;
+}
+
+.simscrub__short { color: #dc2626; font-weight: 600; }

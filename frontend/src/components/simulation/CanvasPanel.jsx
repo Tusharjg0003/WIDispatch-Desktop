@@ -4,8 +4,9 @@ import { buildCyStyle } from "../../cytoscape/buildCyStyle";
 import { applyCardIcon } from "../../cytoscape/nodeCard";
 import { addGraph } from "../../cytoscape/graph";
 import { applyOverlay, clearOverlay, startFlowAnimation, stopFlowAnimation } from "../../cytoscape/simulationOverlay";
-import { canvasStaleness, dayOverlay } from "../../lib/simulationCanvas";
+import { canvasStaleness, dayOverlay, daySummaries } from "../../lib/simulationCanvas";
 import { fetchNetwork } from "../../api/networks";
+import CanvasDayScrubber from "./CanvasDayScrubber";
 import "./CanvasPanel.css";
 
 export default function CanvasPanel({ plan }) {
@@ -84,6 +85,7 @@ export default function CanvasPanel({ plan }) {
   useEffect(() => { setDayIdx(0); }, [plan?.id]);
 
   const overlay = useMemo(() => dayOverlay(plan, dayIdx), [plan, dayIdx]);
+  const summaries = useMemo(() => daySummaries(plan), [plan]);
 
   // Paint. Hydration must have happened first, so this depends on `topology`.
   useEffect(() => {
@@ -156,6 +158,8 @@ export default function CanvasPanel({ plan }) {
           </div>
         )}
       </div>
+
+      <CanvasDayScrubber summaries={summaries} dayIdx={dayIdx} onChange={setDayIdx} />
     </section>
   );
 }
