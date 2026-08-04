@@ -11,6 +11,7 @@ import { canvasStaleness, dayOverlay, daySummaries } from "../../lib/simulationC
 import { fetchNetwork } from "../../api/networks";
 import CanvasDayScrubber from "./CanvasDayScrubber";
 import CanvasToolbar from "./CanvasToolbar";
+import CanvasDetails from "./CanvasDetails";
 import "./CanvasPanel.css";
 
 export default function CanvasPanel({ plan }) {
@@ -30,6 +31,7 @@ export default function CanvasPanel({ plan }) {
   const [traceMode, setTraceMode] = useState("delivered");
   const [traceInfo, setTraceInfo] = useState(null);
   const [isolationActive, setIsolationActive] = useState(false);
+  const [selection, setSelection] = useState({ id: null, kind: null });
 
   // ── Mount the instance once ───────────────────────────────────────────────
   useEffect(() => {
@@ -165,11 +167,23 @@ export default function CanvasPanel({ plan }) {
       setTraceInfo(null);
     };
 
+    const onSelect = () => {
+      const selected = cy.$(":selected");
+      if (selected.length !== 1) {
+        setSelection({ id: null, kind: null });
+        return;
+      }
+      const el = selected[0];
+      setSelection({ id: el.id(), kind: el.isEdge() ? "edge" : "node" });
+    };
+
     cy.on("tap", "node", onNodeTap);
     cy.on("tap", onBackgroundTap);
+    cy.on("select unselect", onSelect);
     return () => {
       cy.removeListener("tap", "node", onNodeTap);
       cy.removeListener("tap", onBackgroundTap);
+      cy.removeListener("select unselect", onSelect);
     };
   }, [cyReady, traceActive, runTrace]);
 
@@ -223,6 +237,16 @@ export default function CanvasPanel({ plan }) {
     const id = setTimeout(() => setToast(null), 3200);
     return () => clearTimeout(id);
   }, [toast]);
+
+  const handleFocus = useCallback((elementId) => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    const el = cy.getElementById(elementId);
+    if (!el.length) return;
+    cy.$(":selected").unselect();
+    el.select();
+    cy.fit(el.closedNeighborhood(), 120);
+  }, []);
 
   const handleFit = () => cyRef.current?.fit(undefined, 48);
 
@@ -327,33 +351,43 @@ export default function CanvasPanel({ plan }) {
 
       <CanvasToolbar groups={toolbarGroups} />
 
-      <div className="simcanvas__stage">
-        <div ref={containerRef} className="simcanvas__cy" />
+      <div className="simcanvas__body">
+        <div className="simcanvas__stage">
+          <div ref={containerRef} className="simcanvas__cy" />
 
-        {toast && (
-          <button type="button" className="simcanvas__toast" onClick={() => setToast(null)}>
-            {toast}
-          </button>
-        )}
+          {toast && (
+            <button type="button" className="simcanvas__toast" onClick={() => setToast(null)}>
+              {toast}
+            </button>
+          )}
 
-        {showLegend && (
-          <div className="simcanvas__legend">
-            <span className="simcanvas__legend-title">Pipe utilisation</span>
-            {[
-              ["low", "Below 70%"],
-              ["medium", "70–90%"],
-              ["high", "90%+"],
-              ["bottleneck", "Binding constraint"],
-              ["unconstrained", "No capacity on record"],
-              ["idle", "No flow"],
-            ].map(([key, label]) => (
-              <span key={key} className="simcanvas__legend-row">
-                <i className={`simcanvas__swatch simcanvas__swatch--${key}`} />
-                {label}
-              </span>
-            ))}
-          </div>
-        )}
+          {showLegend && (
+            <div className="simcanvas__legend">
+              <span className="simcanvas__legend-title">Pipe utilisation</span>
+              {[
+                ["low", "Below 70%"],
+                ["medium", "70–90%"],
+                ["high", "90%+"],
+                ["bottleneck", "Binding constraint"],
+                ["unconstrained", "No capacity on record"],
+                ["idle", "No flow"],
+              ].map(([key, label]) => (
+                <span key={key} className="simcanvas__legend-row">
+                  <i className={`simcanvas__swatch simcanvas__swatch--${key}`} />
+                  {label}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+        <CanvasDetails
+          plan={plan}
+          dayIdx={dayIdx}
+          selectedId={selection.id}
+          selectedKind={selection.kind}
+          traceInfo={traceInfo}
+          onFocus={handleFocus}
+        />
       </div>
 
       <CanvasDayScrubber summaries={summaries} dayIdx={dayIdx} onChange={setDayIdx} />
