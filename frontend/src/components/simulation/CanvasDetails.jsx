@@ -10,6 +10,7 @@ const sar = (v) => (v == null ? "—" : `SAR ${nf.format(Math.round(v))}`);
 const OM_SOURCE = {
   economics: "from Economics",
   plant_spec: "from the asset record",
+  override: "operator override for this run",
   default: "default rate — none on record",
 };
 
@@ -119,7 +120,9 @@ function TraceDetail({ traceInfo, onFocus }) {
 
 function DaySummary({ plan, dayIdx, onFocus }) {
   const day = plan.days[dayIdx];
+  if (!day) return null;
   const shortGates = (day.gates || []).filter((g) => g.shortage > 0);
+  const bindingConstraints = day.bindingConstraints || [];
   return (
     <>
       <Row label="Required" value={`${fmt(day.totalRequired)} m³`} />
@@ -129,8 +132,8 @@ function DaySummary({ plan, dayIdx, onFocus }) {
       <Row label="Variable O&M" value={sar(day.variableOmCost)} />
 
       <h4 className="simdetail__subhead">Binding constraints</h4>
-      {day.bindingConstraints.length === 0 && <p className="simdetail__empty">Nothing was binding today.</p>}
-      {day.bindingConstraints.map((c) => (
+      {bindingConstraints.length === 0 && <p className="simdetail__empty">Nothing was binding today.</p>}
+      {bindingConstraints.map((c) => (
         <button key={`${c.kind}-${c.id}`} type="button" className="simdetail__link" onClick={() => onFocus(c.id)}>
           {c.label}
           <span>{c.capacity == null ? "unlimited" : `${fmt(c.flow)} / ${fmt(c.capacity)}`}</span>

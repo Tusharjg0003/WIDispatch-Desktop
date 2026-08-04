@@ -61,9 +61,6 @@ import {
   TRACE_CLASSES,
   clearTraceClasses,
   computeTrace,
-  edgeSpec,
-  isBidirectionalPipe,
-  nodeName,
   paintTrace,
   traceNeighbours,
 } from "../cytoscape/trace";

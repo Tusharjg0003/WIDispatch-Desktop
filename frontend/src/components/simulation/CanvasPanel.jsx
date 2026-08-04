@@ -93,8 +93,18 @@ export default function CanvasPanel({ plan }) {
   );
 
   // A re-run can have a shorter horizon, so a plan swap must not leave dayIdx
-  // pointing past the end of the new plan's days.
-  useEffect(() => { setDayIdx(0); }, [plan?.id]);
+  // pointing past the end of the new plan's days. The same swap can also
+  // change node/edge ids underneath a stale trace or isolate, so drop those
+  // too rather than let the detail panel describe elements that no longer
+  // exist. traceActive is left alone: it is an armed input mode ("click a
+  // node to trace"), not stale analysis output, and stays valid against the
+  // new topology.
+  useEffect(() => {
+    setDayIdx(0);
+    setTraceInfo(null);
+    setIsolationActive(false);
+    setSelection({ id: null, kind: null });
+  }, [plan?.id]);
 
   const overlay = useMemo(() => dayOverlay(plan, dayIdx), [plan, dayIdx]);
   const summaries = useMemo(() => daySummaries(plan), [plan]);
