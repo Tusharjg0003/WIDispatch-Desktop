@@ -10,6 +10,7 @@ import {
   canvasStaleness,
   edgeDetail,
   nodeDetail,
+  nodeInsight,
   daySummaries,
 } from "./simulationCanvas.js";
 
@@ -53,6 +54,10 @@ test("plantState: a plant with no capacity on record is distinct from an idle on
 test("plantState: running at the day's available capacity reads as at-capacity", () => {
   assert.equal(plantState({ available: 1000 }, 1000), "at-capacity");
   assert.equal(plantState({ available: 1000 }, 400), "partial");
+});
+
+test("plantState: a binding plant supply constraint outranks the capacity bucket", () => {
+  assert.equal(plantState({ available: 1000 }, 1000, true), "binding");
 });
 
 test("gateState: reflects delivery against the request", () => {
@@ -149,6 +154,21 @@ test("dayOverlay: a pump named in bindingConstraints is marked binding", () => {
   assert.deepEqual(overlay.bottleneckNodeIds, ["n_pump"]);
 });
 
+test("dayOverlay: plant supply binding does not turn low-utilisation pipes into bottlenecks", () => {
+  const plan = {
+    ...PLAN,
+    days: [{
+      ...PLAN.days[0],
+      plantOutputs: { n_plant: 500 },
+      pipeFlows: { p1: 220 },
+      bindingConstraints: [{ kind: "plant_supply", label: "Plant 1", id: "n_plant", flow: 500, capacity: 500 }],
+    }],
+  };
+  const overlay = dayOverlay(plan, 0);
+  assert.equal(overlay.nodeStates.n_plant, "binding");
+  assert.equal(overlay.edgeStates.p1, "low");
+});
+
 const TOPOLOGY = {
   nodes: [
     { data: { id: "n_plant", category: "plant" } },
@@ -156,7 +176,10 @@ const TOPOLOGY = {
     { data: { id: "n_gate", category: "handover_point" } },
     { data: { id: "n_junction", category: "node" } },
   ],
-  edges: [{ data: { id: "p1" } }, { data: { id: "p2" } }],
+  edges: [
+    { data: { id: "p1", source: "n_plant", target: "n_gate" } },
+    { data: { id: "p2", source: "n_plant", target: "n_pump" } },
+  ],
 };
 
 test("canvasStaleness: a canvas matching its run is clean", () => {
@@ -226,6 +249,43 @@ test("nodeDetail: a plant carries its allocation, provenance and day cost", () =
 
 test("nodeDetail: a node the run never saw is flagged", () => {
   assert.equal(nodeDetail(PLAN, 0, "n_junction").inRun, false);
+});
+
+test("nodeInsight: plant series uses dispatched output against available supply", () => {
+  const insight = nodeInsight(PLAN, 1, "n_plant");
+  assert.equal(insight.kind, "plant");
+  assert.equal(insight.metricLabel, "Allocated");
+  assert.equal(insight.currentValue, 1000);
+  assert.equal(insight.referenceValue, 2000);
+  assert.equal(insight.series.length, 2);
+  assert.deepEqual(insight.series.map((point) => point.value), [500, 1000]);
+});
+
+test("nodeInsight: gate series surfaces shortage as an alert", () => {
+  const insight = nodeInsight(PLAN, 1, "n_gate");
+  assert.equal(insight.kind, "gate");
+  assert.equal(insight.tone, "bad");
+  assert.equal(insight.noteLabel, "Short");
+  assert.equal(insight.noteValue, 500);
+  assert.equal(insight.series[1].alert, true);
+  assert.equal(insight.series[1].extra, 500);
+});
+
+test("nodeInsight: series alert follows each day's node binding state", () => {
+  const plan = {
+    ...PLAN,
+    days: [{
+      ...PLAN.days[0],
+      bindingConstraints: [{ kind: "plant_supply", label: "Plant 1", id: "n_plant", flow: 500, capacity: 500 }],
+    }, PLAN.days[1]],
+  };
+  const insight = nodeInsight(plan, 1, "n_plant");
+  assert.equal(insight.series[0].alert, true);
+  assert.equal(insight.series[1].alert, false);
+});
+
+test("nodeInsight: unknown or untracked nodes have no popover data", () => {
+  assert.equal(nodeInsight(PLAN, 0, "n_junction"), null);
 });
 
 test("daySummaries: one entry per day, in horizon order", () => {

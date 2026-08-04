@@ -42,7 +42,8 @@ export function edgeWidth(state, util) {
  * config screen already warns about these; the canvas must not hide them among
  * the idle ones.
  */
-export function plantState(plant = {}, allocated = 0) {
+export function plantState(plant = {}, allocated = 0, isBinding = false) {
+  if (isBinding) return "binding";
   if (plant.noCapacity) return "no-capacity";
   if (!(allocated > EPS)) return "idle";
   if (plant.available > 0 && allocated >= plant.available - EPS) return "at-capacity";
@@ -119,7 +120,7 @@ export function dayOverlay(plan, dayIdx = 0) {
   // it has to be collected here rather than read off the Cytoscape node.
   const overriddenIds = [];
   for (const plant of day.plants || []) {
-    nodeStates[plant.nodeId] = plantState(plant, day.plantOutputs?.[plant.nodeId] || 0);
+    nodeStates[plant.nodeId] = plantState(plant, day.plantOutputs?.[plant.nodeId] || 0, bnNodes.has(plant.nodeId));
     if (plant.overridden) overriddenIds.push(plant.nodeId);
   }
   for (const pump of day.pumps || []) {
@@ -235,7 +236,7 @@ export function nodeDetail(plan, dayIdx, nodeId) {
       ...plant,
       allocated: round(allocated),
       costSar: round(allocated * plant.variableOm),
-      state: plantState(plant, allocated),
+      state: plantState(plant, allocated, isBinding),
     };
   }
 
@@ -257,6 +258,118 @@ export function nodeDetail(plan, dayIdx, nodeId) {
   }
 
   return { kind: null, inRun: false, id: nodeId };
+}
+
+function findNodeRow(day, nodeId) {
+  const plant = (day?.plants || []).find((p) => p.nodeId === nodeId);
+  if (plant) return { kind: "plant", row: plant };
+
+  const pump = (day?.pumps || []).find((p) => p.nodeId === nodeId);
+  if (pump) return { kind: "pump", row: pump };
+
+  const gate = (day?.gates || []).find((g) => g.nodeId === nodeId);
+  if (gate) return { kind: "gate", row: gate };
+
+  return null;
+}
+
+export function nodeInsight(plan, dayIdx, nodeId) {
+  const current = nodeDetail(plan, dayIdx, nodeId);
+  if (!current?.inRun) return null;
+
+  const series = (plan?.days || []).map((day, idx) => {
+    const found = findNodeRow(day, nodeId);
+    if (!found) return null;
+    const { nodes: dayBnNodes } = bottleneckIds(day);
+
+    if (found.kind === "plant") {
+      const value = day.plantOutputs?.[nodeId] || 0;
+      return {
+        dayIdx: idx,
+        date: day.date,
+        value: round(value),
+        reference: found.row.available,
+        alert: dayBnNodes.has(nodeId) || found.row.noCapacity || (found.row.available > 0 && value >= found.row.available - EPS),
+      };
+    }
+
+    if (found.kind === "gate") {
+      return {
+        dayIdx: idx,
+        date: day.date,
+        value: round(found.row.delivered || 0),
+        reference: found.row.required,
+        alert: (found.row.shortage || 0) > EPS,
+        extra: round(found.row.shortage || 0),
+      };
+    }
+
+    return {
+      dayIdx: idx,
+      date: day.date,
+      value: found.row.unconstrained ? null : round(found.row.limit),
+      reference: found.row.base,
+      alert: dayBnNodes.has(nodeId) || found.row.fullOutage,
+      extra: round((found.row.maintenanceLoss || 0) + (found.row.outageLoss || 0)),
+    };
+  }).filter(Boolean);
+
+  const observed = series.flatMap((point) => [point.value, point.reference]).filter((v) => v != null && v > 0);
+  const max = observed.length ? Math.max(...observed) : 0;
+  const active = series.find((point) => point.dayIdx === dayIdx);
+  const peak = series.reduce((best, point) => ((point.value || 0) > (best.value || 0) ? point : best), series[0] || null);
+
+  if (current.kind === "plant") {
+    return {
+      kind: "plant",
+      name: current.name,
+      eyebrow: "Dispatch",
+      metricLabel: "Allocated",
+      referenceLabel: "Available",
+      currentValue: current.allocated,
+      referenceValue: current.available,
+      noteLabel: current.isBinding ? "Supply binding" : current.noCapacity ? "No capacity" : "Peak",
+      noteValue: current.isBinding || current.noCapacity ? null : peak?.value,
+      tone: current.isBinding || current.noCapacity ? "bad" : current.allocated > 0 ? "good" : "idle",
+      series,
+      active,
+      max,
+    };
+  }
+
+  if (current.kind === "gate") {
+    return {
+      kind: "gate",
+      name: current.name,
+      eyebrow: "Demand service",
+      metricLabel: "Delivered",
+      referenceLabel: "Required",
+      currentValue: current.delivered,
+      referenceValue: current.required,
+      noteLabel: current.shortage > EPS ? "Short" : "Served",
+      noteValue: current.shortage > EPS ? current.shortage : null,
+      tone: current.shortage > EPS ? "bad" : "good",
+      series,
+      active,
+      max,
+    };
+  }
+
+  return {
+    kind: "pump",
+    name: current.name,
+    eyebrow: "Capacity",
+    metricLabel: "Limit",
+    referenceLabel: "Design",
+    currentValue: current.unconstrained ? null : current.limit,
+    referenceValue: current.base,
+    noteLabel: current.fullOutage ? "Offline" : current.isBinding ? "Binding" : "Loss",
+    noteValue: current.fullOutage || current.isBinding ? null : round((current.maintenanceLoss || 0) + (current.outageLoss || 0)),
+    tone: current.fullOutage || current.isBinding ? "bad" : "good",
+    series,
+    active,
+    max,
+  };
 }
 
 /** One row per day for the scrubber's shortage strip. */

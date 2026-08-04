@@ -168,6 +168,13 @@ export function buildCyStyle() {
     { selector: "node.sim-plant--partial", style: { "border-color": "#22c55e", "border-width": 3 } },
     { selector: "node.sim-plant--at-capacity", style: { "border-color": "#7c3aed", "border-width": 4 } },
     {
+      selector: "node.sim-plant--binding",
+      style: {
+        "border-color": "#dc2626", "border-width": 4,
+        "overlay-color": "#dc2626", "overlay-padding": 5, "overlay-opacity": 0.12,
+      },
+    },
+    {
       selector: "node.sim-plant--no-capacity",
       style: { "border-color": "#94a3b8", "border-width": 3, "border-style": "dotted", opacity: 0.7 },
     },

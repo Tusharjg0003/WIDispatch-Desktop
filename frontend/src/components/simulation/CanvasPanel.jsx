@@ -7,14 +7,34 @@ import { addGraph } from "../../cytoscape/graph";
 import { applyOverlay, clearOverlay, startFlowAnimation, stopFlowAnimation } from "../../cytoscape/simulationOverlay";
 import { clearTraceClasses, computeTrace, paintTrace, traceNeighbours } from "../../cytoscape/trace";
 import { applyIsolation, clearIsolation, isIsolated } from "../../cytoscape/isolate";
-import { canvasStaleness, dayOverlay, daySummaries } from "../../lib/simulationCanvas";
+import { canvasStaleness, dayOverlay, daySummaries, nodeInsight } from "../../lib/simulationCanvas";
 import { fetchNetwork } from "../../api/networks";
 import CanvasDayScrubber from "./CanvasDayScrubber";
 import CanvasToolbar from "./CanvasToolbar";
 import CanvasDetails from "./CanvasDetails";
+import NodeInsightPopover from "./NodeInsightPopover";
 import "./CanvasPanel.css";
 
+function nodeAnchor(node, container) {
+  if (!node?.length || !container) return null;
+  const box = node.renderedBoundingBox({ includeLabels: false, includeOverlays: false });
+  const stageWidth = container.clientWidth;
+  const halfWidth = 118;
+  const margin = 10;
+  const lower = stageWidth > halfWidth * 2 ? halfWidth : stageWidth / 2;
+  const upper = stageWidth > halfWidth * 2 ? stageWidth - halfWidth : stageWidth / 2;
+  const x = Math.min(Math.max((box.x1 + box.x2) / 2, lower), upper);
+  const placeBelow = box.y1 < 128;
+
+  return {
+    x,
+    y: placeBelow ? box.y2 + margin : box.y1 - margin,
+    placement: placeBelow ? "below" : "above",
+  };
+}
+
 export default function CanvasPanel({ plan }) {
+  const stageRef = useRef(null);
   const containerRef = useRef(null);
   const cyRef = useRef(null);
   const animationRef = useRef(null);
@@ -32,6 +52,7 @@ export default function CanvasPanel({ plan }) {
   const [traceInfo, setTraceInfo] = useState(null);
   const [isolationActive, setIsolationActive] = useState(false);
   const [selection, setSelection] = useState({ id: null, kind: null });
+  const [insightAnchor, setInsightAnchor] = useState(null);
 
   // ── Mount the instance once ───────────────────────────────────────────────
   useEffect(() => {
@@ -49,7 +70,24 @@ export default function CanvasPanel({ plan }) {
     cyRef.current = cy;
     setCyReady(true);
 
+    const updateGridBackground = () => {
+      const stage = stageRef.current;
+      if (!stage) return;
+      const pan = cy.pan();
+      const size = 24 * cy.zoom();
+      const offsetX = ((pan.x % size) + size) % size;
+      const offsetY = ((pan.y % size) + size) % size;
+
+      stage.style.setProperty("--grid-size", `${size}px`);
+      stage.style.setProperty("--grid-offset-x", `${offsetX}px`);
+      stage.style.setProperty("--grid-offset-y", `${offsetY}px`);
+    };
+
+    updateGridBackground();
+    cy.on("pan zoom resize", updateGridBackground);
+
     return () => {
+      cy.removeListener("pan zoom resize", updateGridBackground);
       cy.destroy();
       cyRef.current = null;
       setCyReady(false);
@@ -104,10 +142,15 @@ export default function CanvasPanel({ plan }) {
     setTraceInfo(null);
     setIsolationActive(false);
     setSelection({ id: null, kind: null });
+    setInsightAnchor(null);
   }, [plan?.id]);
 
   const overlay = useMemo(() => dayOverlay(plan, dayIdx), [plan, dayIdx]);
   const summaries = useMemo(() => daySummaries(plan), [plan]);
+  const insight = useMemo(
+    () => (selection.kind === "node" ? nodeInsight(plan, dayIdx, selection.id) : null),
+    [plan, dayIdx, selection.id, selection.kind],
+  );
 
   // Unlike the Network Builder, any asset node is a valid trace root here —
   // with real flow available, "where does this plant's output go" is as
@@ -144,6 +187,8 @@ export default function CanvasPanel({ plan }) {
     setTraceInfo(null);
     setIsolationActive(false);
     setTraceActive(false);
+    setSelection({ id: null, kind: null });
+    setInsightAnchor(null);
   }, []);
 
   const handleToggleIsolation = useCallback(() => {
@@ -173,18 +218,24 @@ export default function CanvasPanel({ plan }) {
     };
     const onBackgroundTap = (evt) => {
       if (evt.target !== cy) return;
+      cy.$(":selected").unselect();
       clearTraceClasses(cy);
       setTraceInfo(null);
+      setSelection({ id: null, kind: null });
+      setInsightAnchor(null);
     };
 
     const onSelect = () => {
       const selected = cy.$(":selected");
       if (selected.length !== 1) {
         setSelection({ id: null, kind: null });
+        setInsightAnchor(null);
         return;
       }
       const el = selected[0];
-      setSelection({ id: el.id(), kind: el.isEdge() ? "edge" : "node" });
+      const kind = el.isEdge() ? "edge" : "node";
+      setSelection({ id: el.id(), kind });
+      setInsightAnchor(kind === "node" ? nodeAnchor(el, containerRef.current) : null);
     };
 
     cy.on("tap", "node", onNodeTap);
@@ -196,6 +247,24 @@ export default function CanvasPanel({ plan }) {
       cy.removeListener("select unselect", onSelect);
     };
   }, [cyReady, traceActive, runTrace]);
+
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy || !cyReady || selection.kind !== "node" || !selection.id) return undefined;
+
+    const update = () => {
+      const node = cy.getElementById(selection.id);
+      setInsightAnchor(nodeAnchor(node, containerRef.current));
+    };
+
+    update();
+    cy.on("pan zoom resize", update);
+    window.addEventListener("resize", update);
+    return () => {
+      cy.removeListener("pan zoom resize", update);
+      window.removeEventListener("resize", update);
+    };
+  }, [cyReady, selection.id, selection.kind]);
 
   // Re-run an active trace when the day changes, so a delivery path visibly
   // appears and disappears across the horizon.
@@ -256,6 +325,13 @@ export default function CanvasPanel({ plan }) {
     cy.$(":selected").unselect();
     el.select();
     cy.fit(el.closedNeighborhood(), 120);
+  }, []);
+
+  const handleCloseInsight = useCallback(() => {
+    const cy = cyRef.current;
+    cy?.$(":selected").unselect();
+    setSelection({ id: null, kind: null });
+    setInsightAnchor(null);
   }, []);
 
   const handleFit = () => cyRef.current?.fit(undefined, 48);
@@ -362,8 +438,10 @@ export default function CanvasPanel({ plan }) {
       <CanvasToolbar groups={toolbarGroups} />
 
       <div className="simcanvas__body">
-        <div className="simcanvas__stage">
+        <div ref={stageRef} className="simcanvas__stage simcanvas__stage--grid">
           <div ref={containerRef} className="simcanvas__cy" />
+
+          <NodeInsightPopover insight={insight} anchor={insightAnchor} onClose={handleCloseInsight} />
 
           {toast && (
             <button type="button" className="simcanvas__toast" onClick={() => setToast(null)}>
@@ -378,9 +456,10 @@ export default function CanvasPanel({ plan }) {
                 ["low", "Below 70%"],
                 ["medium", "70–90%"],
                 ["high", "90%+"],
-                ["bottleneck", "Binding constraint"],
+                ["bottleneck", "Pipe binding"],
                 ["unconstrained", "No capacity on record"],
                 ["idle", "No flow"],
+                ["node-binding", "Supply / pump binding"],
               ].map(([key, label]) => (
                 <span key={key} className="simcanvas__legend-row">
                   <i className={`simcanvas__swatch simcanvas__swatch--${key}`} />
