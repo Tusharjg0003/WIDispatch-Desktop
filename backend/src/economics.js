@@ -1,5 +1,6 @@
 import { getDb } from "./db.js";
 import { finite, dateMatch } from "./assets.js";
+import { getPlantBundle } from "./production.js";
 
 async function userNames(db, ids) {
   const unique = [...new Set(ids.filter(Boolean))];
@@ -71,4 +72,41 @@ export async function buildEconomics(filters = {}) {
       approvedAt: r.approved_at ?? null,
     })),
   };
+}
+
+const dayIso = (v) => (v ? String(v).slice(0, 10) : null);
+
+/**
+ * The production plant bundle plus this plant's effective-dated cost-parameter
+ * history, so the Economics plant view can share the production Overview tab
+ * and add a Financial tab from one request.
+ */
+export async function getEconomicsPlantBundle(id) {
+  const [bundle, db] = await Promise.all([getPlantBundle(id), getDb()]);
+
+  const rows = await db
+    .collection("financialEntries")
+    .find({ scope_type: "plant", scope_id: id })
+    .toArray();
+
+  const names = await userNames(db, rows.flatMap((r) => [r.created_by, r.approved_by, r.submitted_by]));
+
+  const financialEntries = rows
+    .map((r) => ({
+      id: r.id || String(r._id),
+      effectiveFrom: dayIso(r.effective_start),
+      effectiveTo: dayIso(r.effective_end),
+      changedFields: Array.isArray(r.changed_fields) ? r.changed_fields : [],
+      ccr: finite(r.ccr),
+      fixedOm: finite(r.fixed_om),
+      variableOm: finite(r.variable_om),
+      capex: finite(r.capex),
+      lifetime: finite(r.lifetime),
+      status: r.submission_status || "draft",
+      updatedAt: r.updated_at ?? r.created_at ?? null,
+      updatedBy: names.get(String(r.approved_by ?? r.submitted_by ?? r.created_by)) || null,
+    }))
+    .sort((a, b) => String(b.effectiveFrom || "").localeCompare(String(a.effectiveFrom || "")));
+
+  return { ...bundle, financialEntries };
 }

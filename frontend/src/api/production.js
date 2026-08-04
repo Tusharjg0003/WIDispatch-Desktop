@@ -24,6 +24,10 @@ export function fetchPlantBundle(id) {
   return getJson(`/api/production/plant/${encodeURIComponent(id)}/bundle`);
 }
 
+export function fetchEconomicsPlantBundle(id) {
+  return getJson(`/api/economics/plant/${encodeURIComponent(id)}/bundle`);
+}
+
 export function fetchRecentOutages({ since, limit } = {}) {
   const params = new URLSearchParams();
   if (since) params.set("since", since);

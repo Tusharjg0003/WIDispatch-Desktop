@@ -11,6 +11,7 @@ import DemandCityGateDetail from "./pages/DemandCityGateDetail";
 import TransmissionPage from "./pages/TransmissionPage";
 import TransmissionPumpStationDetail from "./pages/TransmissionPumpStationDetail";
 import EconomicsPage from "./pages/EconomicsPage";
+import EconomicsPlantDetail from "./pages/EconomicsPlantDetail";
 import AssetRegistryPage from "./pages/AssetRegistryPage";
 import AssetDetailPage from "./pages/AssetDetailPage";
 import NetworkBuilderPage from "./pages/NetworkBuilderPage";
@@ -45,6 +46,7 @@ export default function App() {
             <Route path="/transmission" element={<TransmissionPage />} />
             <Route path="/transmission/:pumpStationId" element={<TransmissionPumpStationDetail />} />
             <Route path="/economics" element={<EconomicsPage />} />
+            <Route path="/economics/:plantId" element={<EconomicsPlantDetail />} />
             <Route path="/network-builder" element={<NetworkBuilderPage />} />
             <Route path="/network-builder/:id" element={<NetworkBuilderPage />} />
             <Route path="/simulation-config" element={<SimulationConfigPage />} />

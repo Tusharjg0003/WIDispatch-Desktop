@@ -1,0 +1,7 @@
+.pfin { display: flex; flex-direction: column; gap: 12px; }
+.pfin .prod-strip { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.pfin__changed { margin-right: 4px; text-transform: none; }
+/* Export is the only control on this tab, so it sits right rather than orphaned at the left. */
+.pfin__actions { justify-content: flex-end; }
+
+@media (max-width: 640px) { .pfin .prod-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

@@ -3,7 +3,7 @@ import cors from "cors";
 import { buildSummary, buildRecords, DOMAINS } from "./metrics.js";
 import { buildTransmission } from "./transmission.js";
 import { buildQuality } from "./quality.js";
-import { buildEconomics } from "./economics.js";
+import { buildEconomics, getEconomicsPlantBundle } from "./economics.js";
 import { listAssets, createAsset, getAssetById, updateAsset, deleteAsset } from "./assetRegistry.js";
 import {
   listTransmissionSystems, createTransmissionSystem,
@@ -148,6 +148,15 @@ app.get("/api/economics", async (req, res) => {
   } catch (err) {
     console.error("economics error:", err);
     res.status(500).json({ error: "Failed to build economics summary" });
+  }
+});
+
+app.get("/api/economics/plant/:id/bundle", async (req, res) => {
+  try {
+    res.json(await getEconomicsPlantBundle(req.params.id));
+  } catch (err) {
+    console.error(`economics plant bundle error (id=${req.params.id}):`, err);
+    res.status(err.statusCode || 500).json({ error: err.message || "Failed to fetch plant financials" });
   }
 });
 

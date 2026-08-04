@@ -12,7 +12,8 @@ const typeBadgeClass = (type) => {
   return "ppl__badge--type-other";
 };
 
-export default function ProductionPlantList() {
+// `basePath` lets the Economics tab reuse this table with its own detail route.
+export default function ProductionPlantList({ basePath = "/production" }) {
   const navigate = useNavigate();
   const [plants, setPlants] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -81,7 +82,7 @@ export default function ProductionPlantList() {
             </thead>
             <tbody>
               {filtered.map((p) => (
-                <tr key={p.id} onClick={() => navigate(`/production/${encodeURIComponent(p.id)}`)}>
+                <tr key={p.id} onClick={() => navigate(`${basePath}/${encodeURIComponent(p.id)}`)}>
                   <td className="mono muted">{p.external_id}</td>
                   <td><div className="ppl__name">{p.name}</div><div className="ppl__city">{p.city}</div></td>
                   <td><span className={`ppl__badge ppl__badge--type ${typeBadgeClass(p.asset_type)}`}>{p.asset_type || "N/A"}</span></td>
