@@ -43,6 +43,7 @@ export default function CanvasPanel({ plan }) {
     const networkId = plan?.network?.id;
     if (!networkId) {
       setTopology(null);
+      setLoadError(null);
       return undefined;
     }
     let cancelled = false;
