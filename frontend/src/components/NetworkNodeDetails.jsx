@@ -179,6 +179,10 @@ export default function NetworkNodeDetails({
         setLineError("Choose a transmission system before adding a line.");
         return;
       }
+      if (lineDraft.isBranch && !lineDraft.parentLineId) {
+        setLineError("Choose a parent line before creating a branch.");
+        return;
+      }
       setLineSaving(true);
       setLineError(null);
       try {

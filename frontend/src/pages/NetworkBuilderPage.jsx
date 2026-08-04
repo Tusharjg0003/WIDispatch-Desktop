@@ -1361,6 +1361,7 @@ export default function NetworkBuilderPage() {
       }
       if (form.newLineName.trim()) {
         if (!systemId) throw new Error("Choose or create a transmission system before adding a line.");
+        if (form.isBranch && !form.parentLineId) throw new Error("Choose a parent line before creating a branch.");
         const created = await createTransmissionLine({
           name: form.newLineName.trim(),
           systemId,

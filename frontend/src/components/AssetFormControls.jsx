@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useId } from "react";
 
 // Shared bits reused by CreateAssetForm, PlantFields and PumpStationFields.
 
@@ -12,10 +12,10 @@ export function Field({ label, children }) {
 }
 
 // Bare switch control (no field wrapper) — usable inline, e.g. in a table row.
-export function Switch({ checked, onChange, onLabel = "Active", offLabel = "Inactive" }) {
+export function Switch({ id, checked, onChange, onLabel = "Active", offLabel = "Inactive" }) {
   return (
     <span className="af__toggle" data-on={checked}>
-      <input type="checkbox" checked={!!checked} onChange={(e) => onChange(e.target.checked)} />
+      <input id={id} type="checkbox" checked={!!checked} onChange={(e) => onChange(e.target.checked)} />
       <span className="af__toggle-track">
         <span className="af__toggle-thumb" />
       </span>
@@ -25,10 +25,11 @@ export function Switch({ checked, onChange, onLabel = "Active", offLabel = "Inac
 }
 
 export function Toggle({ label, checked, onChange, onLabel, offLabel }) {
+  const id = useId();
   return (
     <div className="form-group af__field af__field--toggle">
-      <label>{label}</label>
-      <Switch checked={checked} onChange={onChange} onLabel={onLabel} offLabel={offLabel} />
+      <label htmlFor={id}>{label}</label>
+      <Switch id={id} checked={checked} onChange={onChange} onLabel={onLabel} offLabel={offLabel} />
     </div>
   );
 }

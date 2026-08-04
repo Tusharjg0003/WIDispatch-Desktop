@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import cytoscape from "cytoscape";
 import {
   fetchTransmissionPumpStations,
   fetchTransmissionSystems,
@@ -7,6 +8,8 @@ import {
   deleteTransmissionLine,
 } from "../api/metrics";
 import { fetchNetwork, fetchNetworks } from "../api/networks";
+import { buildCyStyle } from "../cytoscape/buildCyStyle";
+import { applyCardIcon } from "../cytoscape/nodeCard";
 import { activeFunctionalPumps, backupPumps, totalDesignCapacity } from "../lib/pumpStation";
 import { lineDisplayName, lineSystemId } from "../lib/transmissionLines";
 import "./ProductionPlantList.css";
@@ -25,6 +28,15 @@ const asArray = (value) => (Array.isArray(value) ? value : []);
 const finiteNumber = (value) => {
   const numeric = Number(value);
   return Number.isFinite(numeric) ? numeric : null;
+};
+const snapshotFallbackPosition = (index) => ({
+  x: (index % 3) * 220,
+  y: Math.floor(index / 3) * 84,
+});
+
+const cloneData = (value) => {
+  if (!value || typeof value !== "object") return value;
+  return JSON.parse(JSON.stringify(value));
 };
 
 function removeLineFromEdge(edge, lineId) {
@@ -64,6 +76,118 @@ const removeLineFromNetworks = (networks, lineId) => networks.map((network) => (
   ...network,
   edges: asArray(network.edges).map((edge) => removeLineFromEdge(edge, lineId)),
 }));
+
+function TransmissionSystemSnapshot({ system }) {
+  const containerRef = useRef(null);
+  const cyRef = useRef(null);
+  const graph = useMemo(() => {
+    const rawNodes = Array.from(system?.snapshotNodes?.values?.() || []);
+    const rawEdges = asArray(system?.snapshotEdges).filter((edge) => edge.source && edge.target);
+    if (!rawNodes.length || !rawEdges.length) return { nodes: [], edges: [], usedSavedPositions: false };
+
+    const nodeIds = new Set(rawNodes.map((node) => node.id));
+    const edges = rawEdges.filter((edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target));
+    const allNodesHaveSavedPositions = rawNodes.every((node) => {
+      const x = Number(node.position?.x);
+      const y = Number(node.position?.y);
+      return Number.isFinite(x) && Number.isFinite(y);
+    });
+    const positioned = rawNodes.map((node, index) => {
+      const x = Number(node.position?.x);
+      const y = Number(node.position?.y);
+      if (allNodesHaveSavedPositions) return { ...node, x, y };
+      const fallback = snapshotFallbackPosition(index);
+      return { ...node, ...fallback };
+    });
+    const nodes = positioned.map((node) => ({ ...node, data: cloneData(node.data || {}) }));
+    const nodeById = new Map(nodes.map((node) => [node.id, node]));
+
+    return {
+      nodes,
+      edges: edges.filter((edge) => nodeById.has(edge.source) && nodeById.has(edge.target)),
+      usedSavedPositions: allNodesHaveSavedPositions,
+    };
+  }, [system]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || !graph.nodes.length || !graph.edges.length) return undefined;
+
+    const cy = cytoscape({
+      container,
+      style: buildCyStyle(),
+      layout: { name: "preset" },
+      minZoom: 0.05,
+      maxZoom: 3,
+      boxSelectionEnabled: false,
+      autoungrabify: true,
+      autounselectify: true,
+      userPanningEnabled: false,
+      userZoomingEnabled: false,
+      wheelSensitivity: 0.2,
+    });
+    cyRef.current = cy;
+
+    cy.batch(() => {
+      graph.nodes.forEach((node) => {
+        const data = {
+          ...node.data,
+          id: node.id,
+          label: node.label,
+          displayLabel: node.data?.displayLabel || node.data?.label || node.label,
+          type: node.data?.type || node.type || node.data?.category || "node",
+          category: node.data?.category || node.data?.type || node.type || "node",
+        };
+        const cyNode = cy.add({
+          group: "nodes",
+          data,
+          position: { x: node.x, y: node.y },
+        });
+        applyCardIcon(cyNode);
+      });
+      graph.edges.forEach((edge) => {
+        cy.add({
+          group: "edges",
+          data: {
+            ...edge.data,
+            id: edge.id,
+            source: edge.source,
+            target: edge.target,
+            kind: edge.data?.kind || "pipe",
+            label: edge.data?.label || edge.label || "",
+            displayLabel: edge.data?.displayLabel || edge.data?.label || edge.label || "",
+          },
+        });
+      });
+    });
+
+    const fit = () => {
+      cy.resize();
+      if (cy.elements().length) cy.fit(cy.elements(), 26);
+    };
+    requestAnimationFrame(fit);
+
+    return () => {
+      cy.destroy();
+      if (cyRef.current === cy) cyRef.current = null;
+    };
+  }, [graph]);
+
+  if (!graph.nodes.length || !graph.edges.length) {
+    return <div className="transmission-system-detail__empty">No saved topology snapshot yet.</div>;
+  }
+
+  return (
+    <div className="transmission-snapshot">
+      <div className="transmission-snapshot__canvas" ref={containerRef} aria-label="Transmission system network snapshot" />
+      <div className="transmission-snapshot__meta">
+        <span>{graph.nodes.length} saved nodes</span>
+        <span>{graph.edges.length} saved pipes</span>
+        <span>{graph.usedSavedPositions ? "saved positions" : "import layout preview"}</span>
+      </div>
+    </div>
+  );
+}
 
 export default function TransmissionPage() {
   const navigate = useNavigate();
@@ -191,6 +315,8 @@ export default function TransmissionPage() {
       {
         system,
         pipes: [],
+        snapshotNodes: new Map(),
+        snapshotEdges: [],
         lineIds: new Set(),
         networkIds: new Set(),
         totalLength: 0,
@@ -205,6 +331,8 @@ export default function TransmissionPage() {
         map.set(systemId, {
           system: { id: systemId, name: systemId },
           pipes: [],
+          snapshotNodes: new Map(),
+          snapshotEdges: [],
           lineIds: new Set(),
           networkIds: new Set(),
           totalLength: 0,
@@ -217,7 +345,14 @@ export default function TransmissionPage() {
     networks.forEach((network) => {
       const nodesById = new Map(asArray(network.nodes).map((node) => {
         const data = node.data || node;
-        return [data.id || node.id, data.label || data.displayLabel || data.assetId || data.id || node.id];
+        const id = data.id || node.id;
+        return [id, {
+          id,
+          label: data.label || data.displayLabel || data.assetId || id,
+          type: data.type || data.category || "",
+          data: cloneData(data),
+          position: node.position || null,
+        }];
       }));
 
       asArray(network.edges).forEach((edge) => {
@@ -229,6 +364,8 @@ export default function TransmissionPage() {
           map.set(systemId, {
             system: { id: systemId, name: systemId },
             pipes: [],
+            snapshotNodes: new Map(),
+            snapshotEdges: [],
             lineIds: new Set(),
             networkIds: new Set(),
             totalLength: 0,
@@ -247,11 +384,32 @@ export default function TransmissionPage() {
         bucket.networkIds.add(network.id);
         if (length != null) bucket.totalLength += length;
         if (capacity != null) bucket.totalCapacity += capacity;
+        [data.source, data.target].filter(Boolean).forEach((nodeId) => {
+          const key = `${network.id}:${nodeId}`;
+          const node = nodesById.get(nodeId);
+          if (!node || bucket.snapshotNodes.has(key)) return;
+          bucket.snapshotNodes.set(key, {
+            ...node,
+            id: key,
+            sourceNodeId: nodeId,
+            networkId: network.id,
+          });
+        });
+        if (data.source && data.target) {
+          bucket.snapshotEdges.push({
+            id: `${network.id}:${data.id || edge.id}`,
+            source: `${network.id}:${data.source}`,
+            target: `${network.id}:${data.target}`,
+            label: data.label || data.displayLabel || data.id || edge.id,
+            data: cloneData(data),
+            networkId: network.id,
+          });
+        }
         bucket.pipes.push({
           id: data.id || edge.id,
           name: data.label || data.displayLabel || data.id || edge.id,
-          source: nodesById.get(data.source) || data.source || "-",
-          target: nodesById.get(data.target) || data.target || "-",
+          source: nodesById.get(data.source)?.label || data.source || "-",
+          target: nodesById.get(data.target)?.label || data.target || "-",
           networkId: network.id,
           networkName: network.name || network.id,
           length,
@@ -267,6 +425,45 @@ export default function TransmissionPage() {
   const selectedSystem = selectedSystemId
     ? systemBreakdowns.get(selectedSystemId) || null
     : null;
+
+  const selectedLineGroups = useMemo(() => {
+    if (!selectedSystem) return { mainLines: [], orphanBranches: [] };
+    const selectedIds = Array.from(selectedSystem.lineIds);
+    const selectedIdSet = new Set(selectedIds);
+    const lineById = new Map(lines.map((line) => [line.id, line]));
+    const lineItems = selectedIds.map((lineId) => lineById.get(lineId) || { id: lineId, name: lineId });
+    const branchesByParentId = new Map();
+    const mainLines = [];
+    const orphanBranches = [];
+
+    lineItems.forEach((line) => {
+      const isBranch = !!line.isBranch || !!line.parentLineId;
+      if (!isBranch) {
+        mainLines.push(line);
+        return;
+      }
+      if (line.parentLineId && selectedIdSet.has(line.parentLineId)) {
+        const branches = branchesByParentId.get(line.parentLineId) || [];
+        branches.push(line);
+        branchesByParentId.set(line.parentLineId, branches);
+        return;
+      }
+      orphanBranches.push(line);
+    });
+
+    const byName = (a, b) => lineDisplayName(a).localeCompare(lineDisplayName(b));
+    mainLines.sort(byName);
+    orphanBranches.sort(byName);
+    branchesByParentId.forEach((branches) => branches.sort(byName));
+
+    return {
+      mainLines: mainLines.map((line) => ({
+        line,
+        branches: branchesByParentId.get(line.id) || [],
+      })),
+      orphanBranches,
+    };
+  }, [selectedSystem, lines]);
 
   const handleDeleteSystemLine = async (line) => {
     if (!line?.id || deletingLineId) return;
@@ -474,29 +671,87 @@ export default function TransmissionPage() {
                     )}
 
                     <section className="transmission-system-detail__section">
+                      <h3>Network Snapshot</h3>
+                      <TransmissionSystemSnapshot system={selectedSystem} />
+                    </section>
+
+                    <section className="transmission-system-detail__section">
                       <h3>Registered Lines / Branches</h3>
                       {selectedSystem.lineIds.size === 0 ? (
                         <div className="transmission-system-detail__empty">No registered lines for this transmission system.</div>
                       ) : (
-                        <div className="transmission-line-chip-list">
-                          {Array.from(selectedSystem.lineIds).map((lineId) => {
-                            const savedLine = lines.find((item) => item.id === lineId);
-                            const line = savedLine || { id: lineId, name: lineId };
+                        <div className="transmission-line-tree">
+                          {selectedLineGroups.mainLines.map(({ line, branches }) => {
+                            const savedLine = lines.find((item) => item.id === line.id);
                             return (
-                              <span className="transmission-line-chip" key={lineId}>
-                                <span>{line.isBranch ? "Branch" : "Line"}: {lineDisplayName(line)}</span>
+                              <div className="transmission-line-group" key={line.id}>
+                                <div className="transmission-line-row">
+                                  <span className="transmission-line-kind">Line</span>
+                                  <strong>{lineDisplayName(line)}</strong>
+                                  {savedLine && (
+                                    <button
+                                      type="button"
+                                      className="transmission-line-chip__delete"
+                                      onClick={() => handleDeleteSystemLine(savedLine)}
+                                      disabled={deletingLineId === line.id}
+                                      title={`Delete ${lineDisplayName(line)}`}
+                                    >
+                                      {deletingLineId === line.id ? "Deleting" : "Delete"}
+                                    </button>
+                                  )}
+                                </div>
+                                {branches.length > 0 && (
+                                  <div className="transmission-branch-list">
+                                    {branches.map((branch) => {
+                                      const savedBranch = lines.find((item) => item.id === branch.id);
+                                      return (
+                                        <div className="transmission-line-row transmission-line-row--branch" key={branch.id}>
+                                          <span className="transmission-line-kind transmission-line-kind--branch">Branch</span>
+                                          <div className="transmission-line-row__copy">
+                                            <strong>{lineDisplayName(branch)}</strong>
+                                            <small>Branch of {lineDisplayName(line)}</small>
+                                          </div>
+                                          {savedBranch && (
+                                            <button
+                                              type="button"
+                                              className="transmission-line-chip__delete"
+                                              onClick={() => handleDeleteSystemLine(savedBranch)}
+                                              disabled={deletingLineId === branch.id}
+                                              title={`Delete ${lineDisplayName(branch)}`}
+                                            >
+                                              {deletingLineId === branch.id ? "Deleting" : "Delete"}
+                                            </button>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                          {selectedLineGroups.orphanBranches.map((line) => {
+                            const savedLine = lines.find((item) => item.id === line.id);
+                            const parentLine = lines.find((item) => item.id === line.parentLineId);
+                            return (
+                              <div className="transmission-line-row transmission-line-row--branch transmission-line-row--orphan" key={line.id}>
+                                <span className="transmission-line-kind transmission-line-kind--branch">Branch</span>
+                                <div className="transmission-line-row__copy">
+                                  <strong>{lineDisplayName(line)}</strong>
+                                  <small>{line.parentLineId ? `Branch of ${lineDisplayName(parentLine || { id: line.parentLineId, name: line.parentLineId })}` : "Branch parent not selected"}</small>
+                                </div>
                                 {savedLine && (
                                   <button
                                     type="button"
                                     className="transmission-line-chip__delete"
                                     onClick={() => handleDeleteSystemLine(savedLine)}
-                                    disabled={deletingLineId === lineId}
+                                    disabled={deletingLineId === line.id}
                                     title={`Delete ${lineDisplayName(line)}`}
                                   >
-                                    {deletingLineId === lineId ? "Deleting" : "Delete"}
+                                    {deletingLineId === line.id ? "Deleting" : "Delete"}
                                   </button>
                                 )}
-                              </span>
+                              </div>
                             );
                           })}
                         </div>
