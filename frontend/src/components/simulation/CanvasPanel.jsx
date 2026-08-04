@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import cytoscape from "cytoscape";
+import { AlertTriangle, Crosshair, Maximize2, Palette, RefreshCw, Tag, Waves } from "lucide-react";
 import { buildCyStyle } from "../../cytoscape/buildCyStyle";
 import { applyCardIcon } from "../../cytoscape/nodeCard";
 import { addGraph } from "../../cytoscape/graph";
@@ -7,6 +8,7 @@ import { applyOverlay, clearOverlay, startFlowAnimation, stopFlowAnimation } fro
 import { canvasStaleness, dayOverlay, daySummaries } from "../../lib/simulationCanvas";
 import { fetchNetwork } from "../../api/networks";
 import CanvasDayScrubber from "./CanvasDayScrubber";
+import CanvasToolbar from "./CanvasToolbar";
 import "./CanvasPanel.css";
 
 export default function CanvasPanel({ plan }) {
@@ -20,6 +22,8 @@ export default function CanvasPanel({ plan }) {
   const [dayIdx, setDayIdx] = useState(0);
   const [animate, setAnimate] = useState(true);
   const [showLegend, setShowLegend] = useState(true);
+  const [showLabels, setShowLabels] = useState(true);
+  const [toast, setToast] = useState(null);
 
   // ── Mount the instance once ───────────────────────────────────────────────
   useEffect(() => {
@@ -112,6 +116,72 @@ export default function CanvasPanel({ plan }) {
     };
   }, [animate, overlay, cyReady]);
 
+  // Newly hydrated elements need the class applied too, hence the `topology`
+  // dependency alongside the toggle itself.
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy || !cyReady) return;
+    if (showLabels) cy.elements().removeClass("hide-labels");
+    else cy.elements().addClass("hide-labels");
+  }, [showLabels, cyReady, topology]);
+
+  useEffect(() => {
+    if (!toast) return undefined;
+    const id = setTimeout(() => setToast(null), 3200);
+    return () => clearTimeout(id);
+  }, [toast]);
+
+  const handleFit = () => cyRef.current?.fit(undefined, 48);
+
+  const handleZoomToSelection = () => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    const selected = cy.$(":selected");
+    cy.fit(selected.length ? selected : cy.elements(), 60);
+  };
+
+  const handleResetView = () => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    cy.zoom(1);
+    cy.center();
+  };
+
+  // "What is binding today" in one click.
+  const handleSelectBottlenecks = () => {
+    const cy = cyRef.current;
+    if (!cy || !overlay) return;
+    const ids = new Set([...overlay.bottleneckEdgeIds, ...overlay.bottleneckNodeIds]);
+    cy.$(":selected").unselect();
+    const binding = cy.elements().filter((el) => ids.has(el.id()));
+    if (!binding.length) {
+      setToast("Nothing was binding on this day.");
+      return;
+    }
+    binding.select();
+    cy.fit(binding, 80);
+  };
+
+  const toolbarGroups = [
+    {
+      key: "view",
+      items: [
+        { key: "fit", label: "Fit", icon: Maximize2, title: "Fit the network to the frame", onClick: handleFit },
+        { key: "tosel", label: "To Sel", icon: Crosshair, title: "Zoom to selection (or fit all)", onClick: handleZoomToSelection },
+        { key: "labels", label: "Labels", icon: Tag, title: "Toggle labels", active: showLabels, onClick: () => setShowLabels((v) => !v) },
+        { key: "reset", label: "Reset", icon: RefreshCw, title: "Reset pan and zoom", onClick: handleResetView },
+      ],
+    },
+    {
+      key: "overlay",
+      items: [
+        { key: "flow", label: "Flow", icon: Waves, title: "Toggle the flow animation", active: animate, onClick: () => setAnimate((v) => !v) },
+        { key: "legend", label: "Legend", icon: Palette, title: "Toggle the legend", active: showLegend, onClick: () => setShowLegend((v) => !v) },
+        { key: "bottlenecks", label: "Bottlenecks", icon: AlertTriangle, title: "Select everything binding on this day", onClick: handleSelectBottlenecks },
+      ],
+    },
+  ];
+
   const emptyRun = plan?.kpis?.totalRequiredM3 === 0;
 
   return (
@@ -136,8 +206,16 @@ export default function CanvasPanel({ plan }) {
         </div>
       )}
 
+      <CanvasToolbar groups={toolbarGroups} />
+
       <div className="simcanvas__stage">
         <div ref={containerRef} className="simcanvas__cy" />
+
+        {toast && (
+          <button type="button" className="simcanvas__toast" onClick={() => setToast(null)}>
+            {toast}
+          </button>
+        )}
 
         {showLegend && (
           <div className="simcanvas__legend">

@@ -131,3 +131,59 @@
 }
 
 .simscrub__short { color: #dc2626; font-weight: 600; }
+
+.simtoolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.simtoolbar__group {
+  display: flex;
+  gap: 4px;
+  padding-right: 8px;
+  border-right: 1px solid #e2e8f0;
+}
+
+.simtoolbar__group:last-child { border-right: 0; padding-right: 0; }
+
+.simtoolbar__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.simtoolbar__btn:hover:not(:disabled) { background: #f1f5f9; }
+.simtoolbar__btn:disabled { opacity: 0.4; cursor: default; }
+
+.simtoolbar__btn--active {
+  border-color: #1a4a8a;
+  background: rgba(26, 74, 138, 0.08);
+  color: #1a4a8a;
+}
+
+.simcanvas__toast {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  padding: 7px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.9);
+  color: #ffffff;
+  font-size: 11px;
+  cursor: pointer;
+}
