@@ -1,10 +1,12 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import cytoscape from "cytoscape";
-import { AlertTriangle, Crosshair, Maximize2, Palette, RefreshCw, Tag, Waves } from "lucide-react";
+import { AlertTriangle, Crosshair, GitBranch, Layers, Maximize2, Palette, RefreshCw, Tag, Waves, XCircle } from "lucide-react";
 import { buildCyStyle } from "../../cytoscape/buildCyStyle";
 import { applyCardIcon } from "../../cytoscape/nodeCard";
 import { addGraph } from "../../cytoscape/graph";
 import { applyOverlay, clearOverlay, startFlowAnimation, stopFlowAnimation } from "../../cytoscape/simulationOverlay";
+import { clearTraceClasses, computeTrace, paintTrace, traceNeighbours } from "../../cytoscape/trace";
+import { applyIsolation, clearIsolation, isIsolated } from "../../cytoscape/isolate";
 import { canvasStaleness, dayOverlay, daySummaries } from "../../lib/simulationCanvas";
 import { fetchNetwork } from "../../api/networks";
 import CanvasDayScrubber from "./CanvasDayScrubber";
@@ -24,6 +26,10 @@ export default function CanvasPanel({ plan }) {
   const [showLegend, setShowLegend] = useState(true);
   const [showLabels, setShowLabels] = useState(true);
   const [toast, setToast] = useState(null);
+  const [traceActive, setTraceActive] = useState(false);
+  const [traceMode, setTraceMode] = useState("delivered");
+  const [traceInfo, setTraceInfo] = useState(null);
+  const [isolationActive, setIsolationActive] = useState(false);
 
   // ── Mount the instance once ───────────────────────────────────────────────
   useEffect(() => {
@@ -90,6 +96,93 @@ export default function CanvasPanel({ plan }) {
 
   const overlay = useMemo(() => dayOverlay(plan, dayIdx), [plan, dayIdx]);
   const summaries = useMemo(() => daySummaries(plan), [plan]);
+
+  // Unlike the Network Builder, any asset node is a valid trace root here —
+  // with real flow available, "where does this plant's output go" is as
+  // useful as "where does this gate's water come from".
+  const runTrace = useCallback((node, mode = traceMode) => {
+    const cy = cyRef.current;
+    if (!cy || !node) return;
+    const flowByEdge = overlay?.flowByEdge || {};
+    const trace = computeTrace(cy, node.id(), { flowByEdge, mode });
+    paintTrace(cy, trace);
+    const { sources, dests } = traceNeighbours(cy, trace);
+    setTraceInfo({
+      rootId: trace.rootId,
+      rootName: node.data("label") || node.data("displayLabel") || node.id(),
+      mode: trace.mode,
+      requestedMode: trace.requestedMode,
+      hasFlow: trace.hasFlow,
+      sources,
+      dests,
+      upCount: trace.up.nodes.size,
+      downCount: trace.down.nodes.size,
+    });
+    if (mode === "delivered" && !trace.hasFlow) {
+      setToast("No flow on this day, so Trace is showing reachable topology.");
+    }
+  }, [traceMode, overlay]);
+
+  const clearAnalysis = useCallback(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    cy.$(":selected").unselect();
+    clearTraceClasses(cy);
+    clearIsolation(cy);
+    setTraceInfo(null);
+    setIsolationActive(false);
+    setTraceActive(false);
+  }, []);
+
+  const handleToggleIsolation = useCallback(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    if (isolationActive || isIsolated(cy)) {
+      clearIsolation(cy);
+      setIsolationActive(false);
+      setToast("Cleared isolate.");
+      return;
+    }
+    if (!applyIsolation(cy, cy.$(":selected"))) {
+      setToast("Select something to isolate first.");
+      return;
+    }
+    setIsolationActive(true);
+  }, [isolationActive]);
+
+  // Bound per-hydration so a re-fetched topology gets a live handler.
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy || !cyReady) return undefined;
+
+    const onNodeTap = (evt) => {
+      if (!traceActive) return;
+      runTrace(evt.target);
+    };
+    const onBackgroundTap = (evt) => {
+      if (evt.target !== cy) return;
+      clearTraceClasses(cy);
+      setTraceInfo(null);
+    };
+
+    cy.on("tap", "node", onNodeTap);
+    cy.on("tap", onBackgroundTap);
+    return () => {
+      cy.removeListener("tap", "node", onNodeTap);
+      cy.removeListener("tap", onBackgroundTap);
+    };
+  }, [cyReady, traceActive, runTrace]);
+
+  // Re-run an active trace when the day changes, so a delivery path visibly
+  // appears and disappears across the horizon.
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy || !traceInfo?.rootId) return;
+    const root = cy.getElementById(traceInfo.rootId);
+    if (root.length) runTrace(root, traceMode);
+    // Keyed on the day and the mode only. runTrace closes over the overlay this
+    // effect already reacts to, so listing it would re-trace on every repaint.
+  }, [dayIdx, traceMode]);
 
   // Paint. Hydration must have happened first, so this depends on `topology`.
   useEffect(() => {
@@ -170,6 +263,32 @@ export default function CanvasPanel({ plan }) {
         { key: "tosel", label: "To Sel", icon: Crosshair, title: "Zoom to selection (or fit all)", onClick: handleZoomToSelection },
         { key: "labels", label: "Labels", icon: Tag, title: "Toggle labels", active: showLabels, onClick: () => setShowLabels((v) => !v) },
         { key: "reset", label: "Reset", icon: RefreshCw, title: "Reset pan and zoom", onClick: handleResetView },
+      ],
+    },
+    {
+      key: "analysis",
+      items: [
+        {
+          key: "trace",
+          label: "Trace",
+          icon: GitBranch,
+          title: "Click an asset to trace its upstream and downstream path",
+          active: traceActive,
+          onClick: () => {
+            const next = !traceActive;
+            setTraceActive(next);
+            if (next) setToast("Trace: click any plant, pump, gate or junction.");
+            else { clearTraceClasses(cyRef.current); setTraceInfo(null); }
+          },
+        },
+        {
+          key: "tracemode",
+          label: traceMode === "delivered" ? "Delivered" : "Reachable",
+          title: "Switch between delivered flow paths and topology reachability",
+          onClick: () => setTraceMode((m) => (m === "delivered" ? "reachable" : "delivered")),
+        },
+        { key: "isolate", label: "Isolate", icon: Layers, title: "Isolate the current selection, or clear isolate", active: isolationActive, onClick: handleToggleIsolation },
+        { key: "clear", label: "Clear", icon: XCircle, title: "Clear trace, isolate and selection", onClick: clearAnalysis },
       ],
     },
     {
