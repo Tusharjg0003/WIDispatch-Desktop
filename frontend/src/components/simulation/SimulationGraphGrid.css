@@ -1,0 +1,52 @@
+.simgraphs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.simgraph {
+  min-width: 0;
+  margin: 0;
+}
+
+.simgraph .sheet__head {
+  min-height: 38px;
+  padding: 10px 14px;
+}
+
+.simgraph .sdchart,
+.simgraph__body {
+  height: 246px;
+  padding: 12px 10px 6px;
+}
+
+.simgraph__empty {
+  height: 220px;
+  display: grid;
+  place-items: center;
+  font-size: 0.78rem;
+  color: var(--ink-dim);
+  background: var(--surface-subtle);
+  border: 1px dashed var(--line);
+  border-radius: 6px;
+}
+
+.simgraph .recharts-default-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px 8px;
+  font-size: 0.7rem;
+  line-height: 1.2;
+}
+
+.simgraph .recharts-legend-item {
+  margin-right: 0 !important;
+}
+
+@media (max-width: 980px) {
+  .simgraphs {
+    grid-template-columns: 1fr;
+  }
+}

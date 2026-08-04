@@ -109,6 +109,30 @@ export function buildCyStyle() {
         "shadow-opacity": 0.18,
       },
     },
+    // ── Pipe / edge ──────────────────────────────────────────────────────
+    {
+      selector: "edge",
+      style: {
+        width: 2.5,
+        "line-color": "#5b7ca3",
+        "target-arrow-color": "#5b7ca3",
+        "target-arrow-shape": "triangle",
+        "curve-style": "bezier",
+        label: "data(displayLabel)",
+        "font-size": 9,
+        color: "#475569",
+        "font-family": '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+        "text-rotation": "autorotate",
+        "text-background-color": "#ffffff",
+        "text-background-opacity": 0.9,
+        "text-background-padding": 2,
+      },
+    },
+    // Pipes out of service read as dashed lines.
+    {
+      selector: 'edge[status="decommissioned"], edge[status="inactive"]',
+      style: { "line-style": "dashed" },
+    },
     // ── Simulation overlay ───────────────────────────────────────────────────
     // Applied by cytoscape/simulationOverlay.js on the Simulation Canvas tab.
     // Bucket classes carry colour; width is data-driven because it varies
@@ -231,30 +255,6 @@ export function buildCyStyle() {
         "overlay-color": ACCENT,
         "overlay-opacity": 0.18,
       },
-    },
-    // ── Pipe / edge ──────────────────────────────────────────────────────
-    {
-      selector: "edge",
-      style: {
-        width: 2.5,
-        "line-color": "#5b7ca3",
-        "target-arrow-color": "#5b7ca3",
-        "target-arrow-shape": "triangle",
-        "curve-style": "bezier",
-        label: "data(displayLabel)",
-        "font-size": 9,
-        color: "#475569",
-        "font-family": '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-        "text-rotation": "autorotate",
-        "text-background-color": "#ffffff",
-        "text-background-opacity": 0.9,
-        "text-background-padding": 2,
-      },
-    },
-    // Pipes out of service read as dashed lines.
-    {
-      selector: 'edge[status="decommissioned"], edge[status="inactive"]',
-      style: { "line-style": "dashed" },
     },
     // ── Sticky notes (Annotate → Add Note) ───────────────────────────────
     {

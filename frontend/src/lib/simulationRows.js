@@ -131,6 +131,14 @@ export function summariseGates(days = []) {
         shortDays: entries.filter((e) => e.shortage > 0).length,
         worstDay: worst.shortage > 0 ? { date: worst.date, shortage: round(worst.shortage), cause: worst.cause } : null,
         overridden: entries.some((e) => e.overridden),
+        days: entries.map((e) => ({
+          date: e.date,
+          required: round(e.required),
+          delivered: round(e.delivered),
+          shortage: round(e.shortage),
+          cause: e.cause,
+          intakeLimited: e.intakeLimited,
+        })),
       };
     })
     .sort((a, b) => b.shortageM3 - a.shortageM3 || a.name.localeCompare(b.name));
@@ -234,6 +242,66 @@ export function chartSeries(days = []) {
     shortage: day.totalShortage,
     cost: day.variableOmCost,
   }));
+}
+
+/** Per-day spend and blended delivered cost. */
+export function costTrendSeries(days = []) {
+  return days.map((day) => {
+    const delivered = day.totalDelivered || 0;
+    const cost = day.variableOmCost || 0;
+    return {
+      date: day.date,
+      label: day.date.slice(5),
+      cost: round(cost),
+      avgCost: delivered > 0 ? round(cost / delivered) : null,
+    };
+  });
+}
+
+/** Compact stacked dispatch mix: top plants by volume plus an Other bucket. */
+export function plantMixSeries(plan, { limit = 5 } = {}) {
+  const grid = allocationGrid(plan);
+  const topRows = grid.rows.slice(0, limit).map((row, index) => ({ ...row, key: `plant${index}` }));
+  const otherRows = grid.rows.slice(limit);
+  const plants = topRows.map((row) => ({ key: row.key, name: row.name, totalM3: row.totalM3 }));
+
+  if (otherRows.length) {
+    plants.push({
+      key: "other",
+      name: "Other",
+      totalM3: round(sum(otherRows, (row) => row.totalM3)),
+    });
+  }
+
+  const series = grid.dates.map((date) => {
+    const point = { date, label: date.slice(5) };
+    for (const row of topRows) point[row.key] = round(row.byDate[date] || 0);
+    if (otherRows.length) point.other = round(sum(otherRows, (row) => row.byDate[date] || 0));
+    return point;
+  });
+
+  return { series, plants };
+}
+
+/** Count the constraints named by the solver each day, with shortfall alongside. */
+export function bottleneckSeries(days = []) {
+  const keys = { plant_supply: "plantSupply", pipe: "pipe", pump: "pump", gate_intake: "gateIntake" };
+  return days.map((day) => {
+    const point = {
+      date: day.date,
+      label: day.date.slice(5),
+      plantSupply: 0,
+      pipe: 0,
+      pump: 0,
+      gateIntake: 0,
+      shortage: round(day.totalShortage || 0),
+    };
+    for (const constraint of day.bindingConstraints || []) {
+      const key = keys[constraint.kind];
+      if (key) point[key] += 1;
+    }
+    return point;
+  });
 }
 
 /**

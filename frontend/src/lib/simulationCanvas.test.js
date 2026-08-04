@@ -9,6 +9,7 @@ import {
   dayOverlay,
   canvasStaleness,
   edgeDetail,
+  edgeInsight,
   nodeDetail,
   nodeInsight,
   daySummaries,
@@ -230,6 +231,32 @@ test("edgeDetail: an unconstrained pipe reports no utilisation rather than a fak
 test("edgeDetail: an edge the run never saw is flagged, not fabricated", () => {
   const detail = edgeDetail(PLAN, 0, "p_unknown");
   assert.equal(detail.inRun, false);
+});
+
+test("edgeInsight: pipe series uses flow against capacity", () => {
+  const insight = edgeInsight(PLAN, 1, "p1");
+  assert.equal(insight.kind, "pipe");
+  assert.equal(insight.metricLabel, "Flow");
+  assert.equal(insight.referenceLabel, "Capacity");
+  assert.equal(insight.currentValue, 1000);
+  assert.equal(insight.referenceValue, 1000);
+  assert.equal(insight.noteLabel, "Binding");
+  assert.equal(insight.noteValueText, "Now");
+  assert.equal(insight.tone, "bad");
+  assert.deepEqual(insight.series.map((point) => point.value), [500, 1000]);
+  assert.deepEqual(insight.series.map((point) => point.reference), [1000, 1000]);
+  assert.equal(insight.series[1].alert, true);
+});
+
+test("edgeInsight: unconstrained pipes graph flow without a fake capacity", () => {
+  const insight = edgeInsight(PLAN, 0, "p2");
+  assert.equal(insight.referenceValue, null);
+  assert.deepEqual(insight.series.map((point) => point.reference), [null, null]);
+  assert.equal(insight.noteValueText, "No limit");
+});
+
+test("edgeInsight: unknown pipes have no popover data", () => {
+  assert.equal(edgeInsight(PLAN, 0, "p_unknown"), null);
 });
 
 test("nodeDetail: a gate carries prose for its shortage cause", () => {

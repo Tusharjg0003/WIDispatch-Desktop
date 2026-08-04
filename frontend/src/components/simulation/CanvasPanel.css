@@ -48,7 +48,7 @@
 .nodeinsight {
   position: absolute;
   z-index: 4;
-  width: 224px;
+  width: 504px;
   padding: 9px 10px 10px;
   border: 1px solid rgba(15, 23, 42, 0.14);
   border-radius: 8px;
@@ -179,7 +179,7 @@
 
 .nodeinsight__chart svg {
   width: 100%;
-  height: 58px;
+  height: 131px;
   display: block;
   overflow: visible;
 }

@@ -17,6 +17,21 @@ function indexOfSelector(stylesheet, needle) {
   return stylesheet.findIndex((rule) => rule.selector.includes(needle));
 }
 
+function exactSelectorIndex(stylesheet, selector) {
+  return stylesheet.findIndex((rule) => rule.selector === selector);
+}
+
+test("buildCyStyle: simulation edge colours follow the base edge rule", () => {
+  const stylesheet = buildCyStyle();
+  const simIndexes = simulationSelectorIndexes(stylesheet).filter((i) => stylesheet[i].selector.includes("sim-edge"));
+  const baseEdgeIdx = exactSelectorIndex(stylesheet, "edge");
+  assert.ok(baseEdgeIdx >= 0, "expected to find base edge rule");
+  assert.ok(simIndexes.length > 0, "expected to find simulation edge selectors");
+  for (const i of simIndexes) {
+    assert.ok(i > baseEdgeIdx, `simulation edge rule at index ${i} (${stylesheet[i].selector}) must follow base edge (index ${baseEdgeIdx})`);
+  }
+});
+
 test("buildCyStyle: simulation overlay rules precede node:selected", () => {
   const stylesheet = buildCyStyle();
   const simIndexes = simulationSelectorIndexes(stylesheet);

@@ -427,14 +427,29 @@ export default function TransmissionPage() {
     : null;
 
   const selectedLineGroups = useMemo(() => {
-    if (!selectedSystem) return { mainLines: [], orphanBranches: [] };
+    if (!selectedSystem) return { mainLines: [], orphanBranches: [], systemPipes: [] };
     const selectedIds = Array.from(selectedSystem.lineIds);
     const selectedIdSet = new Set(selectedIds);
     const lineById = new Map(lines.map((line) => [line.id, line]));
     const lineItems = selectedIds.map((lineId) => lineById.get(lineId) || { id: lineId, name: lineId });
     const branchesByParentId = new Map();
+    const pipesByLineId = new Map();
+    const systemPipes = [];
     const mainLines = [];
     const orphanBranches = [];
+
+    asArray(selectedSystem.pipes).forEach((pipe) => {
+      const pipeLineIds = asArray(pipe.lines).map((line) => line.id).filter(Boolean);
+      if (!pipeLineIds.length) {
+        systemPipes.push(pipe);
+        return;
+      }
+      pipeLineIds.forEach((lineId) => {
+        const pipes = pipesByLineId.get(lineId) || [];
+        pipes.push(pipe);
+        pipesByLineId.set(lineId, pipes);
+      });
+    });
 
     lineItems.forEach((line) => {
       const isBranch = !!line.isBranch || !!line.parentLineId;
@@ -459,9 +474,17 @@ export default function TransmissionPage() {
     return {
       mainLines: mainLines.map((line) => ({
         line,
-        branches: branchesByParentId.get(line.id) || [],
+        pipes: pipesByLineId.get(line.id) || [],
+        branches: (branchesByParentId.get(line.id) || []).map((branch) => ({
+          line: branch,
+          pipes: pipesByLineId.get(branch.id) || [],
+        })),
       })),
-      orphanBranches,
+      orphanBranches: orphanBranches.map((line) => ({
+        line,
+        pipes: pipesByLineId.get(line.id) || [],
+      })),
+      systemPipes,
     };
   }, [selectedSystem, lines]);
 
@@ -676,18 +699,39 @@ export default function TransmissionPage() {
                     </section>
 
                     <section className="transmission-system-detail__section">
-                      <h3>Registered Lines / Branches</h3>
-                      {selectedSystem.lineIds.size === 0 ? (
-                        <div className="transmission-system-detail__empty">No registered lines for this transmission system.</div>
+                      <h3>System Structure</h3>
+                      {selectedSystem.lineIds.size === 0 && selectedSystem.pipes.length === 0 ? (
+                        <div className="transmission-system-detail__empty">No registered lines or saved pipe segments for this transmission system.</div>
                       ) : (
                         <div className="transmission-line-tree">
-                          {selectedLineGroups.mainLines.map(({ line, branches }) => {
+                          <div className="transmission-structure-row transmission-structure-row--system">
+                            <span className="transmission-line-kind transmission-line-kind--system">System</span>
+                            <div className="transmission-line-row__copy">
+                              <strong>{selectedSystem.system.name || selectedSystem.system.id}</strong>
+                              <small>{selectedSystem.lineIds.size} registered lines, {selectedSystem.pipes.length} saved segment{selectedSystem.pipes.length === 1 ? "" : "s"}</small>
+                            </div>
+                          </div>
+                          {selectedLineGroups.systemPipes.map((pipe) => (
+                            <div className="transmission-structure-row transmission-structure-row--segment transmission-structure-row--system-segment" key={`system-pipe-${pipe.networkId}-${pipe.id}`}>
+                              <span className="transmission-structure-branch-mark">-</span>
+                              <span className="transmission-line-kind transmission-line-kind--pipe">Pipe</span>
+                              <div className="transmission-line-row__copy">
+                                <strong>{pipe.name}</strong>
+                                <small>{pipe.source} to {pipe.target}</small>
+                              </div>
+                            </div>
+                          ))}
+                          {selectedLineGroups.mainLines.map(({ line, pipes, branches }) => {
                             const savedLine = lines.find((item) => item.id === line.id);
+                            const segmentCount = pipes.length + branches.reduce((sum, branch) => sum + branch.pipes.length, 0);
                             return (
                               <div className="transmission-line-group" key={line.id}>
-                                <div className="transmission-line-row">
+                                <div className="transmission-structure-row transmission-structure-row--line">
                                   <span className="transmission-line-kind">Line</span>
-                                  <strong>{lineDisplayName(line)}</strong>
+                                  <div className="transmission-line-row__copy">
+                                    <strong>{lineDisplayName(line)}</strong>
+                                    <small>{branches.length} branch{branches.length === 1 ? "" : "es"}, {segmentCount} segment{segmentCount === 1 ? "" : "s"}</small>
+                                  </div>
                                   {savedLine && (
                                     <button
                                       type="button"
@@ -700,16 +744,26 @@ export default function TransmissionPage() {
                                     </button>
                                   )}
                                 </div>
-                                {branches.length > 0 && (
-                                  <div className="transmission-branch-list">
-                                    {branches.map((branch) => {
-                                      const savedBranch = lines.find((item) => item.id === branch.id);
-                                      return (
-                                        <div className="transmission-line-row transmission-line-row--branch" key={branch.id}>
+                                <div className="transmission-structure-children">
+                                  {pipes.map((pipe) => (
+                                    <div className="transmission-structure-row transmission-structure-row--segment" key={`${line.id}-${pipe.networkId}-${pipe.id}`}>
+                                      <span className="transmission-structure-branch-mark">-</span>
+                                      <span className="transmission-line-kind transmission-line-kind--pipe">Pipe</span>
+                                      <div className="transmission-line-row__copy">
+                                        <strong>{pipe.name}</strong>
+                                        <small>{pipe.source} to {pipe.target}</small>
+                                      </div>
+                                    </div>
+                                  ))}
+                                  {branches.map(({ line: branch, pipes: branchPipes }) => {
+                                    const savedBranch = lines.find((item) => item.id === branch.id);
+                                    return (
+                                      <div className="transmission-line-group transmission-line-group--branch" key={branch.id}>
+                                        <div className="transmission-structure-row transmission-structure-row--branch">
                                           <span className="transmission-line-kind transmission-line-kind--branch">Branch</span>
                                           <div className="transmission-line-row__copy">
                                             <strong>{lineDisplayName(branch)}</strong>
-                                            <small>Branch of {lineDisplayName(line)}</small>
+                                            <small>Branch of {lineDisplayName(line)} - {branchPipes.length} segment{branchPipes.length === 1 ? "" : "s"}</small>
                                           </div>
                                           {savedBranch && (
                                             <button
@@ -723,34 +777,69 @@ export default function TransmissionPage() {
                                             </button>
                                           )}
                                         </div>
-                                      );
-                                    })}
-                                  </div>
-                                )}
+                                        <div className="transmission-structure-children transmission-structure-children--branch">
+                                          {branchPipes.map((pipe) => (
+                                            <div className="transmission-structure-row transmission-structure-row--segment" key={`${branch.id}-${pipe.networkId}-${pipe.id}`}>
+                                              <span className="transmission-structure-branch-mark">-</span>
+                                              <span className="transmission-line-kind transmission-line-kind--pipe">Pipe</span>
+                                              <div className="transmission-line-row__copy">
+                                                <strong>{pipe.name}</strong>
+                                                <small>{pipe.source} to {pipe.target}</small>
+                                              </div>
+                                            </div>
+                                          ))}
+                                          {branchPipes.length === 0 && (
+                                            <div className="transmission-structure-empty">No saved pipe segments under this branch.</div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                  {pipes.length === 0 && branches.length === 0 && (
+                                    <div className="transmission-structure-empty">No saved pipe segments under this line.</div>
+                                  )}
+                                </div>
                               </div>
                             );
                           })}
-                          {selectedLineGroups.orphanBranches.map((line) => {
+                          {selectedLineGroups.orphanBranches.map(({ line, pipes }) => {
                             const savedLine = lines.find((item) => item.id === line.id);
                             const parentLine = lines.find((item) => item.id === line.parentLineId);
                             return (
-                              <div className="transmission-line-row transmission-line-row--branch transmission-line-row--orphan" key={line.id}>
-                                <span className="transmission-line-kind transmission-line-kind--branch">Branch</span>
-                                <div className="transmission-line-row__copy">
-                                  <strong>{lineDisplayName(line)}</strong>
-                                  <small>{line.parentLineId ? `Branch of ${lineDisplayName(parentLine || { id: line.parentLineId, name: line.parentLineId })}` : "Branch parent not selected"}</small>
+                              <div className="transmission-line-group transmission-line-group--branch" key={line.id}>
+                                <div className="transmission-structure-row transmission-structure-row--branch transmission-structure-row--orphan">
+                                  <span className="transmission-line-kind transmission-line-kind--branch">Branch</span>
+                                  <div className="transmission-line-row__copy">
+                                    <strong>{lineDisplayName(line)}</strong>
+                                    <small>{line.parentLineId ? `Branch of ${lineDisplayName(parentLine || { id: line.parentLineId, name: line.parentLineId })}` : "Branch parent not selected"} - {pipes.length} segment{pipes.length === 1 ? "" : "s"}</small>
+                                  </div>
+                                  {savedLine && (
+                                    <button
+                                      type="button"
+                                      className="transmission-line-chip__delete"
+                                      onClick={() => handleDeleteSystemLine(savedLine)}
+                                      disabled={deletingLineId === line.id}
+                                      title={`Delete ${lineDisplayName(line)}`}
+                                    >
+                                      {deletingLineId === line.id ? "Deleting" : "Delete"}
+                                    </button>
+                                  )}
                                 </div>
-                                {savedLine && (
-                                  <button
-                                    type="button"
-                                    className="transmission-line-chip__delete"
-                                    onClick={() => handleDeleteSystemLine(savedLine)}
-                                    disabled={deletingLineId === line.id}
-                                    title={`Delete ${lineDisplayName(line)}`}
-                                  >
-                                    {deletingLineId === line.id ? "Deleting" : "Delete"}
-                                  </button>
-                                )}
+                                <div className="transmission-structure-children transmission-structure-children--branch">
+                                  {pipes.map((pipe) => (
+                                    <div className="transmission-structure-row transmission-structure-row--segment" key={`${line.id}-${pipe.networkId}-${pipe.id}`}>
+                                      <span className="transmission-structure-branch-mark">-</span>
+                                      <span className="transmission-line-kind transmission-line-kind--pipe">Pipe</span>
+                                      <div className="transmission-line-row__copy">
+                                        <strong>{pipe.name}</strong>
+                                        <small>{pipe.source} to {pipe.target}</small>
+                                      </div>
+                                    </div>
+                                  ))}
+                                  {pipes.length === 0 && (
+                                    <div className="transmission-structure-empty">No saved pipe segments under this branch.</div>
+                                  )}
+                                </div>
                               </div>
                             );
                           })}

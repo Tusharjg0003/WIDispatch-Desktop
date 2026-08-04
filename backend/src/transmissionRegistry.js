@@ -269,15 +269,17 @@ export async function listTransmissionLines() {
 }
 
 export async function createTransmissionLine(body = {}) {
-  requireName(body.name);
+  const rawName = body.name || (body.isBranch ? body.branchName : "");
+  requireName(rawName);
   const db = await getDb();
+  const name = String(rawName).trim();
   const doc = {
     id: `line_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-    name: String(body.name).trim(),
+    name,
     systemId: body.systemId || null,
     isBranch: !!body.isBranch,
     parentLineId: body.parentLineId || null,
-    branchName: body.branchName || null,
+    branchName: body.isBranch ? String(body.branchName || name).trim() : null,
     created_at: new Date().toISOString(),
   };
   await db.collection(LINES_COLLECTION).insertOne(doc);

@@ -1,13 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import cytoscape from "cytoscape";
-import { AlertTriangle, Crosshair, GitBranch, Layers, Maximize2, Palette, RefreshCw, Tag, Waves, XCircle } from "lucide-react";
+import { AlertTriangle, GitBranch, Layers, Maximize2, Palette, RefreshCw, Waves, XCircle } from "lucide-react";
 import { buildCyStyle } from "../../cytoscape/buildCyStyle";
 import { applyCardIcon } from "../../cytoscape/nodeCard";
 import { addGraph } from "../../cytoscape/graph";
 import { applyOverlay, clearOverlay, startFlowAnimation, stopFlowAnimation } from "../../cytoscape/simulationOverlay";
 import { clearTraceClasses, computeTrace, paintTrace, traceNeighbours } from "../../cytoscape/trace";
 import { applyIsolation, clearIsolation, isIsolated } from "../../cytoscape/isolate";
-import { canvasStaleness, dayOverlay, daySummaries, nodeInsight } from "../../lib/simulationCanvas";
+import { canvasStaleness, dayOverlay, daySummaries, edgeInsight, nodeInsight } from "../../lib/simulationCanvas";
 import { fetchNetwork } from "../../api/networks";
 import CanvasDayScrubber from "./CanvasDayScrubber";
 import CanvasToolbar from "./CanvasToolbar";
@@ -15,11 +15,11 @@ import CanvasDetails from "./CanvasDetails";
 import NodeInsightPopover from "./NodeInsightPopover";
 import "./CanvasPanel.css";
 
-function nodeAnchor(node, container) {
-  if (!node?.length || !container) return null;
-  const box = node.renderedBoundingBox({ includeLabels: false, includeOverlays: false });
+function elementAnchor(el, container) {
+  if (!el?.length || !container) return null;
+  const box = el.renderedBoundingBox({ includeLabels: false, includeOverlays: false });
   const stageWidth = container.clientWidth;
-  const halfWidth = 118;
+  const halfWidth = 258;
   const margin = 10;
   const lower = stageWidth > halfWidth * 2 ? halfWidth : stageWidth / 2;
   const upper = stageWidth > halfWidth * 2 ? stageWidth - halfWidth : stageWidth / 2;
@@ -45,7 +45,6 @@ export default function CanvasPanel({ plan }) {
   const [dayIdx, setDayIdx] = useState(0);
   const [animate, setAnimate] = useState(true);
   const [showLegend, setShowLegend] = useState(true);
-  const [showLabels, setShowLabels] = useState(true);
   const [toast, setToast] = useState(null);
   const [traceActive, setTraceActive] = useState(false);
   const [traceMode, setTraceMode] = useState("delivered");
@@ -148,7 +147,11 @@ export default function CanvasPanel({ plan }) {
   const overlay = useMemo(() => dayOverlay(plan, dayIdx), [plan, dayIdx]);
   const summaries = useMemo(() => daySummaries(plan), [plan]);
   const insight = useMemo(
-    () => (selection.kind === "node" ? nodeInsight(plan, dayIdx, selection.id) : null),
+    () => {
+      if (selection.kind === "node") return nodeInsight(plan, dayIdx, selection.id);
+      if (selection.kind === "edge") return edgeInsight(plan, dayIdx, selection.id);
+      return null;
+    },
     [plan, dayIdx, selection.id, selection.kind],
   );
 
@@ -235,7 +238,7 @@ export default function CanvasPanel({ plan }) {
       const el = selected[0];
       const kind = el.isEdge() ? "edge" : "node";
       setSelection({ id: el.id(), kind });
-      setInsightAnchor(kind === "node" ? nodeAnchor(el, containerRef.current) : null);
+      setInsightAnchor(elementAnchor(el, containerRef.current));
     };
 
     cy.on("tap", "node", onNodeTap);
@@ -250,11 +253,11 @@ export default function CanvasPanel({ plan }) {
 
   useEffect(() => {
     const cy = cyRef.current;
-    if (!cy || !cyReady || selection.kind !== "node" || !selection.id) return undefined;
+    if (!cy || !cyReady || !selection.kind || !selection.id) return undefined;
 
     const update = () => {
-      const node = cy.getElementById(selection.id);
-      setInsightAnchor(nodeAnchor(node, containerRef.current));
+      const el = cy.getElementById(selection.id);
+      setInsightAnchor(elementAnchor(el, containerRef.current));
     };
 
     update();
@@ -302,15 +305,6 @@ export default function CanvasPanel({ plan }) {
     };
   }, [animate, overlay, cyReady]);
 
-  // Newly hydrated elements need the class applied too, hence the `topology`
-  // dependency alongside the toggle itself.
-  useEffect(() => {
-    const cy = cyRef.current;
-    if (!cy || !cyReady) return;
-    if (showLabels) cy.elements().removeClass("hide-labels");
-    else cy.elements().addClass("hide-labels");
-  }, [showLabels, cyReady, topology]);
-
   useEffect(() => {
     if (!toast) return undefined;
     const id = setTimeout(() => setToast(null), 3200);
@@ -335,13 +329,6 @@ export default function CanvasPanel({ plan }) {
   }, []);
 
   const handleFit = () => cyRef.current?.fit(undefined, 48);
-
-  const handleZoomToSelection = () => {
-    const cy = cyRef.current;
-    if (!cy) return;
-    const selected = cy.$(":selected");
-    cy.fit(selected.length ? selected : cy.elements(), 60);
-  };
 
   const handleResetView = () => {
     const cy = cyRef.current;
@@ -370,8 +357,6 @@ export default function CanvasPanel({ plan }) {
       key: "view",
       items: [
         { key: "fit", label: "Fit", icon: Maximize2, title: "Fit the network to the frame", onClick: handleFit },
-        { key: "tosel", label: "To Sel", icon: Crosshair, title: "Zoom to selection (or fit all)", onClick: handleZoomToSelection },
-        { key: "labels", label: "Labels", icon: Tag, title: "Toggle labels", active: showLabels, onClick: () => setShowLabels((v) => !v) },
         { key: "reset", label: "Reset", icon: RefreshCw, title: "Reset pan and zoom", onClick: handleResetView },
       ],
     },
@@ -391,7 +376,7 @@ export default function CanvasPanel({ plan }) {
             else { clearTraceClasses(cyRef.current); setTraceInfo(null); }
           },
         },
-        {
+        traceActive && {
           key: "tracemode",
           label: traceMode === "delivered" ? "Delivered" : "Reachable",
           title: "Switch between delivered flow paths and topology reachability",
@@ -399,7 +384,7 @@ export default function CanvasPanel({ plan }) {
         },
         { key: "isolate", label: "Isolate", icon: Layers, title: "Isolate the current selection, or clear isolate", active: isolationActive, onClick: handleToggleIsolation },
         { key: "clear", label: "Clear", icon: XCircle, title: "Clear trace, isolate and selection", onClick: clearAnalysis },
-      ],
+      ].filter(Boolean),
     },
     {
       key: "overlay",

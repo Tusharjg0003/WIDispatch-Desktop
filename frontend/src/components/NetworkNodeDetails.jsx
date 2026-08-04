@@ -174,7 +174,10 @@ export default function NetworkNodeDetails({
       ? lines.filter((line) => lineBelongsToSystem(line, pipeSpec.transmissionSystemId))
       : [];
     const createLineForPipe = async () => {
-      if (!onCreateLine || !lineDraft.newLineName.trim()) return;
+      const lineName = lineDraft.isBranch
+        ? lineDraft.newLineName.trim() || lineDraft.branchName.trim()
+        : lineDraft.newLineName.trim();
+      if (!onCreateLine || !lineName) return;
       if (!pipeSpec.transmissionSystemId) {
         setLineError("Choose a transmission system before adding a line.");
         return;
@@ -187,14 +190,13 @@ export default function NetworkNodeDetails({
       setLineError(null);
       try {
         const created = await onCreateLine({
-          name: lineDraft.newLineName.trim(),
+          name: lineName,
           systemId: pipeSpec.transmissionSystemId,
           isBranch: lineDraft.isBranch,
           parentLineId: lineDraft.isBranch ? lineDraft.parentLineId || null : null,
-          branchName: lineDraft.isBranch ? lineDraft.branchName || null : null,
+          branchName: lineDraft.isBranch ? lineDraft.branchName.trim() || lineName : null,
         });
-        const current = Array.isArray(pipeSpec.lineGroupIds) ? pipeSpec.lineGroupIds : [];
-        onSpecArrayChange("lineGroupIds", current.includes(created.id) ? current : [...current, created.id]);
+        onSpecArrayChange("lineGroupIds", [created.id]);
         setLineDraft({ newLineName: "", isBranch: false, parentLineId: "", branchName: "" });
       } catch (err) {
         setLineError(err.message || "Failed to add line");
@@ -338,7 +340,7 @@ export default function NetworkNodeDetails({
           <TransmissionLinePicker
             lines={systemLines}
             selectedIds={pipeSpec.lineGroupIds || []}
-            onSelectedIdsChange={(ids) => onSpecArrayChange("lineGroupIds", ids)}
+            onSelectedIdsChange={(ids) => onSpecArrayChange("lineGroupIds", ids.slice(0, 1))}
             newLineName={lineDraft.newLineName}
             onNewLineNameChange={(value) => setLineDraftField("newLineName", value)}
             isBranch={lineDraft.isBranch}

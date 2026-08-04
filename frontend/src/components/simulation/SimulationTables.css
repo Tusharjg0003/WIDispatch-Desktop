@@ -153,6 +153,10 @@
   background: rgba(217, 119, 6, 0.06);
 }
 
+.simt__day--short td {
+  background: rgba(220, 38, 38, 0.05);
+}
+
 .simt__chip {
   display: inline-block;
   padding: 2px 8px;

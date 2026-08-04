@@ -219,6 +219,48 @@ export function edgeDetail(plan, dayIdx, edgeId) {
   };
 }
 
+export function edgeInsight(plan, dayIdx, edgeId) {
+  const current = edgeDetail(plan, dayIdx, edgeId);
+  if (!current?.inRun) return null;
+
+  const pipe = (plan?.pipes || []).find((p) => p.id === edgeId);
+  const series = (plan?.days || []).map((day, idx) => {
+    const flow = day.pipeFlows?.[edgeId] || 0;
+    const util = pipe?.capacity > 0 ? flow / pipe.capacity : null;
+    const { edges: dayBnEdges } = bottleneckIds(day);
+    return {
+      dayIdx: idx,
+      date: day.date,
+      value: round(flow),
+      reference: current.unconstrained ? null : current.capacity,
+      alert: dayBnEdges.has(edgeId) || (util != null && util >= 0.9),
+      extra: util == null ? null : round(util * 100),
+    };
+  });
+
+  const observed = series.flatMap((point) => [point.value, point.reference]).filter((v) => v != null && v > 0);
+  const max = observed.length ? Math.max(...observed) : 0;
+  const active = series.find((point) => point.dayIdx === dayIdx);
+  const utilText = current.utilisationPct == null ? "No limit" : `${Math.round(current.utilisationPct)}%`;
+
+  return {
+    kind: "pipe",
+    name: current.label || edgeId,
+    eyebrow: "Pipeline flow",
+    metricLabel: "Flow",
+    referenceLabel: "Capacity",
+    currentValue: current.flow,
+    referenceValue: current.unconstrained ? null : current.capacity,
+    noteLabel: current.isBottleneck ? "Binding" : current.unconstrained ? "Limit" : "Utilisation",
+    noteValue: current.isBottleneck ? null : current.utilisationPct,
+    noteValueText: current.isBottleneck ? "Now" : utilText,
+    tone: current.isBottleneck || current.utilisationPct >= 90 ? "bad" : current.flow > EPS ? "good" : "idle",
+    series,
+    active,
+    max,
+  };
+}
+
 export function nodeDetail(plan, dayIdx, nodeId) {
   const day = plan?.days?.[dayIdx];
   if (!day) return null;

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { summariseGates, summarisePlants, summarisePumps } from "../../lib/simulationRows";
+import { causeLabel, summariseGates, summarisePlants, summarisePumps } from "../../lib/simulationRows";
 import "./SimulationTables.css";
 
 // The four config tables. Every number is read from the portals via the last
@@ -98,6 +98,37 @@ function PerDayBreakdown({ row, showAllocated }) {
               </tr>
             );
           })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function GateDayBreakdown({ row }) {
+  return (
+    <div className="simt__breakdown">
+      <table className="simt__days">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th className="num">Required</th>
+            <th className="num">Delivered</th>
+            <th className="num">Shortfall</th>
+            <th>Cause</th>
+          </tr>
+        </thead>
+        <tbody>
+          {row.days.map((d) => (
+            <tr key={d.date} className={d.shortage > 0 ? "simt__day--short" : undefined}>
+              <td className="mono">{d.date}</td>
+              <td className="num mono">{fmt(d.required)}</td>
+              <td className="num mono">{fmt(d.delivered)}</td>
+              <td className={`num mono ${d.shortage > 0 ? "simt__short" : ""}`}>
+                {d.shortage > 0 ? fmt(d.shortage) : "—"}
+              </td>
+              <td>{d.shortage > 0 ? causeLabel(d.cause) : "Served"}</td>
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>
@@ -270,6 +301,7 @@ export default function SimulationTables({ plan, overrides, onOverrideChange }) 
         <table className="ledger simt">
           <thead>
             <tr>
+              <th className="simt__tick" />
               <th className="simt__tick">On</th>
               <th>City gate</th>
               <th className="num">Required (avg/day)</th>
@@ -284,29 +316,38 @@ export default function SimulationTables({ plan, overrides, onOverrideChange }) 
           <tbody>
             {gates.map((row) => {
               const o = overrides[row.nodeId] || {};
+              const open = expanded === row.nodeId;
               return (
-                <tr key={row.nodeId} className={o.active === false ? "simt__row--off" : undefined}>
-                  <td className="simt__tick"><ActiveCell active={o.active} onChange={set(row.nodeId, "active")} /></td>
-                  <td>
-                    <span className="simt__name">{row.name}</span>
-                    <span className="simt__sub mono">{row.assetId}</span>
-                  </td>
-                  <td className="num mono">{fmt(row.avgRequired)}</td>
-                  <td className="num mono">{fmt(row.requiredM3)}</td>
-                  <td className="num mono">{fmt(row.deliveredM3)}</td>
-                  <td className={`num mono ${row.shortageM3 > 0 ? "simt__short" : ""}`}>
-                    {row.shortageM3 > 0 ? fmt(row.shortageM3) : "—"}
-                  </td>
-                  <td className="num mono">{row.shortDays || "—"}</td>
-                  <td className="mono">{row.worstDay ? row.worstDay.date : "—"}</td>
-                  <td>
-                    <OverrideCell value={o.demand} placeholder={fmt(row.avgRequired)} suffix="m³/d"
-                      onChange={set(row.nodeId, "demand")} />
-                  </td>
-                </tr>
+                <React.Fragment key={row.nodeId}>
+                  <tr className={o.active === false ? "simt__row--off" : undefined}>
+                    <td className="simt__tick"><ExpandCell expanded={open} onToggle={toggle(row.nodeId)} /></td>
+                    <td className="simt__tick"><ActiveCell active={o.active} onChange={set(row.nodeId, "active")} /></td>
+                    <td>
+                      <span className="simt__name">{row.name}</span>
+                      <span className="simt__sub mono">{row.assetId}</span>
+                    </td>
+                    <td className="num mono">{fmt(row.avgRequired)}</td>
+                    <td className="num mono">{fmt(row.requiredM3)}</td>
+                    <td className="num mono">{fmt(row.deliveredM3)}</td>
+                    <td className={`num mono ${row.shortageM3 > 0 ? "simt__short" : ""}`}>
+                      {row.shortageM3 > 0 ? fmt(row.shortageM3) : "—"}
+                    </td>
+                    <td className="num mono">{row.shortDays || "—"}</td>
+                    <td className="mono">{row.worstDay ? row.worstDay.date : "—"}</td>
+                    <td>
+                      <OverrideCell value={o.demand} placeholder={fmt(row.avgRequired)} suffix="m³/d"
+                        onChange={set(row.nodeId, "demand")} />
+                    </td>
+                  </tr>
+                  {open && (
+                    <tr className="simt__detail-row">
+                      <td colSpan={10}><GateDayBreakdown row={row} /></td>
+                    </tr>
+                  )}
+                </React.Fragment>
               );
             })}
-            {!gates.length && <tr><td colSpan={9} className="simt__empty">No city gates on this network.</td></tr>}
+            {!gates.length && <tr><td colSpan={10} className="simt__empty">No city gates on this network.</td></tr>}
           </tbody>
         </table>
       </Sheet>

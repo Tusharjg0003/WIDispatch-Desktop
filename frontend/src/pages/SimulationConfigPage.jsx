@@ -6,6 +6,7 @@ import SimulationTables from "../components/simulation/SimulationTables";
 import ResultsPanel from "../components/simulation/ResultsPanel";
 import DecisionsPanel from "../components/simulation/DecisionsPanel";
 import CanvasPanel from "../components/simulation/CanvasPanel";
+import SimulationGraphGrid from "../components/simulation/SimulationGraphGrid";
 import { countOverrides, validateConfig } from "../lib/simulationRows";
 import {
   createSimulationConfig, deleteSimulationConfig, fetchDispatchPlan, fetchSimulationConfig,
@@ -330,7 +331,10 @@ export default function SimulationConfigPage() {
               </nav>
 
               {tab === "configuration" && (
-                <SimulationTables plan={plan} overrides={overrides} onOverrideChange={handleOverrideChange} />
+                <>
+                  <SimulationGraphGrid plan={plan} />
+                  <SimulationTables plan={plan} overrides={overrides} onOverrideChange={handleOverrideChange} />
+                </>
               )}
               {tab === "results" && <ResultsPanel plan={plan} />}
               {tab === "decisions" && (

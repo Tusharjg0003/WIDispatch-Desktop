@@ -3,10 +3,13 @@ import assert from "node:assert/strict";
 import {
   allocationGrid,
   allocationsToCsv,
+  bottleneckSeries,
   causeLabel,
   chartSeries,
   countOverrides,
+  costTrendSeries,
   groupDemandVerdicts,
+  plantMixSeries,
   summariseGates,
   summarisePlants,
   summarisePumps,
@@ -180,6 +183,11 @@ test("summariseGates: totals demand, counts short days and keeps the worst", () 
   assert.equal(row.shortDays, 2);
   assert.deepEqual(row.worstDay, { date: "2026-08-11", shortage: 600, cause: "insufficient_capacity" });
   assert.equal(row.satisfactionPct, 76.67);
+  assert.deepEqual(row.days, [
+    { date: "2026-08-10", required: 1000, delivered: 1000, shortage: 0, cause: null, intakeLimited: undefined },
+    { date: "2026-08-11", required: 1000, delivered: 400, shortage: 600, cause: "insufficient_capacity", intakeLimited: undefined },
+    { date: "2026-08-12", required: 1000, delivered: 900, shortage: 100, cause: "transmission_bottleneck", intakeLimited: undefined },
+  ]);
 });
 
 test("summariseGates: a fully served gate has no worst day", () => {
@@ -261,6 +269,60 @@ test("groupDemandVerdicts: worst-affected gates sort to the top", () => {
 test("chartSeries: one point per day with an MM-DD label", () => {
   const series = chartSeries([day("2026-08-10")]);
   assert.deepEqual(series, [{ date: "2026-08-10", label: "08-10", required: 1000, delivered: 1000, shortage: 0, cost: 1000 }]);
+});
+
+test("costTrendSeries: derives daily spend and blended delivered cost", () => {
+  const series = costTrendSeries([
+    day("2026-08-10", { totalDelivered: 500, variableOmCost: 1250 }),
+    day("2026-08-11", { totalDelivered: 0, variableOmCost: 0 }),
+  ]);
+
+  assert.deepEqual(series, [
+    { date: "2026-08-10", label: "08-10", cost: 1250, avgCost: 2.5 },
+    { date: "2026-08-11", label: "08-11", cost: 0, avgCost: null },
+  ]);
+});
+
+test("plantMixSeries: keeps top plants and rolls the rest into Other", () => {
+  const plan = {
+    days: [{ date: "2026-08-10" }, { date: "2026-08-11" }],
+    plantAllocations: [
+      { assetId: "PL_A", plantName: "Alpha", date: "2026-08-10", allocatedM3: 600, costSar: 600 },
+      { assetId: "PL_A", plantName: "Alpha", date: "2026-08-11", allocatedM3: 200, costSar: 200 },
+      { assetId: "PL_B", plantName: "Beta", date: "2026-08-10", allocatedM3: 300, costSar: 300 },
+      { assetId: "PL_C", plantName: "Gamma", date: "2026-08-11", allocatedM3: 100, costSar: 100 },
+    ],
+  };
+
+  const mix = plantMixSeries(plan, { limit: 2 });
+
+  assert.deepEqual(mix.plants.map((p) => p.name), ["Alpha", "Beta", "Other"]);
+  assert.deepEqual(mix.series, [
+    { date: "2026-08-10", label: "08-10", plant0: 600, plant1: 300, other: 0 },
+    { date: "2026-08-11", label: "08-11", plant0: 200, plant1: 0, other: 100 },
+  ]);
+});
+
+test("bottleneckSeries: counts solver constraints by kind per day", () => {
+  const series = bottleneckSeries([
+    day("2026-08-10", {
+      totalShortage: 250,
+      bindingConstraints: [
+        { kind: "pipe", id: "p1" },
+        { kind: "pipe", id: "p2" },
+        { kind: "pump", id: "n_pump" },
+        { kind: "unknown", id: "x" },
+      ],
+    }),
+    day("2026-08-11", {
+      bindingConstraints: [{ kind: "plant_supply", id: "n_cheap" }, { kind: "gate_intake", id: "n_gate" }],
+    }),
+  ]);
+
+  assert.deepEqual(series, [
+    { date: "2026-08-10", label: "08-10", plantSupply: 0, pipe: 2, pump: 1, gateIntake: 0, shortage: 250 },
+    { date: "2026-08-11", label: "08-11", plantSupply: 1, pipe: 0, pump: 0, gateIntake: 1, shortage: 0 },
+  ]);
 });
 
 test("validateConfig: a missing network or name blocks the run", () => {

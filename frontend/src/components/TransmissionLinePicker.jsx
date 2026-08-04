@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useId } from "react";
 import { Field, Toggle } from "./AssetFormControls";
 
 const lineName = (line) => (line?.isBranch ? line.branchName || line.name : line?.name) || line?.id || "Line";
@@ -20,20 +20,48 @@ export default function TransmissionLinePicker({
   createError = null,
   emptyMessage = "No saved transmission lines for this system yet.",
 }) {
-  const selectedSet = new Set(selectedIds || []);
+  const choiceName = useId();
+  const selectedId = (selectedIds || [])[0] || "";
   const lineById = new Map(lines.map((line) => [line.id, line]));
   const parentLines = lines.filter((line) => !line.isBranch);
-  const toggleLine = (lineId) => {
-    const next = new Set(selectedSet);
-    if (next.has(lineId)) next.delete(lineId);
-    else next.add(lineId);
-    onSelectedIdsChange(Array.from(next));
+  const hasNewLineName = !!newLineName.trim();
+  const hasBranchName = !!branchName.trim();
+  const canCreateLine = isBranch ? (hasNewLineName || hasBranchName) && !!parentLineId : hasNewLineName;
+  const clearNewLineDraft = () => {
+    onNewLineNameChange("");
+    onIsBranchChange(false);
+    onParentLineIdChange("");
+    onBranchNameChange("");
+  };
+  const chooseExistingLine = (lineId) => {
+    onSelectedIdsChange(selectedId === lineId ? [] : [lineId]);
+    clearNewLineDraft();
+  };
+  const setNewName = (value) => {
+    onSelectedIdsChange([]);
+    onNewLineNameChange(value);
+  };
+  const setLineType = (checked) => {
+    onSelectedIdsChange([]);
+    onIsBranchChange(checked);
+    if (!checked) {
+      onParentLineIdChange("");
+      onBranchNameChange("");
+    }
+  };
+  const setParentLine = (lineId) => {
+    onSelectedIdsChange([]);
+    onParentLineIdChange(parentLineId === lineId ? "" : lineId);
+  };
+  const setBranchDisplayName = (value) => {
+    onSelectedIdsChange([]);
+    onBranchNameChange(value);
   };
 
   return (
     <div className="tlp">
       <div className="tlp__group">
-        <div className="tlp__label">Existing Lines</div>
+        <div className="tlp__label">Choose Existing Line / Branch</div>
         <div className="tlp__check-list">
           {lines.length === 0 ? (
             <div className="tlp__empty">{emptyMessage}</div>
@@ -41,9 +69,16 @@ export default function TransmissionLinePicker({
             lines.map((line) => (
               <label className="tlp__check" key={line.id}>
                 <input
-                  type="checkbox"
-                  checked={selectedSet.has(line.id)}
-                  onChange={() => toggleLine(line.id)}
+                  type="radio"
+                  name={`${choiceName}-line-choice`}
+                  checked={selectedId === line.id}
+                  onClick={(e) => {
+                    if (selectedId === line.id) {
+                      e.preventDefault();
+                      chooseExistingLine(line.id);
+                    }
+                  }}
+                  onChange={() => chooseExistingLine(line.id)}
                 />
                 <span className="tlp__check-copy">
                   <strong>{lineName(line)}</strong>
@@ -57,25 +92,19 @@ export default function TransmissionLinePicker({
         </div>
       </div>
 
-      <Field label="New Line Name">
+      <Field label={isBranch ? "New Branch Name" : "New Line Name"}>
         <input
           type="text"
           value={newLineName}
-          placeholder="e.g. Line 3"
-          onChange={(e) => onNewLineNameChange(e.target.value)}
+          placeholder={isBranch ? "e.g. North spur" : "e.g. Line 3"}
+          onChange={(e) => setNewName(e.target.value)}
         />
       </Field>
 
       <Toggle
         label="Line Type"
         checked={isBranch}
-        onChange={(checked) => {
-          onIsBranchChange(checked);
-          if (!checked) {
-            onParentLineIdChange("");
-            onBranchNameChange("");
-          }
-        }}
+        onChange={setLineType}
         onLabel="Branch"
         offLabel="Main line"
       />
@@ -92,9 +121,16 @@ export default function TransmissionLinePicker({
                 parentLines.map((line) => (
                   <label className="tlp__check" key={line.id}>
                     <input
-                      type="checkbox"
+                      type="radio"
+                      name={`${choiceName}-branch-parent`}
                       checked={parentLineId === line.id}
-                      onChange={(e) => onParentLineIdChange(e.target.checked ? line.id : "")}
+                      onClick={(e) => {
+                        if (parentLineId === line.id) {
+                          e.preventDefault();
+                          setParentLine(line.id);
+                        }
+                      }}
+                      onChange={() => setParentLine(line.id)}
                     />
                     <span className="tlp__check-copy">
                       <strong>{lineName(line)}</strong>
@@ -105,12 +141,12 @@ export default function TransmissionLinePicker({
               )}
             </div>
           </div>
-          <Field label="Branch Name">
+          <Field label="Branch Display Name (optional)">
             <input
               type="text"
               value={branchName}
-              placeholder="e.g. North spur"
-              onChange={(e) => onBranchNameChange(e.target.value)}
+              placeholder="Defaults to new branch name"
+              onChange={(e) => setBranchDisplayName(e.target.value)}
             />
           </Field>
         </div>
@@ -122,7 +158,7 @@ export default function TransmissionLinePicker({
             type="button"
             className="af__btn af__btn--primary"
             onClick={onCreateLine}
-            disabled={creating || !newLineName.trim() || (isBranch && !parentLineId)}
+            disabled={creating || !canCreateLine}
           >
             {creating ? "Adding..." : "Add line to pipe"}
           </button>

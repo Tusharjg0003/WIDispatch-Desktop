@@ -132,7 +132,7 @@ export default function PipeVariablesModal({ systems, lines, onCancel, onSubmit 
           <TransmissionLinePicker
             lines={systemLines}
             selectedIds={form.lineGroupIds}
-            onSelectedIdsChange={(ids) => setFormField("lineGroupIds", ids)}
+            onSelectedIdsChange={(ids) => setFormField("lineGroupIds", ids.slice(0, 1))}
             newLineName={form.newLineName}
             onNewLineNameChange={(value) => setFormField("newLineName", value)}
             isBranch={form.isBranch}

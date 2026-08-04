@@ -1352,26 +1352,29 @@ export default function NetworkBuilderPage() {
   const submitPipe = useCallback(
     async (form) => {
       let systemId = form.transmissionSystemId || null;
-      let lineIds = [...form.lineGroupIds];
+      let lineIds = Array.isArray(form.lineGroupIds) ? form.lineGroupIds.filter(Boolean).slice(0, 1) : [];
 
       if (form.newTransmissionSystemName.trim()) {
         const created = await createTransmissionSystem({ name: form.newTransmissionSystemName.trim() });
         setTransmissionSystems((s) => [...s, created]);
         systemId = created.id;
       }
-      if (form.newLineName.trim()) {
+      const lineName = form.isBranch
+        ? form.newLineName.trim() || form.branchName.trim()
+        : form.newLineName.trim();
+      if (lineName) {
         if (!systemId) throw new Error("Choose or create a transmission system before adding a line.");
         if (form.isBranch && !form.parentLineId) throw new Error("Choose a parent line before creating a branch.");
         const created = await createTransmissionLine({
-          name: form.newLineName.trim(),
+          name: lineName,
           systemId,
           isBranch: form.isBranch,
           parentLineId: form.isBranch ? form.parentLineId || null : null,
-          branchName: form.isBranch ? form.branchName : null,
+          branchName: form.isBranch ? form.branchName.trim() || lineName : null,
         });
         const line = { ...created, systemId: created.systemId || systemId };
         setTransmissionLines((s) => [...s, line]);
-        lineIds = [...lineIds, line.id];
+        lineIds = [line.id];
       }
 
       const specs = {};

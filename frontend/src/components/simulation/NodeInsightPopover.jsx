@@ -3,6 +3,10 @@ import { X } from "lucide-react";
 
 const nf = new Intl.NumberFormat("en-US");
 const fmt = (v) => (v == null ? "—" : nf.format(Math.round(v)));
+const displayNote = (insight) => {
+  if (insight.noteValueText) return insight.noteValueText;
+  return insight.noteValue == null ? "Now" : fmt(insight.noteValue);
+};
 
 function pathFor(points) {
   return points.map((point, idx) => `${idx === 0 ? "M" : "L"} ${point.x} ${point.y}`).join(" ");
@@ -10,10 +14,10 @@ function pathFor(points) {
 
 function TimeSeriesChart({ insight }) {
   const [hoverIdx, setHoverIdx] = useState(null);
-  const width = 204;
-  const height = 58;
-  const padX = 7;
-  const padY = 7;
+  const width = 459;
+  const height = 131;
+  const padX = 15;
+  const padY = 15;
   const plotW = width - padX * 2;
   const plotH = height - padY * 2;
   const series = insight.series || [];
@@ -33,8 +37,8 @@ function TimeSeriesChart({ insight }) {
   const hitWidth = plotW / Math.max(1, series.length);
   const tooltip = useMemo(() => {
     if (!inspectPoint) return null;
-    const left = `${(Math.min(Math.max(inspectPoint.x, 54), width - 54) / width) * 100}%`;
-    const position = inspectPoint.y < 26 ? "below" : "above";
+    const left = `${(Math.min(Math.max(inspectPoint.x, 122), width - 122) / width) * 100}%`;
+    const position = inspectPoint.y < 59 ? "below" : "above";
     return { left, position };
   }, [inspectPoint]);
 
@@ -136,7 +140,7 @@ export default function NodeInsightPopover({ insight, anchor, onClose }) {
         </span>
         <span>
           <em>{insight.noteLabel}</em>
-          <strong>{insight.noteValue == null ? "Now" : fmt(insight.noteValue)}</strong>
+          <strong>{displayNote(insight)}</strong>
         </span>
       </div>
 
