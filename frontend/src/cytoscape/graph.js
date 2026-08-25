@@ -4,6 +4,8 @@
 // Cytoscape (already carrying `data`), and the flatter shape the backend
 // stores. Both are accepted so a canvas saved by any version still loads.
 
+import { restoreBendClasses } from "./bendEditing.js";
+
 export const addGraph = (cy, g) => {
   cy.batch(() => {
     (g.nodes || []).forEach((n) => {
@@ -38,4 +40,8 @@ export const addGraph = (cy, g) => {
       cy.add({ group: "edges", data });
     });
   });
+
+  // Bend points persist as weight/distance arrays on the edge data, but the
+  // marker class that makes the stylesheet draw them as segments does not.
+  restoreBendClasses(cy);
 };

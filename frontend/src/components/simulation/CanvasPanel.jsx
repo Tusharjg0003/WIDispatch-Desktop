@@ -2,8 +2,10 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import cytoscape from "cytoscape";
 import { AlertTriangle, GitBranch, Layers, Maximize2, Palette, RefreshCw, Waves, XCircle } from "lucide-react";
 import { buildCyStyle } from "../../cytoscape/buildCyStyle";
-import { applyCardIcon } from "../../cytoscape/nodeCard";
+import { applyEntitySymbol } from "../../cytoscape/entitySymbol";
 import { addGraph } from "../../cytoscape/graph";
+import { CANVAS_GRID_PITCH, computeGridPitch, wrapOffset } from "../../cytoscape/canvasGeometry";
+import { applyZoomLod } from "../../cytoscape/lod";
 import { applyOverlay, clearOverlay, startFlowAnimation, stopFlowAnimation } from "../../cytoscape/simulationOverlay";
 import { clearTraceClasses, computeTrace, paintTrace, traceNeighbours } from "../../cytoscape/trace";
 import { applyIsolation, clearIsolation, isIsolated } from "../../cytoscape/isolate";
@@ -69,21 +71,30 @@ export default function CanvasPanel({ plan }) {
     cyRef.current = cy;
     setCyReady(true);
 
+    // Same adaptive grid as the Network Builder canvas, so a plan reads against
+    // the mesh the topology was drawn on.
     const updateGridBackground = () => {
       const stage = stageRef.current;
       if (!stage) return;
       const pan = cy.pan();
-      const size = 24 * cy.zoom();
-      const offsetX = ((pan.x % size) + size) % size;
-      const offsetY = ((pan.y % size) + size) % size;
+      const zoom = cy.zoom();
+      const { minor, major, minorAlpha } = computeGridPitch(zoom, CANVAS_GRID_PITCH);
+      const minorPx = minor * zoom;
+      const majorPx = major * zoom;
 
-      stage.style.setProperty("--grid-size", `${size}px`);
-      stage.style.setProperty("--grid-offset-x", `${offsetX}px`);
-      stage.style.setProperty("--grid-offset-y", `${offsetY}px`);
+      stage.style.setProperty("--grid-size", `${minorPx}px`);
+      stage.style.setProperty("--grid-major-size", `${majorPx}px`);
+      stage.style.setProperty("--grid-minor-alpha", String(minorAlpha));
+      stage.style.setProperty("--grid-offset-x", `${wrapOffset(pan.x, minorPx)}px`);
+      stage.style.setProperty("--grid-offset-y", `${wrapOffset(pan.y, minorPx)}px`);
+      stage.style.setProperty("--grid-major-offset-x", `${wrapOffset(pan.x, majorPx)}px`);
+      stage.style.setProperty("--grid-major-offset-y", `${wrapOffset(pan.y, majorPx)}px`);
     };
 
     updateGridBackground();
+    applyZoomLod(cy);
     cy.on("pan zoom resize", updateGridBackground);
+    cy.on("zoom add", () => applyZoomLod(cy));
 
     return () => {
       cy.removeListener("pan zoom resize", updateGridBackground);
@@ -120,7 +131,7 @@ export default function CanvasPanel({ plan }) {
     if (!cy || !cyReady || !topology) return;
     cy.elements().remove();
     addGraph(cy, topology);
-    cy.nodes().forEach(applyCardIcon);
+    cy.nodes().forEach(applyEntitySymbol);
     cy.fit(undefined, 48);
   }, [topology, cyReady]);
 

@@ -21,9 +21,13 @@
 .simcanvas__stage {
   position: relative;
   height: clamp(420px, 62vh, 760px);
-  --grid-size: 24px;
+  --grid-size: 40px;
+  --grid-major-size: 200px;
+  --grid-minor-alpha: 1;
   --grid-offset-x: 0px;
   --grid-offset-y: 0px;
+  --grid-major-offset-x: 0px;
+  --grid-major-offset-y: 0px;
   border: 1px solid #e2e8f0;
   border-radius: 10px;
   background: #f8fafc;
@@ -33,10 +37,20 @@
 .simcanvas__stage--grid {
   background-color: #f8fafc;
   background-image:
-    linear-gradient(to right, rgba(99, 130, 191, 0.16) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(99, 130, 191, 0.16) 1px, transparent 1px);
-  background-size: var(--grid-size) var(--grid-size);
-  background-position: var(--grid-offset-x) var(--grid-offset-y);
+    linear-gradient(to right, rgba(99, 130, 191, calc(0.16 * var(--grid-minor-alpha))) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(99, 130, 191, calc(0.16 * var(--grid-minor-alpha))) 1px, transparent 1px),
+    linear-gradient(to right, rgba(71, 105, 170, 0.3) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(71, 105, 170, 0.3) 1px, transparent 1px);
+  background-size:
+    var(--grid-size) var(--grid-size),
+    var(--grid-size) var(--grid-size),
+    var(--grid-major-size) var(--grid-major-size),
+    var(--grid-major-size) var(--grid-major-size);
+  background-position:
+    var(--grid-offset-x) var(--grid-offset-y),
+    var(--grid-offset-x) var(--grid-offset-y),
+    var(--grid-major-offset-x) var(--grid-major-offset-y),
+    var(--grid-major-offset-x) var(--grid-major-offset-y);
 }
 
 .simcanvas__cy {

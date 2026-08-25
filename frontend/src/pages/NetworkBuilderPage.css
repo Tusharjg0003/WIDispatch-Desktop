@@ -48,20 +48,68 @@
   flex: 1;
   min-width: 0;
   min-height: 0;
-  --grid-size: 24px;
+  /* Written by the canvas on every pan/zoom (see computeGridPitch): the pitch
+     doubles/halves to stay legible, and minor lines cross-fade at the step. */
+  --grid-size: 40px;
+  --grid-major-size: 200px;
+  --grid-minor-alpha: 1;
   --grid-offset-x: 0px;
   --grid-offset-y: 0px;
+  --grid-major-offset-x: 0px;
+  --grid-major-offset-y: 0px;
   border: 1px solid var(--line);
   background: var(--surface-subtle);
   overflow: hidden;
 }
 
+/* First pair of gradients is the minor grid, second pair the major one. */
 .nb-canvas-wrap--grid {
   background-image:
-    linear-gradient(to right, rgba(99, 130, 191, 0.18) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(99, 130, 191, 0.18) 1px, transparent 1px);
-  background-size: var(--grid-size) var(--grid-size);
-  background-position: var(--grid-offset-x) var(--grid-offset-y);
+    linear-gradient(to right, rgba(99, 130, 191, calc(0.16 * var(--grid-minor-alpha))) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(99, 130, 191, calc(0.16 * var(--grid-minor-alpha))) 1px, transparent 1px),
+    linear-gradient(to right, rgba(71, 105, 170, 0.3) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(71, 105, 170, 0.3) 1px, transparent 1px);
+  background-size:
+    var(--grid-size) var(--grid-size),
+    var(--grid-size) var(--grid-size),
+    var(--grid-major-size) var(--grid-major-size),
+    var(--grid-major-size) var(--grid-major-size);
+  background-position:
+    var(--grid-offset-x) var(--grid-offset-y),
+    var(--grid-offset-x) var(--grid-offset-y),
+    var(--grid-major-offset-x) var(--grid-major-offset-y),
+    var(--grid-major-offset-x) var(--grid-major-offset-y);
+}
+
+/* Ghost bend handles — an SVG layer of our own, separate from the Konva stage
+   cytoscape-edge-editing draws its drag anchors on. */
+.nb-edge-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.nb-edge-ghost-handle {
+  pointer-events: auto;
+  cursor: crosshair;
+}
+
+.nb-edge-ghost-handle-dot {
+  fill: #ffffff;
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  opacity: 0.75;
+  transition: opacity 0.12s ease, fill 0.12s ease;
+}
+
+.nb-edge-ghost-handle:hover .nb-edge-ghost-handle-dot {
+  opacity: 1;
+  fill: var(--accent);
+  stroke: #ffffff;
 }
 
 .nb-canvas {

@@ -1,6 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import cytoscape from "cytoscape";
+import Konva from "konva";
+import contextMenus from "cytoscape-context-menus";
+import edgeEditing from "cytoscape-edge-editing";
+import "cytoscape-context-menus/cytoscape-context-menus.css";
 import {
   EmptyIcon,
   IconActive,
@@ -56,7 +60,8 @@ import {
 } from "../components/IconAssets";
 import { useLayout } from "../contexts/LayoutContext";
 import { buildCyStyle, ENTITY_TYPE_COLORS, ENTITY_TYPE_LABELS } from "../cytoscape/buildCyStyle";
-import { applyCardIcon } from "../cytoscape/nodeCard";
+import { applyEntitySymbol } from "../cytoscape/entitySymbol";
+import { LOD_CLASSES, applyZoomLod as applyZoomLodTo } from "../cytoscape/lod";
 import {
   TRACE_CLASSES,
   clearTraceClasses,
@@ -65,6 +70,21 @@ import {
   traceNeighbours,
 } from "../cytoscape/trace";
 import { addGraph } from "../cytoscape/graph";
+import {
+  CANVAS_GRID_PITCH,
+  computeGridPitch,
+  snapPosition,
+  wrapOffset,
+} from "../cytoscape/canvasGeometry";
+import {
+  BEND_CLASS,
+  addBendPoint,
+  edgeBendPoints,
+  edgePolyline,
+  removeAllBendPoints,
+  removeNearestBendPoint,
+  restoreBendClasses,
+} from "../cytoscape/bendEditing";
 import { applyIsolation, clearIsolation as clearIsolationClasses, isIsolated } from "../cytoscape/isolate";
 import { fetchNetwork, fetchNetworks, saveNetwork, updateNetwork, deleteNetwork } from "../api/networks";
 import {
@@ -83,6 +103,27 @@ import "./NetworkBuilderPage.css";
 // Dispatched after a successful save/update so WorkspaceRecordSidebar (which
 // owns its own fetch) knows to refresh its list.
 const NETWORK_SAVED_EVENT = "widispatch:network-saved";
+
+// Cytoscape extensions register onto the shared cytoscape module, so this must
+// happen exactly once per page load — the flag survives Vite's hot reloads,
+// which would otherwise re-register and double up the plugins' event handlers.
+const CY_EXTENSIONS_KEY = "__widispatchCyExtensionsRegistered__";
+if (typeof window !== "undefined" && !window[CY_EXTENSIONS_KEY]) {
+  cytoscape.use(contextMenus);
+  edgeEditing(cytoscape, Konva);
+  window[CY_EXTENSIONS_KEY] = true;
+}
+
+// Right-clicking a pipe lands exactly on the centreline; a bend with no
+// perpendicular offset would be stored but invisible.
+const CONTEXT_BEND_MIN_OFFSET = 40;
+// Screen-pixel radius for "you double-clicked an existing bend".
+const BEND_GRAB_RADIUS_PX = 14;
+// A double-click edit is applied a frame later, after cytoscape-edge-editing
+// has finished its own (5ms-debounced) handling of the same gesture — writing
+// inside the event turn gets clobbered, and pulling a bend out from under the
+// plugin mid-gesture makes it throw on an edge that no longer has any.
+const BEND_EDIT_DEFER_MS = 24;
 
 const rid = (p) => `${p}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 const INSERT_TOOL_LABELS = {
@@ -164,7 +205,7 @@ const ACTIVE_STATUSES = new Set(["operational", "maintenance", "under_constructi
 const INACTIVE_STATUSES = new Set(["inactive", "decommissioned"]);
 const TRACE_ROOT_TYPES = new Set(["handover_point", "point", "filling_station", "filling-station", "distribution_point", "distribution-point"]);
 const TRACE_SOURCE_TYPES = new Set(["plant", "stp"]);
-const TRANSIENT_CANVAS_CLASSES = `${TRACE_CLASSES} draw-source insert-target nb-isolate-hidden nb-isolate-dim hide-labels`;
+const TRANSIENT_CANVAS_CLASSES = `${TRACE_CLASSES} ${LOD_CLASSES} draw-source insert-target nb-isolate-hidden nb-isolate-dim hide-labels`;
 const TRANSIENT_CANVAS_CLASS_SET = new Set(TRANSIENT_CANVAS_CLASSES.split(/\s+/));
 // Pipe spec keys that must stay strings — everything else handleSpecChange
 // coerces to a number, since most pipe spec fields are numeric.
@@ -282,9 +323,10 @@ const assetMeta = (a) => ({
 // their full data + position; edges keep full data. Older saves used a flat
 // shape, so addGraph tolerates both.
 const serializeGraph = (cy) => ({
-  // cardIcon is a derived data-URI regenerated on load — don't persist it.
+  // cardIcon / cardStatusColor are derived (see entitySymbol.js) and are
+  // recomputed on load — persisting them would freeze a stale symbol style.
   nodes: cy.nodes().map((n) => {
-    const { cardIcon, ...data } = n.data();
+    const { cardIcon, cardStatusColor, ...data } = n.data();
     return { data, position: { ...n.position() } };
   }),
   edges: cy.edges().map((e) => ({ data: { ...e.data() } })),
@@ -293,8 +335,8 @@ const serializeGraph = (cy) => ({
 const elementData = (element) => element?.data || element || {};
 
 const graphPosition = (element, index = 0) => element?.position || {
-  x: (index % 3) * 220,
-  y: Math.floor(index / 3) * 84,
+  x: (index % 3) * 130,
+  y: Math.floor(index / 3) * 96,
 };
 
 const download = (name, text, mime) => {
@@ -362,6 +404,10 @@ export default function NetworkBuilderPage() {
   const commitPendingRef = useRef(false);
   const areaRef = useRef(null);
   const traceRunRef = useRef(null);
+  const snapToGridRef = useRef(false);
+  const grabbedNodeRef = useRef(null); // the node actually under the cursor
+  const hoveredEdgeRef = useRef(null);
+  const overlayFrameRef = useRef(null);
 
   const [cyReady, setCyReady] = useState(false);
   const [mode, setMode] = useState("select");
@@ -386,6 +432,9 @@ export default function NetworkBuilderPage() {
   const [entityModal, setEntityModal] = useState({ open: false, type: null, position: null, mode: null, form: null, editId: null });
   const [showLabels, setShowLabels] = useState(true);
   const [showGrid, setShowGrid] = useState(true);
+  const [snapToGrid, setSnapToGrid] = useState(false);
+  // Midpoint dots on the hovered pipe; clicking one drops a bend there.
+  const [edgeOverlay, setEdgeOverlay] = useState({ edgeId: null, handles: [] });
   const [showInspector, setShowInspector] = useState(true);
   const [canvasFocusMode, setCanvasFocusMode] = useState(false);
   const [isolationActive, setIsolationActive] = useState(false);
@@ -616,8 +665,8 @@ export default function NetworkBuilderPage() {
               meta: assetMeta(asset),
             },
             position: {
-              x: position.x + column * 220,
-              y: position.y + row * 84,
+              x: position.x + column * 130,
+              y: position.y + row * 96,
             },
           });
           added.push(node);
@@ -682,6 +731,7 @@ export default function NetworkBuilderPage() {
           const nextId = rid("n");
           idMap.set(oldId, nextId);
           delete sourceData.cardIcon;
+          delete sourceData.cardStatusColor;
           const pos = positions[index];
           const addedNode = cy.add({
             group: "nodes",
@@ -779,8 +829,183 @@ export default function NetworkBuilderPage() {
 
   traceRunRef.current = runTrace;
 
+  // ── Grid, snapping and bend-point plumbing ─────────────────────────────────
+  // The grid is a CSS background on the wrapper rather than a Cytoscape layer,
+  // so pan/zoom have to be mirrored onto custom properties by hand. The pitch
+  // adapts (see computeGridPitch) so the mesh never collapses into a solid fill
+  // when zoomed out or stretches into nothing when zoomed in.
+  const updateGridBackground = useCallback(() => {
+    const wrap = canvasWrapRef.current;
+    const cy = cyRef.current;
+    if (!wrap || !cy) return;
+
+    const pan = cy.pan();
+    const zoom = cy.zoom();
+    const { minor, major, minorAlpha } = computeGridPitch(zoom, CANVAS_GRID_PITCH);
+    const minorPx = minor * zoom;
+    const majorPx = major * zoom;
+
+    wrap.style.setProperty("--grid-size", `${minorPx}px`);
+    wrap.style.setProperty("--grid-major-size", `${majorPx}px`);
+    wrap.style.setProperty("--grid-minor-alpha", String(minorAlpha));
+    wrap.style.setProperty("--grid-offset-x", `${wrapOffset(pan.x, minorPx)}px`);
+    wrap.style.setProperty("--grid-offset-y", `${wrapOffset(pan.y, minorPx)}px`);
+    wrap.style.setProperty("--grid-major-offset-x", `${wrapOffset(pan.x, majorPx)}px`);
+    wrap.style.setProperty("--grid-major-offset-y", `${wrapOffset(pan.y, majorPx)}px`);
+  }, []);
+
+  const applyZoomLod = useCallback(() => {
+    applyZoomLodTo(cyRef.current);
+  }, []);
+
+  // cytoscape-edge-editing draws its drag anchors on a Konva stage layered over
+  // the container. It does not resize or re-place that stage itself, and it
+  // keeps drawing anchors for edges that are no longer selected.
+  const syncBendEditingOverlay = useCallback(() => {
+    const cy = cyRef.current;
+    const container = containerRef.current;
+    if (!cy || !container) return;
+
+    // Re-derive bend state from the weight/distance arrays before drawing:
+    // they are the source of truth, and the plugin occasionally drops the
+    // marker class (or leaves stale absolute positions behind) while working
+    // an anchor, which would otherwise straighten a bent pipe on the next
+    // node drag.
+    restoreBendClasses(cy);
+
+    const bentEdges = cy.edges(`.${BEND_CLASS}`);
+    // Visibility follows "are there any bends at all", not "is a bent pipe
+    // selected": the plugin unselects an edge while its anchors are being
+    // dragged, and a stage that disappears mid-drag never receives the mouseup
+    // it does its bookkeeping in (see restoreInteraction below).
+    container.querySelectorAll('[id^="cy-node-edge-editing-stage"]').forEach((overlay) => {
+      overlay.style.position = "absolute";
+      overlay.style.top = "0";
+      overlay.style.left = "0";
+      overlay.style.width = `${container.clientWidth}px`;
+      overlay.style.height = `${container.clientHeight}px`;
+      overlay.style.zIndex = "999";
+      overlay.style.display = bentEdges.length ? "block" : "none";
+    });
+
+    const api = typeof cy.edgeEditing === "function" ? cy.edgeEditing("get") : null;
+    api?.initAnchorPoints?.(bentEdges);
+  }, []);
+
+  // cytoscape-edge-editing turns off grabbing, selection and panning while an
+  // anchor is being dragged, and clears those flags again only from a Konva
+  // "mouse released over the stage" handler. Release anywhere else — outside
+  // the canvas, or over a bend this canvas has just rewritten — and the flags
+  // stay set, which reads to the user as "after touching a bend I can't move
+  // my assets any more". Every gesture therefore ends by putting the canvas
+  // back into its normal interactive state.
+  const restoreInteraction = useCallback(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+
+    // The plugin does that cleanup itself in a Konva "mouse released over the
+    // stage" handler — it resets the flags, releases the anchor it thinks is
+    // still held (a stuck one keeps being redrawn, even for a deleted pipe)
+    // and redraws. It binds that handler only while an anchor is being
+    // dragged, so firing the event at the end of every gesture is a no-op the
+    // rest of the time, and the real fix when the release never reached it.
+    const stage = Konva.stages?.find((candidate) =>
+      containerRef.current?.contains(candidate.container())
+    );
+    stage?.fire?.("contentMouseup");
+
+    if (cy.autoungrabify()) cy.autoungrabify(false);
+    if (cy.autounselectify()) cy.autounselectify(false);
+    if (!cy.panningEnabled()) cy.panningEnabled(true);
+    if (!cy.zoomingEnabled()) cy.zoomingEnabled(true);
+    if (!cy.boxSelectionEnabled()) cy.boxSelectionEnabled(true);
+  }, []);
+
+  // Ghost handles: a dot at the midpoint of every current pipe segment, so a
+  // bend is discoverable without knowing about the context menu.
+  const syncEdgeOverlay = useCallback(() => {
+    const cy = cyRef.current;
+    const edgeId = hoveredEdgeRef.current;
+    if (!cy || !edgeId) return;
+
+    const edge = cy.getElementById(edgeId);
+    if (!edge || !edge.length || edge.hasClass("nb-isolate-hidden")) {
+      setEdgeOverlay({ edgeId: null, handles: [] });
+      return;
+    }
+
+    const pan = cy.pan();
+    const zoom = cy.zoom();
+    const polyline = edgePolyline(edge);
+    const handles = polyline.slice(0, -1).map((point, index) => {
+      const next = polyline[index + 1];
+      const mid = { x: (point.x + next.x) / 2, y: (point.y + next.y) / 2 };
+      return {
+        key: index,
+        x: mid.x * zoom + pan.x,
+        y: mid.y * zoom + pan.y,
+        model: mid,
+      };
+    });
+
+    setEdgeOverlay({ edgeId, handles });
+  }, []);
+
+  const clearEdgeOverlay = useCallback(() => {
+    hoveredEdgeRef.current = null;
+    setEdgeOverlay((prev) => (prev.edgeId === null ? prev : { edgeId: null, handles: [] }));
+  }, []);
+
+  // Both overlays are redrawn on pan/zoom/drag, so coalesce to one per frame.
+  const scheduleOverlaySync = useCallback(() => {
+    if (overlayFrameRef.current) return;
+    overlayFrameRef.current = requestAnimationFrame(() => {
+      overlayFrameRef.current = null;
+      syncEdgeOverlay();
+      syncBendEditingOverlay();
+    });
+  }, [syncEdgeOverlay, syncBendEditingOverlay]);
+
+  const addBendAtModelPoint = useCallback(
+    (edgeId, modelPoint, options) => {
+      const cy = cyRef.current;
+      if (!cy) return;
+      const edge = cy.getElementById(edgeId);
+      // A double-click fires the midpoint handle's mousedown twice before React
+      // can re-render it, so every add is guarded against stacking bends.
+      const minSeparation = BEND_GRAB_RADIUS_PX / 2 / (cy.zoom() || 1);
+      if (!addBendPoint(edge, modelPoint, { minSeparation, ...options })) return;
+      scheduleCommit();
+      syncEdgeOverlay();
+      syncBendEditingOverlay();
+      restoreInteraction();
+    },
+    [scheduleCommit, syncEdgeOverlay, syncBendEditingOverlay, restoreInteraction]
+  );
+
+  const handleRemoveAllBends = useCallback(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    const bent = cy.edges(`:selected.${BEND_CLASS}`);
+    if (!bent.length) {
+      setToast("Select a bent pipe first.");
+      return;
+    }
+    bent.forEach((edge) => removeAllBendPoints(edge));
+    scheduleCommit();
+    clearEdgeOverlay();
+    syncBendEditingOverlay();
+    restoreInteraction();
+  }, [scheduleCommit, clearEdgeOverlay, syncBendEditingOverlay, restoreInteraction]);
+
   // ── Cytoscape init (mount once) ──────────────────────────────────────────────
   useEffect(() => {
+    // cytoscape-edge-editing mounts a Konva stage next to the canvas and does
+    // not always take it back down; a remount would otherwise stack them.
+    containerRef.current
+      ?.querySelectorAll('[id^="cy-node-edge-editing-stage"]')
+      .forEach((el) => el.remove());
+
     const cy = cytoscape({
       container: containerRef.current,
       style: buildCyStyle(),
@@ -791,19 +1016,6 @@ export default function NetworkBuilderPage() {
       wheelSensitivity: 0.2,
     });
     cyRef.current = cy;
-
-    const updateGridBackground = () => {
-      const wrap = canvasWrapRef.current;
-      if (!wrap) return;
-      const pan = cy.pan();
-      const size = 24 * cy.zoom();
-      const offsetX = ((pan.x % size) + size) % size;
-      const offsetY = ((pan.y % size) + size) % size;
-
-      wrap.style.setProperty("--grid-size", `${size}px`);
-      wrap.style.setProperty("--grid-offset-x", `${offsetX}px`);
-      wrap.style.setProperty("--grid-offset-y", `${offsetY}px`);
-    };
 
     const clearDrawSource = () => {
       cy.$(".draw-source").removeClass("draw-source");
@@ -931,26 +1143,262 @@ export default function NetworkBuilderPage() {
       backToSelect();
     });
 
+    // ── Bend-point editing ───────────────────────────────────────────────
+    // Bends only: the plugin's own menu items, Bezier control points and
+    // endpoint reconnection are all off, so the weight/distance arrays stay
+    // the single source of truth for a pipe's shape.
+    cy.edgeEditing({
+      undoable: false,
+      bendPositionsFunction: () => null,
+      bendPointPositionsSetterFunction: () => {},
+      addBendMenuItemTitle: false,
+      removeBendMenuItemTitle: false,
+      removeAllBendMenuItemTitle: false,
+      addControlMenuItemTitle: false,
+      removeControlMenuItemTitle: false,
+      removeAllControlMenuItemTitle: false,
+      handleReconnectEdge: false,
+      anchorShapeSizeFactor: 8,
+      enableFixedAnchorSize: true,
+      zIndex: 999,
+      bendRemovalSensitivity: 8,
+      anchorColor: "#1a4a8a",
+      endPointColor: "#1a4a8a",
+      enableCreateAnchorOnDrag: false,
+    });
+
+    cy.contextMenus({
+      evtType: "cxttap",
+      menuItems: [
+        {
+          id: "nb-add-bend",
+          content: "Add bend point",
+          selector: "edge",
+          onClickFunction: (evt) => {
+            const edge = evt.target || evt.cyTarget;
+            const pos = evt.position || evt.cyPosition;
+            if (edge && pos) {
+              addBendAtModelPoint(edge.id(), pos, { minOffset: CONTEXT_BEND_MIN_OFFSET });
+            }
+          },
+        },
+        {
+          id: "nb-remove-bend",
+          content: "Remove nearest bend point",
+          selector: `edge.${BEND_CLASS}`,
+          onClickFunction: (evt) => {
+            const edge = evt.target || evt.cyTarget;
+            const pos = evt.position || evt.cyPosition;
+            if (edge && pos && removeNearestBendPoint(edge, pos)) {
+              scheduleCommit();
+              scheduleOverlaySync();
+            }
+            restoreInteraction();
+          },
+        },
+        {
+          id: "nb-remove-all-bends",
+          content: "Remove all bend points",
+          selector: `edge.${BEND_CLASS}`,
+          onClickFunction: (evt) => {
+            const edge = evt.target || evt.cyTarget;
+            if (edge && removeAllBendPoints(edge)) {
+              scheduleCommit();
+              scheduleOverlaySync();
+            }
+            restoreInteraction();
+          },
+        },
+      ],
+    });
+
+    // Double-click a pipe to add a bend, or to drop the bend you clicked on.
+    //
+    // Two quirks shape this. Removal cannot ride on Cytoscape's own dblclick:
+    // while a bent pipe is selected the plugin's Konva stage sits over the
+    // canvas and swallows every pointer event that lands on an anchor — which
+    // is exactly where a "delete this bend" double-click lands. So removal is
+    // caught on the container in the capture phase, ahead of both, and tells
+    // the Cytoscape handler to stand down for that gesture. And either edit has
+    // to be applied after the gesture settles: the plugin handles the same
+    // double-click and rewrites the weight/distance arrays from its own state,
+    // clobbering anything written inside the event turn.
+    let removedBendOnDblclick = false;
+
+    const dblclickCapture = (event) => {
+      const container = containerRef.current;
+      if (!container) return;
+
+      const rect = container.getBoundingClientRect();
+      const pan = cy.pan();
+      const zoom = cy.zoom() || 1;
+      const modelPoint = {
+        x: (event.clientX - rect.left - pan.x) / zoom,
+        y: (event.clientY - rect.top - pan.y) / zoom,
+      };
+      const grabRadius = BEND_GRAB_RADIUS_PX / zoom;
+
+      // Any bent pipe, not just a selected one: the plugin unselects an edge
+      // while it manipulates its anchors, so selection is not a reliable
+      // filter here.
+      const hit = cy.edges(`.${BEND_CLASS}`).filter((edge) =>
+        edgeBendPoints(edge).some(
+          (point) => Math.hypot(point.x - modelPoint.x, point.y - modelPoint.y) <= grabRadius
+        )
+      );
+      if (!hit.length) return;
+
+      const edgeId = hit[0].id();
+      removedBendOnDblclick = true;
+      setTimeout(() => {
+        const edge = cy.getElementById(edgeId);
+        if (removeNearestBendPoint(edge, modelPoint)) {
+          scheduleCommit();
+          scheduleOverlaySync();
+        }
+        restoreInteraction();
+      }, BEND_EDIT_DEFER_MS);
+    };
+
+    containerRef.current?.addEventListener("dblclick", dblclickCapture, true);
+
+    cy.on("dblclick", "edge", (evt) => {
+      if (removedBendOnDblclick) {
+        removedBendOnDblclick = false;
+        return;
+      }
+      const edge = evt.target;
+      const clickPos = evt.position || evt.cyPosition;
+      if (!clickPos) return;
+
+      const grabRadius = BEND_GRAB_RADIUS_PX / (cy.zoom() || 1);
+      const onExistingBend = edgeBendPoints(edge).some(
+        (point) => Math.hypot(point.x - clickPos.x, point.y - clickPos.y) <= grabRadius
+      );
+      const edgeId = edge.id();
+
+      setTimeout(() => {
+        if (onExistingBend) {
+          if (removeNearestBendPoint(cy.getElementById(edgeId), clickPos)) {
+            scheduleCommit();
+            scheduleOverlaySync();
+          }
+          restoreInteraction();
+          return;
+        }
+        addBendAtModelPoint(edgeId, clickPos, { minOffset: 0 });
+      }, BEND_EDIT_DEFER_MS);
+    });
+
+    cy.on("mouseover", "edge", (evt) => {
+      if (modeRef.current !== "select") return;
+      hoveredEdgeRef.current = evt.target.id();
+      syncEdgeOverlay();
+    });
+    cy.on("mouseout", "edge", clearEdgeOverlay);
+    cy.on("remove", "edge", (evt) => {
+      if (hoveredEdgeRef.current === evt.target.id()) clearEdgeOverlay();
+    });
+
+    // Registered after the plugin's own tapend handler, so it runs last.
+    cy.on("tapend", () => setTimeout(restoreInteraction, 0));
+    const onPointerUp = () => setTimeout(restoreInteraction, 0);
+    window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("mouseup", onPointerUp);
+
+    cy.on("select unselect remove", "edge", syncBendEditingOverlay);
+    cy.on("cyedgeediting.changeAnchorPoints bendPointMovement", () => {
+      scheduleCommit();
+      scheduleOverlaySync();
+    });
+
+    // ── Snap to grid ─────────────────────────────────────────────────────
+    // A node follows the cursor freely; the grid is applied once, on drop, and
+    // only when Snap is on (Alt bypasses it for a single drag). Snapping on
+    // every drag tick instead makes a node jump between grid intersections
+    // under the cursor, which reads as movement locked to the axes.
+    //
+    // Only the node under the cursor is snapped; anything else moving with it
+    // is shifted by the same delta, so a multi-selection keeps its internal
+    // spacing instead of collapsing onto shared grid intersections.
+    const coMovers = (node) =>
+      node.selected() ? cy.nodes(":selected").difference(node) : cy.collection();
+
+    const snapOnDrop = (node) => {
+      const raw = node.position();
+      const snapped = snapPosition(raw, CANVAS_GRID_PITCH);
+      const dx = snapped.x - raw.x;
+      const dy = snapped.y - raw.y;
+      if (!dx && !dy) return;
+      const others = coMovers(node);
+      node.position(snapped);
+      if (others.length) {
+        others.positions((other) => ({
+          x: other.position().x + dx,
+          y: other.position().y + dy,
+        }));
+      }
+    };
+
+    cy.on("grab", "node", (evt) => {
+      grabbedNodeRef.current = evt.target.id();
+      clearEdgeOverlay();
+    });
+
+    cy.on("free", "node", (evt) => {
+      const node = evt.target;
+      // Cytoscape fires free for every node that moved; only act on the
+      // grabbed one, which carries the rest along.
+      const wasGrabbed = !grabbedNodeRef.current || grabbedNodeRef.current === node.id();
+      grabbedNodeRef.current = null;
+      if (!snapToGridRef.current || !wasGrabbed) return;
+      if (evt.originalEvent?.altKey) return;
+      snapOnDrop(node);
+    });
+
+    cy.on("drag position", "node", scheduleOverlaySync);
+    cy.on("dragfree", "node", syncBendEditingOverlay);
+
     cy.on("select unselect", syncSelection);
     cy.on("add", (evt) => {
       if (!showLabelsRef.current) evt.target.addClass("hide-labels");
     });
-    cy.on("add", "node", (evt) => applyCardIcon(evt.target));
+    cy.on("add", "node", (evt) => applyEntitySymbol(evt.target));
+    // Status and capacity live in persisted data; the symbol and its border are
+    // derived, so they follow every later edit too.
+    cy.on("data", "node", (evt) => applyEntitySymbol(evt.target));
     cy.on("add remove", () => {
       syncGraph();
       syncSelection();
     });
     cy.on("add remove dragfree", scheduleCommit);
     cy.on("pan zoom resize", updateGridBackground);
+    cy.on("pan zoom", scheduleOverlaySync);
+    cy.on("zoom", applyZoomLod);
+    cy.on("add", "node", applyZoomLod);
     updateGridBackground();
+    applyZoomLod();
 
     historyRef.current = { past: [], present: snapshotElements(cy), future: [] };
     setCyReady(true);
+    const containerEl = containerRef.current;
     return () => {
+      containerEl?.removeEventListener("dblclick", dblclickCapture, true);
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("mouseup", onPointerUp);
+      if (overlayFrameRef.current) {
+        cancelAnimationFrame(overlayFrameRef.current);
+        overlayFrameRef.current = null;
+      }
       cy.destroy();
       cyRef.current = null;
     };
-  }, [syncGraph, syncSelection, createPipeEdge, createJunctionNode, scheduleCommit, placeAssetsAt, placeTransmissionSystemAt, splitPipeWithNode]);
+  }, [
+    syncGraph, syncSelection, createPipeEdge, createJunctionNode, scheduleCommit,
+    placeAssetsAt, placeTransmissionSystemAt, splitPipeWithNode,
+    updateGridBackground, applyZoomLod, addBendAtModelPoint, syncEdgeOverlay,
+    syncBendEditingOverlay, clearEdgeOverlay, scheduleOverlaySync, restoreInteraction,
+  ]);
 
   // ── Hydrate from a saved network when the route :id changes ──────────────────
   useEffect(() => {
@@ -2244,6 +2692,10 @@ export default function NetworkBuilderPage() {
   }, [toast]);
 
   useEffect(() => {
+    snapToGridRef.current = snapToGrid;
+  }, [snapToGrid]);
+
+  useEffect(() => {
     showLabelsRef.current = showLabels;
     const cy = cyRef.current;
     if (!cy) return;
@@ -2375,6 +2827,14 @@ export default function NetworkBuilderPage() {
               >
                 Insert on Pipe
               </Btn>
+              <Btn
+                on={handleRemoveAllBends}
+                icon={IconMinus}
+                disabled={selectedEdgeCount < 1}
+                title="Straighten the selected pipes (remove every bend point)"
+              >
+                Straighten
+              </Btn>
             </div>
             <span className="toolbar-group__label">Insert</span>
           </div>
@@ -2401,6 +2861,14 @@ export default function NetworkBuilderPage() {
               <Btn on={() => setModeSafe(mode === "area-zoom" ? "select" : "area-zoom")} icon={IconMaximize} active={mode === "area-zoom"} title="Drag a rectangle to zoom">Area</Btn>
               <Btn on={() => setShowLabels((v) => !v)} icon={IconTag} active={showLabels} title="Toggle labels">Labels</Btn>
               <Btn on={() => setShowGrid((v) => !v)} icon={IconGrid} active={showGrid} title="Toggle grid">Grid</Btn>
+              <Btn
+                on={() => setSnapToGrid((v) => !v)}
+                icon={IconTarget}
+                active={snapToGrid}
+                title="Align assets to the grid when you drop them (hold Alt to bypass)"
+              >
+                Snap
+              </Btn>
               <Btn
                 on={() => setModeSafe(mode === "trace" ? "select" : "trace")}
                 icon={IconDistributionNetwork}
@@ -2540,7 +3008,8 @@ export default function NetworkBuilderPage() {
   }, [
     mode, pendingEntity, network.name, counts.nodes, counts.edges, realNodeCount, saveStatus,
     selectedEl, hasSelection, isPipeSel, hasPipeSelection, hasDeletableSelection, canUndo, canRedo,
-    showLabels, showGrid, showInspector, showLibrary, canvasFocusMode, findOpen, isolationActive, rightPanelTab,
+    showLabels, showGrid, snapToGrid, showInspector, showLibrary, canvasFocusMode, findOpen, isolationActive, rightPanelTab,
+    handleRemoveAllBends,
     setToolbar, setModeSafe, notImplemented, handleInsertEntity, handleFit, handleResetView,
     handleToggleLibraryPanel, handleOpenDetailsPanel, handleToggleDetailsPanel,
     handleZoomToSelection, handleSelectAll, handleSelectActive, handleSelectInactive,
@@ -2664,6 +3133,28 @@ export default function NetworkBuilderPage() {
           onDrop={handleLibraryDrop}
         >
           <div ref={containerRef} className="nb-canvas" />
+
+          {/* Midpoint dots on the hovered pipe. Dragging an existing bend is
+              still the edge-editing plugin's job; these only add new ones. */}
+          {edgeOverlay.handles.length > 0 && (
+            <svg className="nb-edge-overlay" aria-hidden="true">
+              {edgeOverlay.handles.map((handle) => (
+                <g
+                  key={handle.key}
+                  className="nb-edge-ghost-handle"
+                  transform={`translate(${handle.x} ${handle.y})`}
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    addBendAtModelPoint(edgeOverlay.edgeId, handle.model, { minOffset: 0 });
+                  }}
+                >
+                  <circle r="9" fill="transparent" />
+                  <circle className="nb-edge-ghost-handle-dot" r="4" />
+                </g>
+              ))}
+            </svg>
+          )}
 
           <button
             type="button"

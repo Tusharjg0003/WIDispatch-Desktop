@@ -9,7 +9,7 @@ import {
 } from "../api/metrics";
 import { fetchNetwork, fetchNetworks } from "../api/networks";
 import { buildCyStyle } from "../cytoscape/buildCyStyle";
-import { applyCardIcon } from "../cytoscape/nodeCard";
+import { applyEntitySymbol } from "../cytoscape/entitySymbol";
 import { activeFunctionalPumps, backupPumps, totalDesignCapacity } from "../lib/pumpStation";
 import { lineDisplayName, lineSystemId } from "../lib/transmissionLines";
 import "./ProductionPlantList.css";
@@ -143,7 +143,7 @@ function TransmissionSystemSnapshot({ system }) {
           data,
           position: { x: node.x, y: node.y },
         });
-        applyCardIcon(cyNode);
+        applyEntitySymbol(cyNode);
       });
       graph.edges.forEach((edge) => {
         cy.add({

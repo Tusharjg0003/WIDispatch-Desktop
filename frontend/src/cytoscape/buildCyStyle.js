@@ -7,11 +7,13 @@
 // This app's asset categories map straight onto cytoscape node "type".
 // `node` is the internal junction type (a small dot, not a DB asset).
 export const ENTITY_TYPE_COLORS = {
-  plant: "#567cff",
+  plant: "#3b82f6",
   pump: "#ec4899",
-  tank: "#0ea5e9",
-  handover_point: "#14b8a6",
-  node: "#8b93a7",
+  tank: "#10b981",
+  handover_point: "#f59e0b",
+  node: "#6b7280",
+  stp: "#a855f7",
+  filling_station: "#f97316",
 };
 
 export const ENTITY_TYPE_ABBREVIATIONS = {
@@ -42,44 +44,45 @@ const ACCENT = "#1a4a8a";
 
 export function buildCyStyle() {
   return [
-    // ── Base asset card ──────────────────────────────────────────────────
-    // A white card body with a status-tinted icon band on the left (supplied
-    // as a data-URI SVG via data(cardIcon)) and the label in the right region.
+    // ── Entity symbol ────────────────────────────────────────────────────
+    // An asset is a 44px map symbol, not a card: white body, a generated SVG
+    // behind it (tinted disc + glyph + capacity dot, see entitySymbol.js), a
+    // border reporting lifecycle status, and the label underneath.
     {
       selector: "node",
       style: {
-        shape: "round-rectangle",
-        width: 186,
-        height: 54,
+        shape: "ellipse",
+        width: 44,
+        height: 44,
         "background-color": "#ffffff",
         "background-opacity": 1,
         "background-image": "data(cardIcon)",
         "background-fit": "none",
-        "background-width": 54,
-        "background-height": 54,
+        "background-width": 44,
+        "background-height": 44,
         "background-position-x": "0px",
         "background-position-y": "0px",
         "background-clip": "node",
-        "border-width": 1.5,
-        "border-color": "#cbd5e1",
+        "border-width": 3,
+        "border-color": "data(cardStatusColor)",
         "border-style": "solid",
         label: "data(displayLabel)",
-        "text-valign": "center",
+        "text-valign": "bottom",
         "text-halign": "center",
-        // Shift the label into the right region (past the 54px band).
-        "text-margin-x": 28,
-        color: "#1e293b",
-        "font-size": 11,
+        "text-margin-y": 5,
+        color: "#111827",
+        "font-size": 9.5,
         "font-family": '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-        "font-weight": "600",
-        "line-height": 1.2,
+        "font-weight": "bold",
+        "line-height": 1.22,
         "text-wrap": "wrap",
-        "text-max-width": 118,
-        "shadow-blur": 8,
-        "shadow-color": "#0f172a",
-        "shadow-opacity": 0.12,
-        "shadow-offset-x": 0,
-        "shadow-offset-y": 2,
+        "text-max-width": 120,
+        "text-overflow-wrap": "anywhere",
+        // Keeps a label legible where it crosses a pipe underneath it.
+        "text-background-color": "#ffffff",
+        "text-background-opacity": 0.78,
+        "text-background-padding": 2,
+        "text-background-shape": "roundrectangle",
       },
     },
     // Inactive assets read as "not in service" via a dashed border.
@@ -90,23 +93,47 @@ export function buildCyStyle() {
     // Labels toggle (View → Labels).
     { selector: "node.hide-labels", style: { label: "" } },
     { selector: "edge.hide-labels", style: { label: "" } },
-    // Junction node — a small dot, no card.
+    // Junction node — a small plain dot, no symbol and no label.
     {
       selector: 'node[type="node"]',
       style: {
         shape: "ellipse",
-        width: 16,
-        height: 16,
-        "background-color": "#64748b",
+        width: 18,
+        height: 18,
+        "background-color": "#ffffff",
         "background-image": "none",
-        color: "#64748b",
         label: "",
-        "text-margin-x": 0,
+        "text-margin-y": 0,
         "border-width": 2,
-        "border-color": "#ffffff",
-        "shadow-blur": 4,
-        "shadow-color": "#0f172a",
-        "shadow-opacity": 0.18,
+        "border-color": "#6b7280",
+      },
+    },
+    // ── Level of detail ──────────────────────────────────────────────────
+    // Applied by the canvas on zoom (symbol nodes only — junctions, notes and
+    // group boxes keep their own geometry). Zoomed out the symbols shrink and
+    // then drop their labels, so a large network stays readable instead of
+    // turning into a wall of overlapping text.
+    {
+      selector: "node.lod-mid",
+      style: {
+        width: 36,
+        height: 36,
+        "background-width": 36,
+        "background-height": 36,
+        "border-width": 2.5,
+        "font-size": 9,
+        "text-max-width": 96,
+      },
+    },
+    {
+      selector: "node.lod-far",
+      style: {
+        label: "",
+        width: 30,
+        height: 30,
+        "background-width": 30,
+        "background-height": 30,
+        "border-width": 2,
       },
     },
     // ── Pipe / edge ──────────────────────────────────────────────────────
@@ -126,6 +153,23 @@ export function buildCyStyle() {
         "text-background-color": "#ffffff",
         "text-background-opacity": 0.9,
         "text-background-padding": 2,
+      },
+    },
+    // Bent pipes: cytoscape-edge-editing stores the bends as weight/distance
+    // pairs on the edge, and `segments` is what makes them actually draw.
+    {
+      selector: "edge.edgebendediting-hasbendpoints",
+      style: {
+        "curve-style": "segments",
+        "segment-weights": "data(cyedgebendeditingWeights)",
+        "segment-distances": "data(cyedgebendeditingDistances)",
+        // Bends are stored relative to the two node *centres*, which is what
+        // the geometry in canvasGeometry.js assumes. Without this, Cytoscape
+        // measures them from the node borders instead, so a bend drifts as
+        // soon as either node moves and changes the edge's angle. The editing
+        // plugin installs the same rule for itself; the Simulation Canvas
+        // renders saved bends without the plugin and relies on this one.
+        "edge-distances": "node-position",
       },
     },
     // Pipes out of service read as dashed lines.
@@ -234,11 +278,11 @@ export function buildCyStyle() {
     {
       selector: "node:selected",
       style: {
-        "border-color": ACCENT,
-        "border-width": 3,
-        "overlay-color": ACCENT,
+        "border-color": "#0969da",
+        "border-width": 4,
+        "overlay-color": "#0969da",
         "overlay-padding": 5,
-        "overlay-opacity": 0.14,
+        "overlay-opacity": 0.15,
       },
     },
     // Isolation mode hides everything outside the focused selection/scope.
@@ -275,6 +319,10 @@ export function buildCyStyle() {
         "text-margin-x": 0,
         color: "#78350f",
         "font-size": 11,
+        // The base rule styles an entity label sitting under a symbol; inside
+        // a note the text is the content, and bold is a per-note toggle.
+        "font-weight": "normal",
+        "text-background-opacity": 0,
         "text-wrap": "wrap",
         "text-max-width": 180,
         "text-margin-y": 10,
@@ -311,6 +359,8 @@ export function buildCyStyle() {
         "text-margin-x": 0,
         color: ACCENT,
         "font-size": 11,
+        "font-weight": "normal",
+        "text-background-opacity": 0,
         "z-index": 0,
       },
     },

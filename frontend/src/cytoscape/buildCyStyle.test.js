@@ -99,3 +99,39 @@ test("buildCyStyle: sim-edge--unconstrained is not styled identically to sim-edg
     "sim-edge--unconstrained must not resolve to the same styling as sim-edge--low — the legend draws them as distinct dash patterns",
   );
 });
+
+test("buildCyStyle: the bend rule follows the base edge rule", () => {
+  const stylesheet = buildCyStyle();
+  const bendIdx = indexOfSelector(stylesheet, "edgebendediting-hasbendpoints");
+  const baseEdgeIdx = exactSelectorIndex(stylesheet, "edge");
+  assert.ok(bendIdx >= 0, "expected a bend-point rule");
+  assert.ok(
+    bendIdx > baseEdgeIdx,
+    "curve-style: segments must override the base edge's bezier, so it has to come later",
+  );
+  const bendRule = stylesheet[bendIdx];
+  assert.equal(bendRule.style["curve-style"], "segments");
+  assert.equal(bendRule.style["segment-weights"], "data(cyedgebendeditingWeights)");
+  assert.equal(bendRule.style["segment-distances"], "data(cyedgebendeditingDistances)");
+  // Weights/distances are relative to node centres, not to the border
+  // intersections Cytoscape measures from by default.
+  assert.equal(bendRule.style["edge-distances"], "node-position");
+});
+
+test("buildCyStyle: level-of-detail rules sit between the base node rule and selection", () => {
+  const stylesheet = buildCyStyle();
+  const baseNodeIdx = exactSelectorIndex(stylesheet, "node");
+  const selectedIdx = indexOfSelector(stylesheet, "node:selected");
+  for (const cls of ["node.lod-mid", "node.lod-far"]) {
+    const idx = exactSelectorIndex(stylesheet, cls);
+    assert.ok(idx >= 0, `expected a ${cls} rule`);
+    assert.ok(idx > baseNodeIdx, `${cls} must override the base node card geometry`);
+    assert.ok(idx < selectedIdx, `${cls} must not outrank selection styling`);
+  }
+});
+
+test("buildCyStyle: the far zoom band drops labels", () => {
+  const stylesheet = buildCyStyle();
+  const far = stylesheet[exactSelectorIndex(stylesheet, "node.lod-far")];
+  assert.equal(far.style.label, "");
+});
