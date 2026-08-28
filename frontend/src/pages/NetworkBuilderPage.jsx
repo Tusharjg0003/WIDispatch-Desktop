@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import cytoscape from "cytoscape";
 import Konva from "konva";
 import contextMenus from "cytoscape-context-menus";
@@ -27,6 +28,7 @@ import {
   IconDownload,
   IconDroplet,
   IconEdit2,
+  IconEye,
   IconEyeOff,
   IconFileText,
   IconFolder,
@@ -86,6 +88,21 @@ import {
   restoreBendClasses,
 } from "../cytoscape/bendEditing";
 import { applyIsolation, clearIsolation as clearIsolationClasses, isIsolated } from "../cytoscape/isolate";
+import { normalizeBox, selectInBox } from "../cytoscape/boxSelect";
+import {
+  ASSET_CATEGORIES,
+  FILTER_HIDDEN_CLASS,
+  PIPELINE_KEY,
+  applyCategoryFilter,
+  canvasAssets as readCanvasAssets,
+  capacityByYear,
+  capacityOf,
+  formatCapacity,
+  horizonYears,
+  largestByCapacity,
+  nameOf,
+  summarizeCategories,
+} from "../cytoscape/assetFilter";
 import { fetchNetwork, fetchNetworks, saveNetwork, updateNetwork, deleteNetwork } from "../api/networks";
 import {
   fetchTransmissionSystems, createTransmissionSystem,
@@ -119,6 +136,11 @@ if (typeof window !== "undefined" && !window[CY_EXTENSIONS_KEY]) {
 const CONTEXT_BEND_MIN_OFFSET = 40;
 // Screen-pixel radius for "you double-clicked an existing bend".
 const BEND_GRAB_RADIUS_PX = 14;
+// How far the pointer travels before a right-click becomes a box select.
+// Matches Cytoscape's own desktopTapThreshold, so a gesture we treat as a drag
+// is one it also treats as a drag — and therefore does not fire cxttap for,
+// which is what keeps the pipe context menu shut on a right-drag.
+const RIGHT_DRAG_THRESHOLD = 4;
 // A double-click edit is applied a frame later, after cytoscape-edge-editing
 // has finished its own (5ms-debounced) handling of the same gesture — writing
 // inside the event turn gets clobbered, and pulling a bend out from under the
@@ -205,7 +227,7 @@ const ACTIVE_STATUSES = new Set(["operational", "maintenance", "under_constructi
 const INACTIVE_STATUSES = new Set(["inactive", "decommissioned"]);
 const TRACE_ROOT_TYPES = new Set(["handover_point", "point", "filling_station", "filling-station", "distribution_point", "distribution-point"]);
 const TRACE_SOURCE_TYPES = new Set(["plant", "stp"]);
-const TRANSIENT_CANVAS_CLASSES = `${TRACE_CLASSES} ${LOD_CLASSES} draw-source insert-target nb-isolate-hidden nb-isolate-dim hide-labels`;
+const TRANSIENT_CANVAS_CLASSES = `${TRACE_CLASSES} ${LOD_CLASSES} ${FILTER_HIDDEN_CLASS} draw-source insert-target nb-isolate-hidden nb-isolate-dim hide-labels`;
 const TRANSIENT_CANVAS_CLASS_SET = new Set(TRANSIENT_CANVAS_CLASSES.split(/\s+/));
 // Pipe spec keys that must stay strings — everything else handleSpecChange
 // coerces to a number, since most pipe spec fields are numeric.
@@ -310,6 +332,9 @@ const withHalvedPipeLength = (data) => {
 // offline even if the source asset later changes.
 const assetMeta = (a) => ({
   region: a.region,
+  // Lifecycle dates drive the capacity-by-horizon chart in the right panel.
+  commissioning_date: a.commissioning_date,
+  decommissioning_date: a.decommissioning_date,
   cluster: a.cluster,
   asset_type: a.asset_type,
   latitude: a.latitude,
@@ -448,9 +473,63 @@ export default function NetworkBuilderPage() {
   const [findOpen, setFindOpen] = useState(false);
   const [findQuery, setFindQuery] = useState("");
   const [areaBox, setAreaBox] = useState(null); // {x,y,w,h} while area-zoom dragging
+  const [boxSelect, setBoxSelect] = useState(null); // {x,y,w,h} while right-drag selecting
+  const [hiddenAssetTypes, setHiddenAssetTypes] = useState(() => new Set());
+  const [horizon, setHorizon] = useState(() => {
+    const thisYear = new Date().getFullYear();
+    return { start: thisYear, end: thisYear + 10 };
+  });
+  // Bumped whenever element data changes, so the sidebar re-reads the graph.
+  const [assetPanelVersion, setAssetPanelVersion] = useState(0);
   const [traceInfo, setTraceInfo] = useState(null);
   const [traceMode, setTraceMode] = useState("reachable");
   const [, setHistTick] = useState(0); // forces undo/redo enable refresh
+
+  // ── Right panel: assets, filters and insights ──────────────────────────────
+  // The panel reads the live graph as plain records once, then counts, charts
+  // and ranks from those. `counts` moves on every add/remove and
+  // `assetPanelVersion` on every data edit, which is what makes it re-read.
+  const canvasAssetList = useMemo(
+    () => (cyReady ? readCanvasAssets(cyRef.current) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [cyReady, counts, placedIds, assetPanelVersion]
+  );
+
+  const assetSummary = useMemo(() => summarizeCategories(canvasAssetList), [canvasAssetList]);
+
+  const visibleAssetCategories = useMemo(
+    () => ASSET_CATEGORIES.filter((c) => assetSummary[c.key] && !hiddenAssetTypes.has(c.key)),
+    [assetSummary, hiddenAssetTypes]
+  );
+
+  const chartYears = useMemo(() => horizonYears(horizon.start, horizon.end), [horizon.start, horizon.end]);
+
+  const capacityChartRows = useMemo(() => {
+    const visible = canvasAssetList.filter((asset) => !hiddenAssetTypes.has(asset.category));
+    return capacityByYear(visible, chartYears);
+  }, [canvasAssetList, hiddenAssetTypes, chartYears]);
+
+  const largestAssets = useMemo(
+    () => largestByCapacity(canvasAssetList, { hidden: hiddenAssetTypes, limit: 10 }),
+    [canvasAssetList, hiddenAssetTypes]
+  );
+
+  const categoryColour = useCallback(
+    (key) => (key === PIPELINE_KEY ? "#5b7ca3" : ENTITY_TYPE_COLORS[key] || "#94a3b8"),
+    []
+  );
+
+
+  const toggleAssetType = useCallback((key) => {
+    setHiddenAssetTypes((previous) => {
+      const next = new Set(previous);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
+
+  const showAllAssetTypes = useCallback(() => setHiddenAssetTypes(new Set()), []);
 
   // ── Graph → React sync ─────────────────────────────────────────────────────
   const syncGraph = useCallback(() => {
@@ -1225,17 +1304,37 @@ export default function NetworkBuilderPage() {
     // clobbering anything written inside the event turn.
     let removedBendOnDblclick = false;
 
+    // Screen (client) coordinates → Cytoscape model coordinates.
+    const toModelPoint = (clientX, clientY) => {
+      const container = containerRef.current;
+      if (!container) return null;
+      const rect = container.getBoundingClientRect();
+      const pan = cy.pan();
+      const zoom = cy.zoom() || 1;
+      return {
+        x: (clientX - rect.left - pan.x) / zoom,
+        y: (clientY - rect.top - pan.y) / zoom,
+      };
+    };
+
+    const nearBendAnchor = (clientX, clientY) => {
+      const modelPoint = toModelPoint(clientX, clientY);
+      if (!modelPoint) return false;
+      const grabRadius = BEND_GRAB_RADIUS_PX / (cy.zoom() || 1);
+      return cy.edges(`.${BEND_CLASS}`).some((edge) =>
+        edgeBendPoints(edge).some(
+          (point) => Math.hypot(point.x - modelPoint.x, point.y - modelPoint.y) <= grabRadius
+        )
+      );
+    };
+
     const dblclickCapture = (event) => {
       const container = containerRef.current;
       if (!container) return;
 
-      const rect = container.getBoundingClientRect();
-      const pan = cy.pan();
+      const modelPoint = toModelPoint(event.clientX, event.clientY);
+      if (!modelPoint) return;
       const zoom = cy.zoom() || 1;
-      const modelPoint = {
-        x: (event.clientX - rect.left - pan.x) / zoom,
-        y: (event.clientY - rect.top - pan.y) / zoom,
-      };
       const grabRadius = BEND_GRAB_RADIUS_PX / zoom;
 
       // Any bent pipe, not just a selected one: the plugin unselects an edge
@@ -1299,6 +1398,75 @@ export default function NetworkBuilderPage() {
     cy.on("remove", "edge", (evt) => {
       if (hoveredEdgeRef.current === evt.target.id()) clearEdgeOverlay();
     });
+
+    // ── Right-drag box select ────────────────────────────────────────────
+    // Cytoscape's own box selection is on the left button behind Shift; this
+    // adds the right button, which is what operators reach for. A stationary
+    // right-click still opens the context menu — only a drag turns into a
+    // rectangle, and only then is the browser menu suppressed.
+    let boxSelectOrigin = null;
+    let boxSelectMoved = false;
+
+    const handleBoxSelectDown = (event) => {
+      if (event.button !== 2) return;
+      // The bend plugin drives its anchors from the right button too; leave
+      // gestures that start on one alone.
+      if (nearBendAnchor(event.clientX, event.clientY)) return;
+
+      boxSelectOrigin = { x: event.clientX, y: event.clientY, shiftKey: event.shiftKey };
+      boxSelectMoved = false;
+    };
+
+    const handleBoxSelectMove = (event) => {
+      if (!boxSelectOrigin) return;
+
+      const dx = event.clientX - boxSelectOrigin.x;
+      const dy = event.clientY - boxSelectOrigin.y;
+      if (!boxSelectMoved && Math.hypot(dx, dy) < RIGHT_DRAG_THRESHOLD) return;
+      boxSelectMoved = true;
+
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
+      setBoxSelect({
+        x: Math.min(boxSelectOrigin.x, event.clientX) - rect.left,
+        y: Math.min(boxSelectOrigin.y, event.clientY) - rect.top,
+        w: Math.abs(dx),
+        h: Math.abs(dy),
+      });
+    };
+
+    const handleBoxSelectUp = (event) => {
+      if (!boxSelectOrigin) return;
+
+      const origin = boxSelectOrigin;
+      const wasDrag = boxSelectMoved;
+      boxSelectOrigin = null;
+      setBoxSelect(null);
+      // Left set for the contextmenu handler that fires right after this, and
+      // cleared there; a plain right-click must still open the menu.
+      setTimeout(() => { boxSelectMoved = false; }, 0);
+
+      if (!wasDrag) return;
+
+      const a = toModelPoint(origin.x, origin.y);
+      const b = toModelPoint(event.clientX, event.clientY);
+      if (!a || !b) return;
+
+      selectInBox(cy, normalizeBox(a, b), { additive: origin.shiftKey });
+    };
+
+    const handleBoxSelectContextMenu = (event) => {
+      if (!boxSelectMoved) return;
+      event.preventDefault();
+      event.stopPropagation();
+      boxSelectMoved = false;
+    };
+
+    containerRef.current?.addEventListener("mousedown", handleBoxSelectDown);
+    window.addEventListener("mousemove", handleBoxSelectMove);
+    window.addEventListener("mouseup", handleBoxSelectUp);
+    containerRef.current?.addEventListener("contextmenu", handleBoxSelectContextMenu, true);
 
     // Registered after the plugin's own tapend handler, so it runs last.
     cy.on("tapend", () => setTimeout(restoreInteraction, 0));
@@ -1367,6 +1535,7 @@ export default function NetworkBuilderPage() {
     // Status and capacity live in persisted data; the symbol and its border are
     // derived, so they follow every later edit too.
     cy.on("data", "node", (evt) => applyEntitySymbol(evt.target));
+    cy.on("data", () => setAssetPanelVersion((version) => version + 1));
     cy.on("add remove", () => {
       syncGraph();
       syncSelection();
@@ -1384,6 +1553,10 @@ export default function NetworkBuilderPage() {
     const containerEl = containerRef.current;
     return () => {
       containerEl?.removeEventListener("dblclick", dblclickCapture, true);
+      containerEl?.removeEventListener("mousedown", handleBoxSelectDown);
+      containerEl?.removeEventListener("contextmenu", handleBoxSelectContextMenu, true);
+      window.removeEventListener("mousemove", handleBoxSelectMove);
+      window.removeEventListener("mouseup", handleBoxSelectUp);
       window.removeEventListener("pointerup", onPointerUp);
       window.removeEventListener("mouseup", onPointerUp);
       if (overlayFrameRef.current) {
@@ -2044,8 +2217,29 @@ export default function NetworkBuilderPage() {
       if (!el.length) return;
       cy.$(":selected").unselect();
       el.select();
-      cy.animate({ center: { eles: el }, zoom: Math.max(cy.zoom(), 1.15) }, { duration: 240 });
+      // Centre and zoom together. Cytoscape only honours a numeric `zoom`
+      // alongside an explicit `pan` here — `center: { eles }` with a zoom level
+      // moves the pan and leaves the zoom untouched — so the centring pan is
+      // worked out by hand.
+      const level = Math.max(cy.zoom(), 1.15);
+      const target = el.isNode() ? el.position() : el.midpoint();
+      const viewport = {
+        zoom: level,
+        pan: { x: cy.width() / 2 - target.x * level, y: cy.height() / 2 - target.y * level },
+      };
+
+      // Cytoscape steps animations off requestAnimationFrame, which a hidden
+      // tab never fires: the viewport would then simply never arrive. Nothing
+      // to animate for an audience that isn't looking, so jump straight there.
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") {
+        cy.viewport(viewport);
+      } else {
+        cy.animate(viewport, { duration: 240 });
+      }
       syncSelection();
+      // A focused element is one the user wants to inspect.
+      setShowInspector(true);
+      setRightPanelTab("details");
     },
     [syncSelection]
   );
@@ -2692,6 +2886,11 @@ export default function NetworkBuilderPage() {
   }, [toast]);
 
   useEffect(() => {
+    if (!cyReady) return;
+    applyCategoryFilter(cyRef.current, hiddenAssetTypes);
+  }, [hiddenAssetTypes, cyReady, counts]);
+
+  useEffect(() => {
     snapToGridRef.current = snapToGrid;
   }, [snapToGrid]);
 
@@ -3167,6 +3366,13 @@ export default function NetworkBuilderPage() {
             {canvasFocusMode ? <IconMinimize2 size={13} /> : <IconMaximize2 size={13} />}
           </button>
 
+          {boxSelect && boxSelect.w > 2 && boxSelect.h > 2 && (
+            <div
+              className="nb-box-select-rect"
+              style={{ left: boxSelect.x, top: boxSelect.y, width: boxSelect.w, height: boxSelect.h }}
+            />
+          )}
+
           {mode === "area-zoom" && (
             <div
               className="nb-area-capture"
@@ -3271,6 +3477,136 @@ export default function NetworkBuilderPage() {
 
             {rightPanelTab === "details" && (
               <div className="ns2-panel-body ns2-panel-body--details">
+                {/* Category visibility — hiding is a class on the elements, so
+                    nothing is removed and clearing brings it all back. */}
+                <section className="nb-asset-filter" aria-label="Show or hide asset categories">
+                  <div className="nb-asset-filter__head">
+                    <span className="nb-asset-filter__title">Canvas Categories</span>
+                    {hiddenAssetTypes.size > 0 && (
+                      <button type="button" className="nb-asset-filter__reset" onClick={showAllAssetTypes}>
+                        Show all asset types
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="nb-asset-filter__list">
+                    {ASSET_CATEGORIES.map((category) => {
+                      const stats = assetSummary[category.key];
+                      if (!stats) return null;
+                      const isHidden = hiddenAssetTypes.has(category.key);
+                      return (
+                        <button
+                          key={category.key}
+                          type="button"
+                          className={`nb-asset-filter__row${isHidden ? " nb-asset-filter__row--hidden" : ""}`}
+                          onClick={() => toggleAssetType(category.key)}
+                          aria-pressed={!isHidden}
+                          title={`${isHidden ? "Show" : "Hide"} ${category.label} on the canvas`}
+                        >
+                          <span className="nb-asset-filter__swatch" style={{ background: categoryColour(category.key) }} />
+                          <span className="nb-asset-filter__label">{category.label}</span>
+                          <span className="nb-asset-filter__count">{stats.count}</span>
+                          <span
+                            className="nb-asset-filter__capacity"
+                            title={category.unit ? `Total capacity (${category.unit})` : undefined}
+                          >
+                            {category.unit ? formatCapacity(stats.capacity) : "—"}
+                          </span>
+                          <span className="nb-asset-filter__eye" aria-hidden="true">
+                            {isHidden ? <IconEyeOff size={13} /> : <IconEye size={13} />}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+
+                {/* Capacity in service per year, stacked by visible category. */}
+                <section className="nb-panel-section" aria-label="Capacity by horizon">
+                  <div className="nb-panel-section__head">
+                    <span className="nb-asset-filter__title">Capacity by horizon</span>
+                    <span className="nb-horizon">
+                      <input
+                        type="number"
+                        className="nb-horizon__input"
+                        value={horizon.start}
+                        onChange={(e) => setHorizon((h) => ({ ...h, start: e.target.value }))}
+                        aria-label="Horizon start year"
+                      />
+                      <span className="nb-horizon__dash">–</span>
+                      <input
+                        type="number"
+                        className="nb-horizon__input"
+                        value={horizon.end}
+                        onChange={(e) => setHorizon((h) => ({ ...h, end: e.target.value }))}
+                        aria-label="Horizon end year"
+                      />
+                    </span>
+                  </div>
+
+                  {chartYears.length === 0 ? (
+                    <div className="nb-panel-hint">Set a valid year range to chart capacity.</div>
+                  ) : visibleAssetCategories.length === 0 ? (
+                    <div className="nb-panel-hint">
+                      All asset types are hidden — show one to chart its capacity.
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={190}>
+                      <BarChart data={capacityChartRows} margin={{ top: 8, right: 8, left: 0, bottom: 4 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                        <XAxis dataKey="year" tick={{ fontSize: 10 }} />
+                        <YAxis tick={{ fontSize: 10 }} tickFormatter={formatCapacity} width={44} />
+                        <Tooltip
+                          formatter={(value, name) => [
+                            formatCapacity(value),
+                            ASSET_CATEGORIES.find((c) => c.key === name)?.label || name,
+                          ]}
+                        />
+                        {visibleAssetCategories.map((category) => (
+                          <Bar
+                            key={category.key}
+                            dataKey={category.key}
+                            stackId="capacity"
+                            fill={categoryColour(category.key)}
+                            isAnimationActive={false}
+                          />
+                        ))}
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </section>
+
+                <section className="nb-panel-section" aria-label="Largest assets by capacity">
+                  <div className="nb-panel-section__head">
+                    <span className="nb-asset-filter__title">Largest by capacity</span>
+                  </div>
+
+                  {largestAssets.length === 0 ? (
+                    <div className="nb-panel-hint">No capacities recorded on the visible assets.</div>
+                  ) : (
+                    <div className="nb-asset-top">
+                      {largestAssets.map((asset) => (
+                        <button
+                          key={asset.id}
+                          type="button"
+                          className="nb-asset-top__row"
+                          onClick={() => focusCanvasElement(asset.id)}
+                          title="Select and centre on the canvas"
+                        >
+                          <span
+                            className="nb-asset-filter__swatch"
+                            style={{ background: categoryColour(asset.category) }}
+                          />
+                          <span className="nb-asset-top__name">{nameOf(asset.data, asset.id)}</span>
+                          <span className="nb-asset-filter__capacity">
+                            {formatCapacity(capacityOf(asset.data))}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </section>
+
                 <NetworkNodeDetails
                   selected={selectedEl}
                   systems={transmissionSystems}

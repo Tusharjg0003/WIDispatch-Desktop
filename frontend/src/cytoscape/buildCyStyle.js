@@ -290,6 +290,11 @@ export function buildCyStyle() {
       selector: ".nb-isolate-hidden",
       style: { display: "none" },
     },
+    // Category visibility filter (right panel) — see cytoscape/assetFilter.js.
+    {
+      selector: ".filter-hidden",
+      style: { display: "none" },
+    },
     // First node picked while drawing a pipe.
     {
       selector: "node.draw-source",

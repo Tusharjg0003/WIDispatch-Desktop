@@ -1840,6 +1840,16 @@
   z-index: 4;
   cursor: crosshair;
 }
+/* Right-drag selection rectangle (see handleBoxSelect* in the page). */
+.nb-box-select-rect {
+  position: absolute;
+  z-index: 10;
+  border: 1.5px dashed #2563eb;
+  background: rgba(9, 105, 218, 0.1);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
 .nb-area-rect {
   position: absolute;
   border: 1px solid var(--accent);
@@ -2349,34 +2359,48 @@
   white-space: nowrap;
 }
 
+/* Rings, because that is how a node reports its status on the canvas: the
+   symbol's fill is its type and its border is its lifecycle. */
 .ns2-legend__status {
   justify-self: start;
-  width: 10px;
-  height: 10px;
-  border: 1px solid transparent;
-  border-radius: 3px;
-  background: #94a3b8;
+  width: 11px;
+  height: 11px;
+  border: 2px solid #94a3b8;
+  border-radius: 50%;
+  background: #ffffff;
 }
 
 .ns2-legend__status--planned {
-  background: #3b82f6;
+  border-color: #3b82f6;
 }
 
 .ns2-legend__status--operational {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: #10b981;
+  border-color: #10b981;
 }
 
 .ns2-legend__status--construction {
-  background: #f59e0b;
+  border-color: #f59e0b;
 }
 
 .ns2-legend__status--inactive {
-  background: #ffffff;
-  border-color: #94a3b8;
+  border-color: #d1d5db;
   border-style: dashed;
+}
+
+/* The amber dot the symbol carries when an asset's capacity is capped. */
+.ns2-legend__status--capacity-limited {
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid #ffffff;
+  background: #f59e0b;
+  box-shadow: 0 0 0 1px #fde68a;
+}
+
+.ns2-legend__hint {
+  margin-bottom: 8px;
+  font-size: 0.6875rem;
+  line-height: 1.35;
+  color: var(--ink-dim);
 }
 
 .ns2-legend__asset {
@@ -2636,4 +2660,208 @@
   border-color: #7aa7e8;
   background: #eef5ff;
   color: #123c72;
+}
+
+/* ── Right panel: category visibility filter ───────────────────────────────── */
+.nb-asset-filter {
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.nb-asset-filter__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+  padding: 0 6px;
+}
+
+.nb-asset-filter__title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+.nb-asset-filter__reset {
+  padding: 2px 6px;
+  font-size: 10px;
+  color: var(--accent);
+  background: transparent;
+  border: 1px solid var(--accent-border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.nb-asset-filter__reset:hover {
+  background: var(--accent-soft);
+}
+
+.nb-asset-filter__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nb-asset-filter__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 5px 6px;
+  font-size: 11px;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.nb-asset-filter__row:hover {
+  background: #f1f5f9;
+  border-color: var(--line);
+}
+
+.nb-asset-filter__row:focus-visible {
+  outline: none;
+  border-color: var(--accent-border);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.nb-asset-filter__swatch {
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+  border-radius: 3px;
+}
+
+.nb-asset-filter__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nb-asset-filter__count {
+  min-width: 22px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--ink-dim);
+}
+
+.nb-asset-filter__capacity {
+  min-width: 42px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--ink-dim);
+}
+
+.nb-asset-filter__eye {
+  display: inline-flex;
+  align-items: center;
+  color: var(--ink-dim);
+}
+
+/* A hidden category stays listed, so it can be brought back. */
+.nb-asset-filter__row--hidden {
+  opacity: 0.45;
+}
+
+.nb-asset-filter__row--hidden .nb-asset-filter__label {
+  text-decoration: line-through;
+}
+
+/* Right panel: capacity chart + largest-by-capacity list. */
+.nb-panel-section {
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.nb-panel-section__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  padding: 0 6px;
+}
+
+.nb-panel-hint {
+  padding: 8px 6px;
+  font-size: 11px;
+  color: var(--ink-dim);
+}
+
+.nb-horizon {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.nb-horizon__input {
+  width: 52px;
+  padding: 2px 4px;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+
+.nb-horizon__input:focus-visible {
+  outline: none;
+  border-color: var(--accent-border);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.nb-horizon__dash {
+  font-size: 10px;
+  color: var(--ink-dim);
+}
+
+.nb-asset-top {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nb-asset-top__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 5px 6px;
+  font-size: 11px;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.nb-asset-top__row:hover {
+  background: #f1f5f9;
+  border-color: var(--line);
+}
+
+.nb-asset-top__row:focus-visible {
+  outline: none;
+  border-color: var(--accent-border);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.nb-asset-top__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

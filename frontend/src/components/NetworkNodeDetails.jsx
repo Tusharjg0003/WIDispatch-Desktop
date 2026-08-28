@@ -47,6 +47,7 @@ const LIFECYCLE_LEGEND = [
   { key: "operational", label: "Operational" },
   { key: "construction", label: "Under construction" },
   { key: "inactive", label: "Inactive" },
+  { key: "capacity-limited", label: "Capacity limited" },
 ];
 
 const ASSET_LEGEND = [
@@ -80,6 +81,9 @@ function CanvasLegend() {
   return (
     <div className="ns2-legend" aria-label="Canvas legend">
       <div className="ns2-legend__title">Canvas Legend</div>
+      <div className="ns2-legend__hint">
+        Fill = asset type · Ring = lifecycle status · Amber dot = capacity limited
+      </div>
 
       <section className="ns2-legend__section">
         <div className="ns2-legend__section-title">Lifecycle</div>
