@@ -33,6 +33,7 @@ import {
   IconFileText,
   IconFolder,
   IconGitBranch,
+  IconHelpCircle,
   IconGrid,
   IconItalic,
   IconMaximize,
@@ -234,6 +235,51 @@ const TRANSIENT_CANVAS_CLASS_SET = new Set(TRANSIENT_CANVAS_CLASSES.split(/\s+/)
 const STRING_SPEC_FIELDS = new Set(["pipelineMaterial", "infraSource", "capacityLimitationType", "transmissionSystemId"]);
 const LIBRARY_DRAG_TYPE = "application/x-widispatch-assets";
 const TRANSMISSION_SYSTEM_DRAG_TYPE = "application/x-widispatch-transmission-system";
+
+// Every shortcut the canvas answers to, in the order the guide lists them.
+// The handler in the page is the only place these are bound.
+const SHORTCUT_GROUPS = [
+  {
+    title: "Edit",
+    rows: [
+      { keys: "Ctrl + Z", desc: "Undo" },
+      { keys: "Ctrl + Y / Ctrl + Shift + Z", desc: "Redo" },
+      { keys: "Ctrl + S", desc: "Save" },
+      { keys: "Ctrl + C", desc: "Copy selection" },
+      { keys: "Ctrl + X", desc: "Cut selection" },
+      { keys: "Ctrl + V", desc: "Paste" },
+      { keys: "Delete / Backspace", desc: "Delete selection" },
+    ],
+  },
+  {
+    title: "Select",
+    rows: [
+      { keys: "Ctrl + A", desc: "Select all" },
+      { keys: "Right-click + drag", desc: "Box-select an area" },
+      { keys: "Shift + drag", desc: "Box-select an area" },
+      { keys: "Arrow keys", desc: "Nudge selection one grid square" },
+      { keys: "Shift + Arrow keys", desc: "Nudge selection ten grid squares" },
+    ],
+  },
+  {
+    title: "View",
+    rows: [
+      { keys: "F", desc: "Fit everything on screen" },
+      { keys: "Z", desc: "Zoom to selection" },
+      { keys: "Ctrl + Shift + F", desc: "Toggle full screen" },
+      { keys: "Esc", desc: "Leave current tool, or exit full screen" },
+      { keys: "?", desc: "Show/hide this shortcut guide" },
+    ],
+  },
+  {
+    title: "While drawing",
+    rows: [
+      { keys: "Double-click a pipe", desc: "Add a bend where clicked" },
+      { keys: "Double-click a bend", desc: "Remove that bend" },
+      { keys: "Alt + drag", desc: "Move freely, ignoring snap-to-grid" },
+    ],
+  },
+];
 
 const emptyEntityForm = (entityType) => ({
   category: entityType,
@@ -475,6 +521,7 @@ export default function NetworkBuilderPage() {
   const [areaBox, setAreaBox] = useState(null); // {x,y,w,h} while area-zoom dragging
   const [boxSelect, setBoxSelect] = useState(null); // {x,y,w,h} while right-drag selecting
   const [hiddenAssetTypes, setHiddenAssetTypes] = useState(() => new Set());
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [horizon, setHorizon] = useState(() => {
     const thisYear = new Date().getFullYear();
     return { start: thisYear, end: thisYear + 10 };
@@ -2056,6 +2103,26 @@ export default function NetworkBuilderPage() {
     cy.fit(sel.length ? sel : cy.elements(), 60);
   }, []);
 
+  // Arrow keys move the selection by a grid square, Shift by ten.
+  const nudgeSelection = useCallback(
+    (dx, dy) => {
+      const cy = cyRef.current;
+      if (!cy || (!dx && !dy)) return false;
+      const nodes = cy.nodes(":selected");
+      if (!nodes.length) return false;
+
+      cy.batch(() => {
+        nodes.forEach((node) => {
+          const p = node.position();
+          node.position({ x: p.x + dx, y: p.y + dy });
+        });
+      });
+      scheduleCommit();
+      return true;
+    },
+    [scheduleCommit]
+  );
+
   const handleSelectAll = useCallback(() => {
     const cy = cyRef.current;
     if (cy) cy.elements().select();
@@ -2647,6 +2714,19 @@ export default function NetworkBuilderPage() {
     setToast(`Copied ${sel.length} element${sel.length === 1 ? "" : "s"}.`);
   }, []);
 
+  const handleCutSelection = useCallback(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    const sel = cy.$(":selected");
+    if (!sel.length) {
+      setToast("Nothing selected to cut.");
+      return;
+    }
+    clipboardRef.current = sel.jsons().map(stripTransientClasses);
+    handleDelete();
+    setToast(`Cut ${sel.length} element${sel.length === 1 ? "" : "s"}.`);
+  }, [handleDelete]);
+
   const handleCopyAll = useCallback(() => {
     const cy = cyRef.current;
     if (!cy || !cy.elements().length) return;
@@ -2857,27 +2937,6 @@ export default function NetworkBuilderPage() {
     setModeSafe("select");
   }, [setModeSafe]);
 
-  // ── Keyboard shortcuts ───────────────────────────────────────────────────────
-  useEffect(() => {
-    const onKey = (e) => {
-      const t = e.target;
-      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT")) {
-        if (e.key === "Escape") t.blur();
-        return;
-      }
-      const mod = e.metaKey || e.ctrlKey;
-      if (e.key === "Escape") setModeSafe("select");
-      else if (mod && e.key.toLowerCase() === "z" && !e.shiftKey) { e.preventDefault(); handleUndo(); }
-      else if (mod && (e.key.toLowerCase() === "y" || (e.key.toLowerCase() === "z" && e.shiftKey))) { e.preventDefault(); handleRedo(); }
-      else if (mod && e.key.toLowerCase() === "c") { e.preventDefault(); handleCopySelection(); }
-      else if (mod && e.key.toLowerCase() === "v") { e.preventDefault(); handlePaste(); }
-      else if (mod && e.key.toLowerCase() === "a") { e.preventDefault(); handleSelectAll(); }
-      else if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); handleDelete(); }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [setModeSafe, handleUndo, handleRedo, handleCopySelection, handlePaste, handleSelectAll, handleDelete]);
-
   // ── Toast auto-dismiss + label visibility ────────────────────────────────────
   useEffect(() => {
     if (!toast) return undefined;
@@ -2921,6 +2980,79 @@ export default function NetworkBuilderPage() {
     }
     setShowLibrary((v) => !v);
   }, [canvasFocusMode]);
+
+  // ── Keyboard shortcuts ───────────────────────────────────────────────────────
+  // The canvas registers every shortcut here and nowhere else: toolbar buttons
+  // call the same handlers, but binding keys next to them as well would fire
+  // each action twice.
+  useEffect(() => {
+    const isTypingTarget = (target) => {
+      if (!target || typeof target.closest !== "function") return false;
+      const tag = target.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+      if (target.isContentEditable) return true;
+      // A modal owns the keyboard while it is open.
+      return !!target.closest('.af__overlay, .af__modal, [role="dialog"]');
+    };
+
+    const onKey = (e) => {
+      const key = e.key;
+      const lower = typeof key === "string" ? key.toLowerCase() : "";
+      const mod = e.metaKey || e.ctrlKey;
+
+      if (isTypingTarget(e.target)) {
+        if (key === "Escape" && typeof e.target.blur === "function") e.target.blur();
+        return;
+      }
+
+      // The guide is a pinned panel rather than a modal, so it does not take
+      // the keyboard: it only claims Esc, ahead of leaving a tool.
+      if (shortcutsOpen && (key === "Escape" || key === "?")) {
+        e.preventDefault();
+        setShortcutsOpen(false);
+        return;
+      }
+
+      // Edit
+      if (mod && lower === "z" && !e.shiftKey) { e.preventDefault(); handleUndo(); return; }
+      if (mod && (lower === "y" || (lower === "z" && e.shiftKey))) { e.preventDefault(); handleRedo(); return; }
+      if (mod && lower === "s") { e.preventDefault(); handleSave(); return; }
+      if (mod && lower === "c") { e.preventDefault(); handleCopySelection(); return; }
+      if (mod && lower === "x") { e.preventDefault(); handleCutSelection(); return; }
+      if (mod && lower === "v") { e.preventDefault(); handlePaste(); return; }
+      if (key === "Delete" || key === "Backspace") { e.preventDefault(); handleDelete(); return; }
+
+      // Select
+      if (mod && lower === "a") { e.preventDefault(); handleSelectAll(); return; }
+      if (lower === "arrowleft" || lower === "arrowright" || lower === "arrowup" || lower === "arrowdown") {
+        const step = (e.shiftKey ? 10 : 1) * CANVAS_GRID_PITCH;
+        const dx = lower === "arrowleft" ? -step : lower === "arrowright" ? step : 0;
+        const dy = lower === "arrowup" ? -step : lower === "arrowdown" ? step : 0;
+        if (nudgeSelection(dx, dy)) e.preventDefault();
+        return;
+      }
+
+      // View
+      if (mod && e.shiftKey && lower === "f") { e.preventDefault(); handleToggleCanvasFocus(); return; }
+      if (!mod && lower === "f") { e.preventDefault(); handleFit(); return; }
+      if (!mod && lower === "z") { e.preventDefault(); handleZoomToSelection(); return; }
+      if (key === "?") { e.preventDefault(); setShortcutsOpen(true); return; }
+      if (key === "Escape") {
+        e.preventDefault();
+        // Leave the active tool first; full screen is only dropped once there
+        // is no tool left to leave.
+        if (modeRef.current !== "select") setModeSafe("select");
+        else if (canvasFocusMode) setCanvasFocusMode(false);
+      }
+    };
+
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [
+    shortcutsOpen, canvasFocusMode, setModeSafe, handleUndo, handleRedo, handleSave,
+    handleCopySelection, handleCutSelection, handlePaste, handleDelete, handleSelectAll,
+    nudgeSelection, handleFit, handleZoomToSelection, handleToggleCanvasFocus,
+  ]);
 
   const handleOpenDetailsPanel = useCallback(() => {
     setCanvasFocusMode(false);
@@ -3078,6 +3210,14 @@ export default function NetworkBuilderPage() {
                 Trace HP
               </Btn>
               <Btn on={handleResetView} icon={IconRefresh} title="Reset pan and zoom">Reset</Btn>
+              <Btn
+                on={() => setShortcutsOpen((v) => !v)}
+                icon={IconHelpCircle}
+                active={shortcutsOpen}
+                title="Show every keyboard shortcut (?)"
+              >
+                Shortcuts
+              </Btn>
             </div>
             <span className="toolbar-group__label">View</span>
           </div>
@@ -3208,6 +3348,7 @@ export default function NetworkBuilderPage() {
     mode, pendingEntity, network.name, counts.nodes, counts.edges, realNodeCount, saveStatus,
     selectedEl, hasSelection, isPipeSel, hasPipeSelection, hasDeletableSelection, canUndo, canRedo,
     showLabels, showGrid, snapToGrid, showInspector, showLibrary, canvasFocusMode, findOpen, isolationActive, rightPanelTab,
+    shortcutsOpen,
     handleRemoveAllBends,
     setToolbar, setModeSafe, notImplemented, handleInsertEntity, handleFit, handleResetView,
     handleToggleLibraryPanel, handleOpenDetailsPanel, handleToggleDetailsPanel,
@@ -3355,16 +3496,63 @@ export default function NetworkBuilderPage() {
             </svg>
           )}
 
-          <button
-            type="button"
-            className={`nb-canvas-focus-toggle${canvasFocusMode ? " is-active" : ""}`}
-            onClick={handleToggleCanvasFocus}
-            aria-label={canvasFocusMode ? "Exit canvas fullscreen" : "Show only toolbar and canvas"}
-            aria-pressed={canvasFocusMode}
-            title={canvasFocusMode ? "Exit canvas fullscreen" : "Show only toolbar and canvas"}
-          >
-            {canvasFocusMode ? <IconMinimize2 size={13} /> : <IconMaximize2 size={13} />}
-          </button>
+          <div className="nb-canvas-controls">
+            <button
+              type="button"
+              className={`nb-canvas-ctl${shortcutsOpen ? " is-active" : ""}`}
+              onClick={() => setShortcutsOpen((v) => !v)}
+              aria-expanded={shortcutsOpen}
+              aria-controls="nb-shortcut-guide"
+              aria-label="Keyboard shortcuts"
+              title="Show every keyboard shortcut (?)"
+            >
+              <IconHelpCircle size={13} />
+            </button>
+
+            <button
+              type="button"
+              className={`nb-canvas-ctl${canvasFocusMode ? " is-active" : ""}`}
+              onClick={handleToggleCanvasFocus}
+              aria-label={canvasFocusMode ? "Exit canvas fullscreen" : "Show only toolbar and canvas"}
+              aria-pressed={canvasFocusMode}
+              title={canvasFocusMode ? "Exit canvas fullscreen" : "Show only toolbar and canvas"}
+            >
+              {canvasFocusMode ? <IconMinimize2 size={13} /> : <IconMaximize2 size={13} />}
+            </button>
+          </div>
+
+          {/* Collapsible reference, pinned to the canvas: it stays open while
+              you keep working, so the shortcut you just read is usable. */}
+          {shortcutsOpen && (
+            <aside className="nb-shortcut-guide" id="nb-shortcut-guide" aria-label="Keyboard shortcuts">
+              <header className="nb-shortcut-guide__head">
+                <span className="nb-shortcut-guide__title">Keyboard shortcuts</span>
+                <button
+                  type="button"
+                  className="nb-shortcut-guide__close"
+                  onClick={() => setShortcutsOpen(false)}
+                  aria-label="Collapse shortcut guide"
+                  title="Collapse (Esc)"
+                >
+                  ×
+                </button>
+              </header>
+
+              <div className="nb-shortcut-guide__body">
+                {SHORTCUT_GROUPS.map((group) => (
+                  <section key={group.title}>
+                    <div className="nb-shortcut-group-title">{group.title}</div>
+                    {group.rows.map((row) => (
+                      <div className="nb-shortcut-row" key={row.keys}>
+                        <kbd className="nb-shortcut-keys">{row.keys}</kbd>
+                        <span className="nb-shortcut-desc">{row.desc}</span>
+                      </div>
+                    ))}
+                  </section>
+                ))}
+              </div>
+            </aside>
+          )}
 
           {boxSelect && boxSelect.w > 2 && boxSelect.h > 2 && (
             <div

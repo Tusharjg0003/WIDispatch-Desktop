@@ -122,11 +122,17 @@
   padding: 4px;
 }
 
-.nb-canvas-focus-toggle {
+.nb-canvas-controls {
   position: absolute;
   top: 10px;
   right: 10px;
   z-index: 7;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nb-canvas-ctl {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -142,21 +148,21 @@
   transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease, box-shadow 0.12s ease;
 }
 
-.nb-canvas-focus-toggle svg,
-.nb-canvas-focus-toggle img {
+.nb-canvas-ctl svg,
+.nb-canvas-ctl img {
   width: 13px;
   height: 13px;
   color: currentColor;
 }
 
-.nb-canvas-focus-toggle:hover,
-.nb-canvas-focus-toggle.is-active {
+.nb-canvas-ctl:hover,
+.nb-canvas-ctl.is-active {
   border-color: #7aa7e8;
   background: #eaf2ff;
   color: #123c72;
 }
 
-.nb-canvas-focus-toggle:focus-visible {
+.nb-canvas-ctl:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px rgba(43, 124, 255, 0.35);
 }
@@ -2864,4 +2870,105 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* ── Keyboard shortcut guide ───────────────────────────────────────────────── */
+/* A collapsible panel pinned under the canvas controls, not a modal: the
+   canvas stays live underneath it. */
+.nb-shortcut-guide {
+  position: absolute;
+  top: 48px;
+  right: 10px;
+  z-index: 8;
+  width: min(320px, calc(100% - 20px));
+  max-height: calc(100% - 60px);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
+  overflow: hidden;
+}
+
+.nb-shortcut-guide__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 8px 7px 10px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-subtle);
+}
+
+.nb-shortcut-guide__title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+.nb-shortcut-guide__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--ink-dim);
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.nb-shortcut-guide__close:hover {
+  background: var(--accent-hover);
+  color: var(--accent);
+}
+
+.nb-shortcut-guide__body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 10px;
+  overflow-y: auto;
+}
+
+.nb-shortcut-group-title {
+  margin-bottom: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-dim, #64748b);
+}
+
+.nb-shortcut-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 3px 0;
+  font-size: 11px;
+}
+
+.nb-shortcut-keys {
+  flex-shrink: 0;
+  min-width: 130px;
+  padding: 2px 6px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 10px;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.nb-shortcut-desc {
+  color: #0f172a;
 }
