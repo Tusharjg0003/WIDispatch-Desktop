@@ -3,3 +3,6 @@ dist
 dist-ssr
 *.local
 .DS_Store
+
+# Unreadable iCloud-evicted build output; delete via Finder
+dist.stuck-*
