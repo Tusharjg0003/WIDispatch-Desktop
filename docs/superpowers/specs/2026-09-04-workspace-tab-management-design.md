@@ -50,7 +50,7 @@ Deferred to later controlled phases:
 Not lines removed. This sequence must work without leakage:
 
 ```text
-Open A → modify graph → select node → open Assets
+Open A → modify graph → select node → open an Inspector panel
 → start an unsafe canvas interaction → switch to B
 → A is captured → unsafe interaction is cancelled
 → B restores independently → change B → switch to A
@@ -66,8 +66,8 @@ Open A → modify graph → select node → open Assets
 |---|---|---|
 | Tab systems this phase | Workspace + Inspector/Issues refactor | Ribbon deferred |
 | Language | TypeScript for new modules only | No repo-wide migration |
-| Dependencies | zustand, immer, dexie, zod, @dnd-kit/{core,sortable,utilities} | No Radix, no XState this phase |
-| Graph holding strategy | Single Cytoscape instance, rehydrate on switch | Spec §7; one handler registration; O(1) memory in tab count |
+| Dependencies | zustand, immer, dexie, zod, @dnd-kit/{core,sortable,utilities,modifiers} | No Radix, no XState this phase |
+| Graph holding strategy | Single Cytoscape instance, rehydrate on switch | Spec §7; one handler registration; O(1) *live instances* (see below) |
 | Snapshot transport | In-memory map for switching; Dexie debounced for recovery | Switching stays synchronous and race-free |
 | Routing | URL mirrors active workspace via history replace | Deep links keep working |
 | Same network in two tabs | Not allowed — activates existing tab | Avoids two dirty tabs clobbering one backend record |
@@ -77,13 +77,35 @@ Open A → modify graph → select node → open Assets
 | Interaction mode | Typed adapter, not XState | Later phase swaps implementation without touching WorkspaceController |
 | Close confirmation | None — close is undoable via reopen | Avoids introducing a modal |
 
+### Memory characteristics — stated precisely
+
+The single-instance strategy is **not** O(1) total memory. It is:
+
+```text
+O(1)              live Cytoscape instances, renderers, and event handler sets
+O(N × snapshot)   serialized element JSON held in the in-memory snapshot map
+```
+
+The win is that N grows only in *serialized* form — no renderer, no Konva
+layers, no per-instance handler closures, no hidden-container resize handling.
+That is a large constant-factor saving, not an asymptotic one, and the document
+should not claim otherwise. If the snapshot map becomes a memory concern for
+very large graphs, the eviction strategy is to drop snapshots for non-adjacent
+tabs and reload them from Dexie on demand — deferred until measured.
+
 ### Dependency install
 
 ```bash
 npm install zustand immer dexie zod \
-  @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities
+  @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities @dnd-kit/modifiers
 npm install --save-dev typescript
 ```
+
+**`@dnd-kit/modifiers` is a fourth dnd-kit package beyond the originally agreed
+three.** It provides `restrictToHorizontalAxis` and
+`restrictToParentElement`, which the tab bar requires. The alternative is to
+clamp the axis manually in an `onDragMove` handler; the package is the
+supported path and is part of the same dnd-kit release line.
 
 ---
 
@@ -178,7 +200,18 @@ export interface WorkspaceInstance {
 }
 ```
 
-Two deliberate calls:
+**`InspectorTab` is complete for this application.** The right panel today
+renders exactly four tabs — verified against every `setRightPanelTab(...)` call
+site and every `rightPanelTab === ...` comparison in `NetworkBuilderPage.jsx`.
+The greenfield spec's Assets / Config / Validation / Results tabs **do not exist
+in this codebase**; asset and configuration editing live in the Details panel
+and in modals, and the right-panel asset filter is a control inside the panel,
+not a tab. Adding those tabs is a separate feature, not a state-preservation
+concern, so `activeInspectorTab` preserving four values preserves the real
+active tab exactly. When those tabs are introduced, the union widens and
+`WorkspaceUiState` needs no shape change.
+
+Two further deliberate calls:
 
 - **No separate `title`.** The tab renders `document.name`; `renameWorkspace`
   writes to it. A single source of truth avoids tab/header divergence.
@@ -191,7 +224,7 @@ Two deliberate calls:
 
 | Store | Owns | Never owns |
 |---|---|---|
-| `workspaceStore` | `activeWorkspaceId`, `instances`, `order`, `recentlyClosed`, dirty/pinned | Async work, Cytoscape, snapshots |
+| `workspaceStore` | `activeWorkspaceId`, `pendingWorkspaceId`, `instances`, `order`, `recentlyClosed`, dirty/pinned/loadError | Async work, Cytoscape, snapshots, `displayedWorkspaceId` |
 | `inspectorStore` | `open`, `activeTab` | Which workspace it belongs to |
 | `issuesStore` | `mode` | Anything inspector-tab-related |
 | `selectionStore` | `selectedElementIds: string[]` | Cytoscape element objects |
@@ -260,6 +293,9 @@ export interface CanvasController {
   loadDocument(doc: NetworkDocument): void;
   clear(): void;
 
+  getSelectedIds(): string[];
+  restoreSelection(ids: string[]): void;
+
   getViewport(): CanvasViewport | null;
   restoreViewport(viewport: CanvasViewport | null): void;
 
@@ -291,12 +327,51 @@ restoreSnapshot(snapshot) {
     this.#cy.batch(() => {
       this.#cy.elements().remove();
       this.#cy.add(snapshot?.elements ?? []);
+      restoreBendClasses(this.#cy);
     });
   } finally {
     this.#restoring = false;
   }
 }
 ```
+
+### Post-restore derived state
+
+`stripTransientClasses` removes classes on capture that must be re-derived on
+restore. Verified against `TRANSIENT_CANVAS_CLASS_SET`:
+
+| Class | Re-applied by | Status |
+|---|---|---|
+| `hide-labels` | page's `cy.on("add", …)` handler | automatic |
+| LOD classes | page's `cy.on("add","node", applyZoomLod)` | automatic |
+| entity symbols | page's `cy.on("add","node", applyEntitySymbol)` | automatic |
+| `FILTER_HIDDEN_CLASS` (asset filter) | `viewBridge.apply()` restoring `hiddenAssetTypes` | **ordering-dependent** |
+| trace / isolation classes | intentionally dropped — transient this phase | by design |
+| `edgebendediting-hasbendpoints` | **not** stripped; survives capture | plus defensive `restoreBendClasses` |
+
+Two consequences:
+
+1. **`viewBridge.apply()` must run after the graph is restored**, or the asset
+   filter re-applies to elements that no longer exist and the incoming graph
+   shows hidden types. The transaction in §9 orders it correctly.
+2. **`restoreBendClasses` is called defensively.** Bend classes are not in the
+   transient set, so they do survive a snapshot round-trip — but the call is
+   idempotent, cheap, and guards against a future addition to the transient set
+   silently flattening every bent pipe. `loadDocument`'s `addGraph` path already
+   calls it.
+
+`restoreSelection(ids)` performs the real Cytoscape operation —
+`cy.$(...).select()` inside a batch — because updating `selectionStore` alone
+does **not** produce a Cytoscape selection. The §9 ordering rationale depends on
+the resulting `select` event actually firing. Selection events reach
+`syncSelection`, not `scheduleCommit`, so restoring a selection does not mark
+the workspace dirty.
+
+**Known cost, not addressed this phase:** the page's
+`cy.on("add remove", () => { syncGraph(); syncSelection(); })` fires per element,
+so restoring a large graph runs it once per element even inside `batch()`. This
+is pre-existing behaviour on the current `addGraph` load path and is unchanged
+by this phase.
 
 **`isRestoring()` is load-bearing.** The page's `scheduleCommit` already bails
 on `restoringRef.current`; it will also consult `canvasController.isRestoring()`.
@@ -426,6 +501,33 @@ The Cytoscape element schema stays deliberately loose — `data.id` required,
 arbitrary domain fields and a strict schema would reject valid graphs whenever a
 new field is added.
 
+### Testability split — no browser IndexedDB in tests
+
+Plain Node has no IndexedDB, and Dexie expects one. Rather than pull in a
+test-only IndexedDB polyfill, the repository is split so that **all logic worth
+testing is pure**:
+
+```text
+parseRecoveredSession(rows, sessionRow) → RecoveredSession   ← pure, fully tested
+DexieCanvasRepository                                        ← thin I/O shell
+```
+
+`parseRecoveredSession` holds every behaviour tests 11–14 target: Zod
+`safeParse` per record, dropping corrupt records, deriving order when the
+session row is invalid, and choosing the active workspace. It takes plain arrays
+and returns a plain object — no Dexie, no IndexedDB, no async.
+
+`DexieCanvasRepository` is then deliberately thin: table reads/writes and the
+availability probe, with no branching logic of its own. It is exercised by
+manual verification rather than automated tests.
+
+`WorkspaceController` tests inject a fake in-memory `CanvasRepository`, so they
+never touch Dexie at all.
+
+**If true integration coverage of the Dexie layer is wanted later**, the option
+is `fake-indexeddb` as a devDependency. That is deliberately *not* in this
+phase's dependency scope; the split above is what avoids needing it.
+
 ### IndexedDB unavailability
 
 Private-mode Safari and hardened configurations reject `indexedDB.open`. The
@@ -438,27 +540,64 @@ never fail to boot because persistence is unavailable.**
 
 ## 9. WorkspaceController
 
+### Workspace identity: three distinct ids
+
+```text
+activeWorkspaceId     what the UI treats as current (workspaceStore)
+pendingWorkspaceId    a switch has been requested but not yet committed
+displayedWorkspaceId  which workspace the live Cytoscape graph ACTUALLY holds
+```
+
+`displayedWorkspaceId` is owned privately by `WorkspaceController`, never by the
+store, and is the **only** key ever used when capturing the outgoing graph.
+Capturing against `activeWorkspaceId` is what makes the race below possible.
+
 ### `activateWorkspace(nextId)`
+
+The transaction has two phases: an **async resolve phase that mutates nothing**,
+then a **fully synchronous commit phase**.
 
 ```ts
 async activateWorkspace(nextId: string): Promise<void> {
-  if (nextId === store.activeWorkspaceId) return;
-  const token = ++this.#switchToken;
+  const already = nextId === store.activeWorkspaceId
+               && this.#displayedWorkspaceId === nextId;
+  if (already) return;
 
-  // flush outgoing — fully synchronous
-  if (activeId) {
-    this.#snapshots.set(activeId, canvas.captureSnapshot());
-    store.updateWorkspaceUI(activeId, {
+  const token = ++this.#switchToken;
+  const next  = store.instances[nextId];
+
+  // ── PHASE 1: resolve incoming payload. No state is mutated here. ──
+  let snapshot = this.#snapshots.get(nextId) ?? null;
+  let doc: NetworkDocument | null = null;
+  let loadError = false;
+
+  if (!snapshot && next.document.networkId) {
+    store.setPending(nextId);                    // tab shows a loading state
+    try {
+      doc = await fetchNetwork(next.document.networkId);
+    } catch (err) {
+      loadError = true;
+      reportError(err);
+    }
+    if (token !== this.#switchToken) return;     // superseded — nothing mutated
+    store.setPending(null);
+  }
+
+  // ── PHASE 2: commit. Synchronous start to finish. ──
+  const outgoing = this.#displayedWorkspaceId;
+  if (outgoing) {
+    const captured = canvas.captureSnapshot();
+    if (captured) this.#snapshots.set(outgoing, captured);   // skip on null
+    store.updateWorkspaceUI(outgoing, {
       inspectorOpen:      inspectorStore.open,
       inspectorTab:       inspectorStore.activeTab,
       issuePanelMode:     issuesStore.mode,
-      selectedElementIds: selectionStore.selectedElementIds,
+      selectedElementIds: canvas.getSelectedIds(),
       viewport:           canvas.getViewport(),
       view:               viewBridge.capture(),
     });
   }
 
-  // cancel transient state
   interaction.cancelUnsafeInteraction();
   interaction.reset();
   selectionStore.clearSelection();
@@ -466,42 +605,60 @@ async activateWorkspace(nextId: string): Promise<void> {
 
   store.setActive(nextId);
 
-  // restore incoming
-  const cached = this.#snapshots.get(nextId);
-  if (cached) {
-    canvas.restoreSnapshot(cached);
-  } else if (next.document.networkId) {
-    const doc = await fetchNetwork(next.document.networkId);
-    if (token !== this.#switchToken) return;   // superseded
-    canvas.loadDocument(doc);
-  } else {
-    canvas.clear();
-  }
+  if (snapshot)      canvas.restoreSnapshot(snapshot);
+  else if (doc)      canvas.loadDocument(doc);
+  else               canvas.clear();
+
+  this.#displayedWorkspaceId = nextId;
+  store.setLoadError(nextId, loadError);
 
   canvas.restoreViewport(next.ui.viewport);
-  viewBridge.apply(next.ui.view);
-  selectionStore.setSelection(next.ui.selectedElementIds);  // BEFORE inspector
-  inspectorStore.hydrate(next.ui);
+  viewBridge.apply(next.ui.view);                       // after restore
+  canvas.restoreSelection(next.ui.selectedElementIds);  // fires cy select event
+  selectionStore.setSelection(next.ui.selectedElementIds);
+  inspectorStore.hydrate(next.ui);                      // must come last
   issuesStore.setMode(next.ui.issuePanelMode);
 
   navigator.replace(next.document.networkId
     ? `/network-builder/${next.document.networkId}`
     : `/network-builder`);
 
-  this.scheduleRecoverySnapshot();
+  if (!loadError) this.scheduleRecoverySnapshot();
 }
 ```
 
-Three critical details:
+### Why the two-phase split is required
 
-1. **`#switchToken`.** Only the backend fetch is async. Clicking tab C while B
-   is fetching must not land B's graph on top of C.
-2. **Selection restores before inspector hydration.** Reselecting elements
-   fires the page's `select` handler, which sets the inspector tab to
-   `details`. Hydrating the inspector afterwards means a workspace left on
-   Issues returns to Issues.
-3. **Cached snapshots restore synchronously.** The common path — ping-ponging
-   between open tabs — never touches IndexedDB and never awaits.
+Consider A → B (B needs fetching), then the user clicks C mid-flight.
+
+If `setActive(B)` ran before the `await`, the store would say B is active while
+Cytoscape still holds **A's graph**. The C switch would then capture the live
+graph and store it under B — **writing A's graph into B's snapshot**. A
+`#switchToken` alone does not prevent this: it stops stale B from *restoring*,
+but the corrupting capture has already happened.
+
+Two mechanisms together close it:
+
+1. **Nothing mutates before the `await` resolves.** A superseded switch returns
+   having changed no store, no canvas, and no snapshot map entry.
+2. **Capture is keyed on `displayedWorkspaceId`**, which by construction names
+   the workspace whose graph is actually in Cytoscape — never a workspace whose
+   load is still in flight.
+
+`pendingWorkspaceId` exists purely so the tab bar can show a loading state
+during the fetch, since `setActive` no longer runs early. It is UI-only and
+never used as a capture key.
+
+### Ordering constraints, made explicit
+
+| Step | Must come | Because |
+|---|---|---|
+| capture outgoing | before any reset | resets destroy the state being captured |
+| `cancelUnsafeInteraction` | before restore | insertion refs point at outgoing elements |
+| `restoreViewport` | after restore | zoom/pan on an empty graph is meaningless |
+| `viewBridge.apply` | after restore | asset-filter classes apply to restored elements |
+| `restoreSelection` | after restore | the ids must exist to be selectable |
+| `inspectorStore.hydrate` | after `restoreSelection` | the `select` event forces the Details tab; hydration must win |
 
 ### Lifecycle operations
 
@@ -518,7 +675,13 @@ Three critical details:
   closed by either).
 - `duplicateWorkspace(id)` — copies the current snapshot into a new workspace
   with `networkId: null`, name `"<name> (copy)"`, `dirty: true`.
-- `renameWorkspace(id, name)` — writes `document.name`.
+- `renameWorkspace(id, name)` — writes `document.name`, **sets `dirty: true`,
+  and schedules a recovery write**. Because there is no separate tab title,
+  `document.name` is the field persisted to the backend, so a rename is a
+  document mutation, not a UI mutation. Renaming a saved network without
+  flagging unsaved changes would let the new name be lost silently on refresh.
+  Renaming a never-saved workspace also sets dirty, which is harmless — it is
+  already dirty.
 - `reorderWorkspaces(from, to)` — touches `order` only, never
   `activeWorkspaceId`.
 - `togglePin(id)` — pinned tabs sort first.
@@ -532,6 +695,7 @@ Three critical details:
 | Event | `dirty` | Recovery write |
 |---|---|---|
 | add / remove / move node, edit element data | true | debounced 750 ms |
+| **rename workspace** (`document.name`) | **true** | debounced 750 ms |
 | pan, zoom, inspector tab, view toggle | unchanged | debounced 750 ms |
 | workspace switch, `visibilitychange` | unchanged | immediate flush |
 
@@ -549,10 +713,34 @@ on the next debounce tick. The flag clears on a successful load.
 `recoverSession(routeId)` on mount:
 
 1. `repository.loadAll()` — per-record `safeParse`, drop-and-log failures.
-2. Restore instances, order and active workspace from surviving records.
-3. Deep link: if `routeId` matches a recovered workspace, activate it;
-   otherwise `openNetwork(routeId)` opens it as an additional tab.
-4. Nothing recovered and no `routeId` → create one `Untitled 1`.
+2. Restore `instances`, `order`, and the recovered **snapshots** into the
+   in-memory map — but set **`activeWorkspaceId: null`**, and leave
+   `displayedWorkspaceId` null.
+3. Determine the target: the `routeId`'s workspace if it matches one recovered,
+   else the recovered active id, else the most recently updated.
+4. Call `activateWorkspace(target)` — which now takes the normal path.
+5. Deep link to a network that is *not* among the recovered workspaces →
+   `openNetwork(routeId)` opens it as an additional tab.
+6. Nothing recovered and no `routeId` → `createWorkspace()` → `Untitled 1`.
+
+**Why hydrating with `activeWorkspaceId: null` matters.** If recovery restored
+`activeWorkspaceId: 'A'` directly, the subsequent `activateWorkspace('A')` would
+hit the early-return guard and **never restore A's graph** — leaving a blank
+canvas above a tab bar confidently showing A as active. Hydrating with a null
+active id makes the first activation an ordinary switch with no outgoing
+workspace to flush, so no special-case initialization path or `forceRestore`
+flag is needed.
+
+The early-return guard is additionally hardened to require that Cytoscape
+actually holds the workspace:
+
+```ts
+if (nextId === store.activeWorkspaceId
+    && this.#displayedWorkspaceId === nextId) return;
+```
+
+so any future path that desynchronizes store state from canvas state
+self-corrects rather than silently no-opping.
 
 ---
 
@@ -667,22 +855,27 @@ by injection, so the entire switch transaction is testable against fakes.
 **Switch transaction**
 
 5. A→B→A restores graph, viewport, inspector tab, issues mode and selection exactly
-6. Call order asserted: flush → cancelUnsafeInteraction → reset → clearSelection → history.reset → setActive → restore
+6. Call order asserted: capture → cancelUnsafeInteraction → reset → clearSelection → history.reset → setActive → restore → restoreViewport → viewBridge.apply → restoreSelection → inspector.hydrate
 7. Mid edge-insertion, switching calls `cancelUnsafeInteraction()` before any restore
-8. Selection restores before inspector hydration, so a workspace left on Issues returns to Issues
+8. `restoreSelection` precedes `inspectorStore.hydrate`, so a workspace left on Issues returns to Issues rather than being forced to Details by the `select` event
 9. A switch superseded while fetching discards the stale graph (`#switchToken`)
+10. **A→B (B fetching) then →C never writes A's graph into B's snapshot** — the capture-key race. Asserts `snapshots.get('B')` is untouched and C holds C's graph
+11. A superseded switch mutates nothing — store, canvas and snapshot map are all byte-identical to before
+12. `captureSnapshot()` returning `null` writes no snapshot-map entry and no recovery record
 
 **Dirty state**
 
-10. `notifyDocumentMutated()` → dirty; `markSaved()` → clean; inspector / view / viewport changes leave dirty untouched
+13. `notifyDocumentMutated()` → dirty; `markSaved()` → clean; inspector / view / viewport changes leave dirty untouched
+14. `renameWorkspace()` → dirty true and a recovery write scheduled
 
-**Recovery**
+**Recovery** — all against pure `parseRecoveredSession`, no IndexedDB
 
-11. Valid records restore instances, order and active
-12. One corrupt record is dropped; the rest still recover
-13. A corrupt `session` row falls back to order derived from surviving records
-14. A workspace with `loadError` writes no snapshot
-15. The repository degrades cleanly when IndexedDB is unavailable
+15. Valid records restore instances, order and active
+16. One corrupt record is dropped; the rest still recover
+17. A corrupt `session` row falls back to order derived from surviving records
+18. A workspace with `loadError` writes no snapshot
+19. **Cold start restores the graph**: hydrate with `activeWorkspaceId: null`, activate the recovered id, assert the canvas actually received a restore — the blank-canvas-after-refresh regression
+20. The repository degrades cleanly when IndexedDB is unavailable (fake repository asserts the no-op fallback contract)
 
 **Not covered by automated tests.** The dnd-kit drag gesture, inline rename and
 the context menu are React/DOM behaviour, and this repository has no DOM test
@@ -698,8 +891,9 @@ verified manually against the §35 sequence in section 1.
 3. `workspaceStore` (+ reducer tests 1–4)
 4. `inspectorStore`, `issuesStore`, `selectionStore`
 5. `CanvasController` + `CanvasInteractionController` interface
-6. Dexie `canvasDb` + `CanvasRepository` (+ tests 11–15)
-7. `WorkspaceController` (+ tests 5–10)
+6. `parseRecoveredSession` (pure, + tests 15–20), then Dexie `canvasDb` +
+   `DexieCanvasRepository` shell
+7. `WorkspaceController` (+ tests 5–14)
 8. `WorkspaceTabs` / `WorkspaceTab` / context menu + CSS
 9. `NetworkBuilderPage` integration, items 1–9
 10. Dead code removal + typecheck + full test run
