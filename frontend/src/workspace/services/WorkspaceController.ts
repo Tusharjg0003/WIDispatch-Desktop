@@ -175,6 +175,21 @@ export class WorkspaceController {
     this.#displayedWorkspaceId = nextId;
     workspaceStore.getState().setLoadError(nextId, loadError);
 
+    // Adopt identity from the freshly loaded document. A workspace opened by
+    // id alone (from the saved-networks rail) starts with a placeholder name;
+    // the backend document is the authority, so the tab shows the real name
+    // without the sidebar having to pass it in.
+    if (doc && !loadError) {
+      const loaded = doc as { name?: string; description?: string };
+      if (loaded.name) {
+        workspaceStore.getState().adoptDocumentIdentity(nextId, {
+          name: loaded.name,
+          description: loaded.description ?? "",
+        });
+        this.#markRecordDirty(nextId);
+      }
+    }
+
     const next = workspaceStore.getState().instances[nextId];
     if (!next) return;
 

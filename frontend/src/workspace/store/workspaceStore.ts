@@ -40,6 +40,7 @@ export interface WorkspaceStoreState {
   removeWorkspace(id: string, snapshotElements: unknown[] | null): void;
   renameWorkspace(id: string, name: string): void;
   markDirty(id: string): void;
+  adoptDocumentIdentity(id: string, patch: { name: string; description: string }): void;
   markSaved(id: string, patch: { networkId?: string | null; name?: string }): void;
   setLoadError(id: string, loadError: boolean): void;
   updateWorkspaceUI(id: string, patch: Partial<WorkspaceUiState>): void;
@@ -145,6 +146,19 @@ export const workspaceStore = createStore<WorkspaceStoreState>((set, get) => ({
         // mutation, not a UI one.
         workspace.dirty = true;
         touch(workspace);
+      })
+    );
+  },
+
+  adoptDocumentIdentity(id, patch) {
+    set(
+      produce((state: WorkspaceStoreState) => {
+        const workspace = state.instances[id];
+        if (!workspace) return;
+        workspace.document.name = patch.name;
+        workspace.document.description = patch.description;
+        // Naming a workspace after the document it just loaded is not an edit
+        // to that document, so dirty is deliberately untouched.
       })
     );
   },

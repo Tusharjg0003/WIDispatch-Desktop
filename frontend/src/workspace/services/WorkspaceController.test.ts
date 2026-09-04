@@ -412,6 +412,59 @@ test("a deep link to an already-open network activates it instead of duplicating
   assert.equal(workspaceStore.getState().order.length, 2);
 });
 
+test("opening a saved network by id adopts its real name from the document", async () => {
+  const { controller } = setup({
+    fetchNetwork: async () => ({
+      name: "Riyadh Trunk Main",
+      description: "north corridor",
+      nodes: [{ data: { id: "n1" } }],
+      edges: [],
+    }),
+  });
+
+  // The sidebar passes an id only, with no name.
+  const id = await controller.openNetwork("net-42");
+
+  const workspace = controller.getWorkspace(id);
+  assert.equal(workspace?.document.name, "Riyadh Trunk Main");
+  assert.equal(workspace?.document.description, "north corridor");
+  assert.equal(workspace?.document.networkId, "net-42");
+  assert.equal(
+    workspace?.dirty,
+    false,
+    "adopting the loaded document's own name is not an edit to it"
+  );
+});
+
+test("opening a saved network puts it in its own tab beside the current one", async () => {
+  const { controller, canvas } = setup({
+    fetchNetwork: async () => ({ name: "Saved", nodes: [{ data: { id: "s1" } }], edges: [] }),
+  });
+
+  const first = await controller.createWorkspace("Scratch");
+  canvas.elements = [{ data: { id: "scratch1" } }];
+
+  const opened = await controller.openNetwork("net-7");
+
+  assert.notEqual(opened, first);
+  assert.equal(workspaceStore.getState().order.length, 2);
+  assert.equal(workspaceStore.getState().activeWorkspaceId, opened);
+  assert.deepEqual(canvas.elements, [{ data: { id: "s1" } }]);
+  // The scratch workspace kept its own graph.
+  assert.deepEqual(controller.getSnapshot(first)?.elements, [{ data: { id: "scratch1" } }]);
+});
+
+test("a failed load leaves the placeholder name and does not adopt", async () => {
+  const { controller } = setup({
+    fetchNetwork: async () => { throw new Error("offline"); },
+  });
+
+  const id = await controller.openNetwork("net-bad");
+
+  assert.equal(controller.getWorkspace(id)?.loadError, true);
+  assert.equal(controller.getWorkspace(id)?.document.name, "Network");
+});
+
 test("the URL mirrors the active workspace", async () => {
   const { controller, navigated } = setup();
   await controller.createWorkspace("A");

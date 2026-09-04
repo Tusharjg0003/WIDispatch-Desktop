@@ -3465,7 +3465,7 @@ export default function NetworkBuilderPage() {
             savedEvent={NETWORK_SAVED_EVENT}
             getMeta={(n) => `${n.nodeCount} nodes · ${n.edgeCount} pipes`}
             onNew={handleNew}
-            onSelect={(id) => navigate(`/network-builder/${id}`)}
+            onSelect={(id) => void workspaceController.openNetwork(id)}
           />
         </aside>
       )}
