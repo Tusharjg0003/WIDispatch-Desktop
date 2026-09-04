@@ -16,7 +16,6 @@
     "noEmit": true,
     "skipLibCheck": true,
     "types": ["node"],
-    "types": ["node"],
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
