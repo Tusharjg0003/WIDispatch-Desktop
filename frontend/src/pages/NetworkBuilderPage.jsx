@@ -1,5 +1,17 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import WorkspaceTabs from "../workspace/components/WorkspaceTabs";
+import WorkspaceTabsBoundary from "../workspace/components/WorkspaceTabsBoundary";
+import { workspaceController } from "../workspace/services/workspaceControllerInstance";
+import { useWorkspaceStore, workspaceStore } from "../workspace/store/workspaceStore";
+import { canvasController } from "../canvas/controller/CanvasController";
+import {
+  snapshotElements,
+  stripTransientClasses,
+} from "../canvas/controller/canvasSnapshotSerializer";
+import { useInspectorStore, inspectorStore } from "../inspector/store/inspectorStore";
+import { useIssuesStore, issuesStore } from "../issues/store/issuesStore";
+import { selectionStore } from "../selection/store/selectionStore";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import cytoscape from "cytoscape";
 import Konva from "konva";
@@ -62,7 +74,7 @@ import {
   IconUpload,
 } from "../components/IconAssets";
 import { useLayout } from "../contexts/LayoutContext";
-import { buildCyStyle, ENTITY_TYPE_COLORS, ENTITY_TYPE_LABELS } from "../cytoscape/buildCyStyle";
+import { ENTITY_TYPE_COLORS, ENTITY_TYPE_LABELS } from "../cytoscape/buildCyStyle";
 import { applyEntitySymbol } from "../cytoscape/entitySymbol";
 import { LOD_CLASSES, applyZoomLod as applyZoomLodTo } from "../cytoscape/lod";
 import {
@@ -72,7 +84,6 @@ import {
   paintTrace,
   traceNeighbours,
 } from "../cytoscape/trace";
-import { addGraph } from "../cytoscape/graph";
 import {
   CANVAS_GRID_PITCH,
   computeGridPitch,
@@ -104,7 +115,7 @@ import {
   nameOf,
   summarizeCategories,
 } from "../cytoscape/assetFilter";
-import { fetchNetwork, fetchNetworks, saveNetwork, updateNetwork, deleteNetwork } from "../api/networks";
+import { fetchNetworks, saveNetwork, updateNetwork, deleteNetwork } from "../api/networks";
 import {
   fetchTransmissionSystems, createTransmissionSystem,
   fetchTransmissionLines, createTransmissionLine, fetchTransmissionSystemNetwork,
@@ -228,87 +239,6 @@ const ACTIVE_STATUSES = new Set(["operational", "maintenance", "under_constructi
 const INACTIVE_STATUSES = new Set(["inactive", "decommissioned"]);
 const TRACE_ROOT_TYPES = new Set(["handover_point", "point", "filling_station", "filling-station", "distribution_point", "distribution-point"]);
 const TRACE_SOURCE_TYPES = new Set(["plant", "stp"]);
-const TRANSIENT_CANVAS_CLASSES = `${TRACE_CLASSES} ${LOD_CLASSES} ${FILTER_HIDDEN_CLASS} draw-source insert-target nb-isolate-hidden nb-isolate-dim hide-labels`;
-const TRANSIENT_CANVAS_CLASS_SET = new Set(TRANSIENT_CANVAS_CLASSES.split(/\s+/));
-// Pipe spec keys that must stay strings — everything else handleSpecChange
-// coerces to a number, since most pipe spec fields are numeric.
-const STRING_SPEC_FIELDS = new Set(["pipelineMaterial", "infraSource", "capacityLimitationType", "transmissionSystemId"]);
-const LIBRARY_DRAG_TYPE = "application/x-widispatch-assets";
-const TRANSMISSION_SYSTEM_DRAG_TYPE = "application/x-widispatch-transmission-system";
-
-// Every shortcut the canvas answers to, in the order the guide lists them.
-// The handler in the page is the only place these are bound.
-const SHORTCUT_GROUPS = [
-  {
-    title: "Edit",
-    rows: [
-      { keys: "Ctrl + Z", desc: "Undo" },
-      { keys: "Ctrl + Y / Ctrl + Shift + Z", desc: "Redo" },
-      { keys: "Ctrl + S", desc: "Save" },
-      { keys: "Ctrl + C", desc: "Copy selection" },
-      { keys: "Ctrl + X", desc: "Cut selection" },
-      { keys: "Ctrl + V", desc: "Paste" },
-      { keys: "Delete / Backspace", desc: "Delete selection" },
-    ],
-  },
-  {
-    title: "Select",
-    rows: [
-      { keys: "Ctrl + A", desc: "Select all" },
-      { keys: "Right-click + drag", desc: "Box-select an area" },
-      { keys: "Shift + drag", desc: "Box-select an area" },
-      { keys: "Arrow keys", desc: "Nudge selection one grid square" },
-      { keys: "Shift + Arrow keys", desc: "Nudge selection ten grid squares" },
-    ],
-  },
-  {
-    title: "View",
-    rows: [
-      { keys: "F", desc: "Fit everything on screen" },
-      { keys: "Z", desc: "Zoom to selection" },
-      { keys: "Ctrl + Shift + F", desc: "Toggle full screen" },
-      { keys: "Esc", desc: "Leave current tool, or exit full screen" },
-      { keys: "?", desc: "Show/hide this shortcut guide" },
-    ],
-  },
-  {
-    title: "While drawing",
-    rows: [
-      { keys: "Double-click a pipe", desc: "Add a bend where clicked" },
-      { keys: "Double-click a bend", desc: "Remove that bend" },
-      { keys: "Alt + drag", desc: "Move freely, ignoring snap-to-grid" },
-    ],
-  },
-];
-
-const emptyEntityForm = (entityType) => ({
-  category: entityType,
-  name: "",
-  status: entityType === "pump" ? "inactive" : "planned",
-  commissioning_date: "",
-  decommissioning_date: "",
-  active: true,
-});
-
-const cloneData = (value) => {
-  if (!value || typeof value !== "object") return value;
-  return JSON.parse(JSON.stringify(value));
-};
-
-const stripTransientClasses = (json) => {
-  if (!json || !json.classes) return json;
-  const kept = String(json.classes)
-    .split(/\s+/)
-    .filter((cls) => cls && !TRANSIENT_CANVAS_CLASS_SET.has(cls));
-  if (!kept.length) {
-    const { classes, ...rest } = json;
-    return rest;
-  }
-  return { ...json, classes: kept.join(" ") };
-};
-
-const snapshotElements = (cy) => cy.elements().jsons().map(stripTransientClasses);
-
 const firstNumeric = (...values) => {
   for (const value of values) {
     if (value === "" || value == null) continue;
@@ -465,7 +395,6 @@ export default function NetworkBuilderPage() {
   const pendingEntityRef = useRef(null); // blank entity type being inserted
   const insertEdgeRef = useRef(null);
   const insertPositionRef = useRef(null);
-  const loadedIdRef = useRef(null);
   const saveTimerRef = useRef(null);
   const showLabelsRef = useRef(true);
   const clipboardRef = useRef(null);
@@ -492,7 +421,23 @@ export default function NetworkBuilderPage() {
   const [selectedDeletableCount, setSelectedDeletableCount] = useState(0);
   const [counts, setCounts] = useState({ nodes: 0, edges: 0 });
   const [placedIds, setPlacedIds] = useState(new Set());
-  const [network, setNetwork] = useState({ id: null, name: "", description: "" });
+  // The document identity lives on the active workspace, so renaming a tab and
+  // the page header can never disagree.
+  const activeWorkspaceId = useWorkspaceStore((state) => state.activeWorkspaceId);
+  // Select the workspace itself — a stable reference between Immer updates —
+  // and derive from it. Returning a fresh object from the selector would give
+  // useSyncExternalStore a new snapshot every call and spin forever.
+  const activeWorkspace = useWorkspaceStore((state) =>
+    state.activeWorkspaceId ? state.instances[state.activeWorkspaceId] : null
+  );
+  const network = useMemo(
+    () => ({
+      id: activeWorkspace?.document.networkId ?? null,
+      name: activeWorkspace?.document.name ?? "",
+      description: activeWorkspace?.document.description ?? "",
+    }),
+    [activeWorkspace]
+  );
   const [saveStatus, setSaveStatus] = useState("idle");
   const [showLibrary, setShowLibrary] = useState(true);
   const [toast, setToast] = useState(null);
@@ -506,11 +451,25 @@ export default function NetworkBuilderPage() {
   const [snapToGrid, setSnapToGrid] = useState(false);
   // Midpoint dots on the hovered pipe; clicking one drops a bend there.
   const [edgeOverlay, setEdgeOverlay] = useState({ edgeId: null, handles: [] });
-  const [showInspector, setShowInspector] = useState(true);
+  const showInspector = useInspectorStore((state) => state.open);
+  const setShowInspector = useCallback((next) => {
+    const open = typeof next === "function" ? next(inspectorStore.getState().open) : next;
+    if (open) inspectorStore.getState().openInspector();
+    else inspectorStore.getState().closeInspector();
+  }, []);
   const [canvasFocusMode, setCanvasFocusMode] = useState(false);
   const [isolationActive, setIsolationActive] = useState(false);
-  const [rightPanelTab, setRightPanelTab] = useState("details");
-  const [issuePanelMode, setIssuePanelMode] = useState("issues");
+  const rightPanelTab = useInspectorStore((state) => state.activeTab);
+  // Selecting a tab always opens the panel: every existing call site set both.
+  const setRightPanelTab = useCallback(
+    (tab) => inspectorStore.getState().openInspector(tab),
+    []
+  );
+  const issuePanelMode = useIssuesStore((state) => state.mode);
+  const setIssuePanelMode = useCallback(
+    (mode) => issuesStore.getState().setMode(mode),
+    []
+  );
   const [validationIssues, setValidationIssues] = useState([]);
   const [panelFindQuery, setPanelFindQuery] = useState("");
   const [isolationQuery, setIsolationQuery] = useState("");
@@ -596,6 +555,9 @@ export default function NetworkBuilderPage() {
     const cy = cyRef.current;
     if (!cy) return;
     const sel = cy.$(":selected");
+    // Workspace-level selection identity: IDs only. The `selectedEl` object
+    // below stays a derived view-model for the editing forms.
+    selectionStore.getState().setSelection(sel.map((el) => el.id()));
     setHasSelection(sel.length > 0);
     setSelectedEdgeCount(sel.filter((el) => el.isEdge()).length);
     setSelectedDeletableCount(
@@ -631,7 +593,14 @@ export default function NetworkBuilderPage() {
   }, []);
 
   const scheduleCommit = useCallback(() => {
-    if (restoringRef.current || commitPendingRef.current) return;
+    // A workspace restore replays the whole graph through add/remove; without
+    // this guard the incoming workspace would arrive dirty with a history
+    // entry already committed.
+    if (restoringRef.current || canvasController.isRestoring()) return;
+    // Document mutations funnel through here, which makes this the single
+    // hook point for dirty tracking and debounced recovery writes.
+    workspaceController.notifyDocumentMutated();
+    if (commitPendingRef.current) return;
     commitPendingRef.current = true;
     setTimeout(() => {
       commitPendingRef.current = false;
@@ -1132,15 +1101,9 @@ export default function NetworkBuilderPage() {
       ?.querySelectorAll('[id^="cy-node-edge-editing-stage"]')
       .forEach((el) => el.remove());
 
-    const cy = cytoscape({
-      container: containerRef.current,
-      style: buildCyStyle(),
-      layout: { name: "preset" },
-      minZoom: 0.05,
-      maxZoom: 4,
-      boxSelectionEnabled: true, // shift-drag box-selects; plain drag pans
-      wheelSensitivity: 0.2,
-    });
+    // CanvasController owns construction and destruction; this page keeps
+    // ownership of what the graph means — the handlers and extensions below.
+    const cy = canvasController.initialize(containerRef.current);
     cyRef.current = cy;
 
     const clearDrawSource = () => {
@@ -1610,7 +1573,7 @@ export default function NetworkBuilderPage() {
         cancelAnimationFrame(overlayFrameRef.current);
         overlayFrameRef.current = null;
       }
-      cy.destroy();
+      canvasController.destroy();
       cyRef.current = null;
     };
   }, [
@@ -1620,37 +1583,19 @@ export default function NetworkBuilderPage() {
     syncBendEditingOverlay, clearEdgeOverlay, scheduleOverlaySync, restoreInteraction,
   ]);
 
-  // ── Hydrate from a saved network when the route :id changes ──────────────────
+  // ── Workspace session bootstrap ─────────────────────────────────────────────
+  // WorkspaceController owns document loading. The route :id is deep-link
+  // INTENT, read once here; it is no longer a live data source, so switching
+  // tabs does not re-trigger a fetch.
+  const sessionStartedRef = useRef(false);
   useEffect(() => {
-    const cy = cyRef.current;
-    if (!cy || !cyReady) return;
-    if (!id) {
-      loadedIdRef.current = null;
-      return;
-    }
-    if (id === loadedIdRef.current) return;
-    let cancelled = false;
-    fetchNetwork(id)
-      .then((doc) => {
-        if (cancelled || !cyRef.current) return;
-        loadedIdRef.current = id;
-        restoringRef.current = true;
-        cy.elements().remove();
-        addGraph(cy, doc);
-        restoringRef.current = false;
-        clearTraceClasses(cy);
-        cy.fit(undefined, 48);
-        setNetwork({ id: doc.id, name: doc.name, description: doc.description || "" });
-        setSelectedEl(null);
-        setTraceInfo(null);
-        syncGraph();
-        resetHistory();
-      })
-      .catch((e) => setToast(e.message || "Couldn't load network"));
-    return () => {
-      cancelled = true;
-    };
-  }, [id, cyReady, syncGraph, resetHistory]);
+    if (!cyReady || sessionStartedRef.current) return;
+    sessionStartedRef.current = true;
+    void workspaceController.recoverSession(id ?? null);
+    // `id` is deliberately not a dependency: re-running on navigation is what
+    // made document loading an effect's responsibility in the first place.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cyReady]);
 
   // ── Transmission Systems/Lines: fetched once, shared by the pipe modal and
   // the canvas inspector so a newly-created system/line is immediately known
@@ -2189,6 +2134,63 @@ export default function NetworkBuilderPage() {
     setActiveIsolationKey("");
     setToast(message);
   }, []);
+
+  // ── Workspace adapters ──────────────────────────────────────────────────────
+  // WorkspaceController reaches page-owned state only through these seams, so
+  // it stays framework-independent and unaffected when a later phase moves any
+  // of this state into a store.
+  useEffect(() => {
+    workspaceController.registerInteraction({
+      cancelUnsafeInteraction: () => {
+        // setModeSafe already clears draw-source, the pipe source, pending
+        // entity/asset placement, insert refs and the area box.
+        setModeSafe("select");
+      },
+      reset: () => {
+        const cy = cyRef.current;
+        if (cy) {
+          clearIsolationClasses(cy);
+          clearTraceClasses(cy);
+        }
+        setIsolationActive(false);
+        setActiveIsolationLabel("");
+        setActiveIsolationKey("");
+        setTraceInfo(null);
+        setTraceMode("reachable");
+      },
+    });
+    workspaceController.registerHistory({ reset: () => resetHistory() });
+    return () => workspaceController.detach();
+  }, [setModeSafe, resetHistory]);
+
+  // Re-registered whenever a toggle changes so capture() always reads current
+  // values; registration is a field assignment, so this is cheap.
+  useEffect(() => {
+    workspaceController.registerViewBridge({
+      capture: () => ({
+        showLabels,
+        showGrid,
+        snapToGrid,
+        showLibrary,
+        canvasFocusMode,
+        hiddenAssetTypes: [...hiddenAssetTypes],
+      }),
+      apply: (toggles) => {
+        setShowLabels(toggles.showLabels);
+        setShowGrid(toggles.showGrid);
+        setSnapToGrid(toggles.snapToGrid);
+        setShowLibrary(toggles.showLibrary);
+        setCanvasFocusMode(toggles.canvasFocusMode);
+        setHiddenAssetTypes(new Set(toggles.hiddenAssetTypes));
+      },
+    });
+  }, [showLabels, showGrid, snapToGrid, showLibrary, canvasFocusMode, hiddenAssetTypes]);
+
+  useEffect(() => {
+    workspaceController.registerNavigator({
+      replace: (path) => navigate(path, { replace: true }),
+    });
+  }, [navigate]);
 
   const isolateCollection = useCallback((elements, label = "selection", activeKey = "") => {
     const cy = cyRef.current;
@@ -2790,12 +2792,15 @@ export default function NetworkBuilderPage() {
       try {
         const useUpdate = network.id && !asNew;
         const doc = useUpdate ? await updateNetwork(network.id, payload) : await saveNetwork(payload);
-        setNetwork((prev) => ({ ...prev, id: doc.id, name: doc.name }));
-        setSaveStatus("saved");
-        if (!useUpdate) {
-          loadedIdRef.current = doc.id;
-          navigate(`/network-builder/${doc.id}`, { replace: true });
+        // markSaved clears dirty, adopts the backend id for a previously
+        // unsaved workspace, and mirrors the id into the URL.
+        if (activeWorkspaceId) {
+          workspaceController.markSaved(activeWorkspaceId, {
+            networkId: doc.id,
+            name: doc.name,
+          });
         }
+        setSaveStatus("saved");
         window.dispatchEvent(new Event(NETWORK_SAVED_EVENT));
         clearTimeout(saveTimerRef.current);
         saveTimerRef.current = setTimeout(() => setSaveStatus("idle"), 2000);
@@ -2860,19 +2865,22 @@ export default function NetworkBuilderPage() {
           const doc = JSON.parse(reader.result);
           const cy = cyRef.current;
           if (!cy) return;
-          restoringRef.current = true;
-          cy.elements().remove();
-          addGraph(cy, doc);
-          restoringRef.current = false;
+          canvasController.loadDocument(doc);
           clearTraceClasses(cy);
           cy.fit(undefined, 48);
-          loadedIdRef.current = null;
-          setNetwork({ id: null, name: doc.name || "", description: doc.description || "" });
+          // An import becomes a new unsaved document in the active workspace.
+          const workspaceId = activeWorkspaceId;
+          if (workspaceId) {
+            workspaceController.markSaved(workspaceId, {
+              networkId: null,
+              name: doc.name || "Imported network",
+            });
+            workspaceController.notifyDocumentMutated();
+          }
           setSelectedEl(null);
           setTraceInfo(null);
           syncGraph();
           resetHistory();
-          navigate("/network-builder");
           setToast("Imported canvas from file.");
         } catch {
           setToast("Couldn't parse that JSON file.");
@@ -2880,22 +2888,14 @@ export default function NetworkBuilderPage() {
       };
       reader.readAsText(file);
     },
-    [navigate, syncGraph, resetHistory]
+    [activeWorkspaceId, syncGraph, resetHistory]
   );
 
+  // "New" now opens another workspace tab instead of discarding the current
+  // document, so there is nothing to confirm away.
   const handleNew = useCallback(() => {
-    const cy = cyRef.current;
-    if (cy && cy.elements().length && !window.confirm("Start a new network? Unsaved changes will be lost.")) return;
-    if (cy) cy.elements().remove();
-    loadedIdRef.current = null;
-    setNetwork({ id: null, name: "", description: "" });
-    setSelectedEl(null);
-    setTraceInfo(null);
-    setModeSafe("select");
-    syncGraph();
-    resetHistory();
-    navigate("/network-builder");
-  }, [navigate, setModeSafe, syncGraph, resetHistory]);
+    void workspaceController.createWorkspace();
+  }, []);
 
   // ── Area-zoom drag overlay ───────────────────────────────────────────────────
   const areaDown = useCallback((e) => {
@@ -3005,6 +3005,42 @@ export default function NetworkBuilderPage() {
         return;
       }
 
+      // Workspace shortcuts live in this handler rather than a second global
+      // listener, so nothing fires twice.
+      //
+      // Ctrl/Cmd+Tab is deliberately absent: Chrome reserves it for browser
+      // tab switching and the event is not cancelable, so binding it would
+      // silently do nothing.
+      if (mod && e.altKey) {
+        if (key === "ArrowRight") {
+          e.preventDefault();
+          void workspaceController.activateRelative(1);
+          return;
+        }
+        if (key === "ArrowLeft") {
+          e.preventDefault();
+          void workspaceController.activateRelative(-1);
+          return;
+        }
+        if (lower === "n") {
+          e.preventDefault();
+          void workspaceController.createWorkspace();
+          return;
+        }
+      }
+      if (mod && e.shiftKey && lower === "t") {
+        e.preventDefault();
+        void workspaceController.reopenLastClosed();
+        return;
+      }
+      if (mod && !e.shiftKey && lower === "w") {
+        // Closing is undoable via Ctrl/Cmd+Shift+T, so no confirmation prompt.
+        e.preventDefault();
+        const id = workspaceStore.getState().activeWorkspaceId;
+        if (id) void workspaceController.closeWorkspace(id);
+        return;
+      }
+
       // The guide is a pinned panel rather than a modal, so it does not take
       // the keyboard: it only claims Esc, ahead of leaving a tool.
       if (shortcutsOpen && (key === "Escape" || key === "?")) {
@@ -3094,6 +3130,10 @@ export default function NetworkBuilderPage() {
     );
 
     setToolbar(
+      <div className="nb-chrome">
+      <WorkspaceTabsBoundary>
+        <WorkspaceTabs />
+      </WorkspaceTabsBoundary>
       <div className="contextual-toolbar contextual-toolbar--compact contextual-toolbar--static-fit">
         <div className="contextual-toolbar__container">
           {/* File */}
@@ -3342,6 +3382,7 @@ export default function NetworkBuilderPage() {
             <span className="toolbar-group__label">Panel</span>
           </div>
         </div>
+      </div>
       </div>
     );
   }, [

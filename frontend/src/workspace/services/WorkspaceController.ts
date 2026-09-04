@@ -58,6 +58,12 @@ export class WorkspaceController {
   #displayedWorkspaceId: string | null = null;
 
   #snapshots = new Map<string, CanvasSnapshot>();
+  /**
+   * Workspaces whose METADATA changed while they were not on screen. The
+   * displayed workspace is always written; without this set a rename or pin of
+   * a background tab would never reach IndexedDB and would vanish on refresh.
+   */
+  #pendingRecordWrites = new Set<string>();
   #switchToken = 0;
   #recoveryTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -268,6 +274,7 @@ export class WorkspaceController {
 
     if (this.#displayedWorkspaceId === id) this.#displayedWorkspaceId = null;
     this.#snapshots.delete(id);
+    this.#pendingRecordWrites.delete(id);
     workspaceStore.getState().removeWorkspace(id, snapshot?.elements ?? null);
     await this.#repository.deleteWorkspace(id);
 
@@ -341,6 +348,7 @@ export class WorkspaceController {
 
   renameWorkspace(id: string, name: string): void {
     workspaceStore.getState().renameWorkspace(id, name);
+    this.#markRecordDirty(id);
     this.scheduleRecoverySnapshot();
   }
 
@@ -351,6 +359,8 @@ export class WorkspaceController {
 
   togglePin(id: string): void {
     workspaceStore.getState().togglePin(id);
+    this.#markRecordDirty(id);
+    this.scheduleRecoverySnapshot();
     void this.#persistSession();
   }
 
@@ -395,6 +405,7 @@ export class WorkspaceController {
 
   markSaved(id: string, patch: { networkId?: string | null; name?: string }): void {
     workspaceStore.getState().markSaved(id, patch);
+    this.#markRecordDirty(id);
     const workspace = workspaceStore.getState().instances[id];
     if (workspace && this.#displayedWorkspaceId === id) {
       this.#navigator.replace(
@@ -418,35 +429,54 @@ export class WorkspaceController {
     this.#recoveryTimer = timer;
   }
 
+  #markRecordDirty(id: string): void {
+    this.#pendingRecordWrites.add(id);
+  }
+
   async flushRecoverySnapshot(): Promise<void> {
-    const id = this.#displayedWorkspaceId;
-    if (!id) return;
-    const workspace = workspaceStore.getState().instances[id];
-    if (!workspace) return;
-    // A workspace whose document failed to load holds an empty canvas. Writing
-    // that would overwrite a good stored graph with nothing.
-    if (workspace.loadError) return;
+    const displayed = this.#displayedWorkspaceId;
+    const targets = new Set(this.#pendingRecordWrites);
+    this.#pendingRecordWrites.clear();
+    if (displayed) targets.add(displayed);
+    if (!targets.size) return;
 
-    const snapshot = this.#canvas.captureSnapshot();
-    if (!snapshot) return;
-    this.#snapshots.set(id, snapshot);
+    for (const id of targets) {
+      const workspace = workspaceStore.getState().instances[id];
+      if (!workspace) continue;
+      // A workspace whose document failed to load holds an empty canvas.
+      // Writing that would overwrite a good stored graph with nothing.
+      if (workspace.loadError) continue;
 
-    const ui = {
-      ...workspace.ui,
-      inspectorOpen: inspectorStore.getState().open,
-      inspectorTab: inspectorStore.getState().activeTab,
-      issuePanelMode: issuesStore.getState().mode,
-      selectedElementIds: this.#canvas.getSelectedIds(),
-      viewport: snapshot.viewport,
-      view: this.#viewBridge?.capture() ?? workspace.ui.view,
-    };
+      let snapshot: CanvasSnapshot | null = null;
+      if (id === displayed) {
+        snapshot = this.#canvas.captureSnapshot();
+        if (snapshot) this.#snapshots.set(id, snapshot);
+      }
+      snapshot = snapshot ?? this.#snapshots.get(id) ?? null;
+      if (!snapshot) continue;
 
-    await this.#repository.saveWorkspace({
-      workspaceId: id,
-      workspace: { ...workspace, ui },
-      snapshot,
-      updatedAt: Date.now(),
-    });
+      // Only the displayed workspace has live UI state to harvest; a
+      // background tab's stored ui is already current.
+      const ui =
+        id === displayed
+          ? {
+              ...workspace.ui,
+              inspectorOpen: inspectorStore.getState().open,
+              inspectorTab: inspectorStore.getState().activeTab,
+              issuePanelMode: issuesStore.getState().mode,
+              selectedElementIds: this.#canvas.getSelectedIds(),
+              viewport: snapshot.viewport,
+              view: this.#viewBridge?.capture() ?? workspace.ui.view,
+            }
+          : workspace.ui;
+
+      await this.#repository.saveWorkspace({
+        workspaceId: id,
+        workspace: { ...workspace, ui },
+        snapshot,
+        updatedAt: Date.now(),
+      });
+    }
     await this.#persistSession();
   }
 

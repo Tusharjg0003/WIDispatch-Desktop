@@ -331,6 +331,39 @@ test("duplicate copies the graph into a new unsaved workspace", async () => {
   assert.deepEqual(canvas.elements, [{ data: { id: "a1" } }]);
 });
 
+test("renaming a background workspace is persisted", async () => {
+  const { controller, repository } = setup();
+  const aId = await controller.createWorkspace("A");
+  const bId = await controller.createWorkspace("B");
+  // B is displayed; rename A, which is not.
+  assert.equal(controller.displayedWorkspaceId, bId);
+
+  controller.renameWorkspace(aId, "Renamed A");
+  await controller.flushRecoverySnapshot();
+
+  const recovered = await repository.loadAll();
+  const storedA = recovered.workspaces.find((w) => w.id === aId);
+  assert.equal(
+    storedA?.document.name,
+    "Renamed A",
+    "a rename of a background tab must reach storage, not just memory"
+  );
+  // The displayed workspace is still written too.
+  assert.ok(recovered.workspaces.find((w) => w.id === bId));
+});
+
+test("pinning a background workspace is persisted", async () => {
+  const { controller, repository } = setup();
+  const aId = await controller.createWorkspace("A");
+  await controller.createWorkspace("B");
+
+  controller.togglePin(aId);
+  await controller.flushRecoverySnapshot();
+
+  const recovered = await repository.loadAll();
+  assert.equal(recovered.workspaces.find((w) => w.id === aId)?.pinned, true);
+});
+
 test("cold start restores the recovered graph rather than leaving a blank canvas", async () => {
   const first = setup();
   const aId = await first.controller.createWorkspace("A");
