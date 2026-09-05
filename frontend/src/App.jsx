@@ -5,7 +5,6 @@ import TopNavigationBar from "./components/TopNavigationBar";
 import OutageNotificationToast from "./components/production/OutageNotificationToast";
 import HomePage from "./pages/HomePage";
 import ProductionPage from "./pages/ProductionPage";
-import ProductionPlantDetail from "./pages/ProductionPlantDetail";
 import DemandPage from "./pages/DemandPage";
 import DemandCityGateDetail from "./pages/DemandCityGateDetail";
 import TransmissionPage from "./pages/TransmissionPage";
@@ -40,7 +39,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/production" element={<ProductionPage />} />
-            <Route path="/production/:plantId" element={<ProductionPlantDetail />} />
+            <Route path="/production/:plantId" element={<ProductionPage />} />
             <Route path="/demand" element={<DemandPage />} />
             <Route path="/demand/:cityGateId" element={<DemandCityGateDetail />} />
             <Route path="/transmission" element={<TransmissionPage />} />
