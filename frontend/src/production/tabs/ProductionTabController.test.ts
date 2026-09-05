@@ -190,3 +190,16 @@ test("a corrupt stored session degrades to the list tab alone", () => {
   assert.deepEqual(titles(), [LIST_TAB_TITLE]);
   assert.equal(controller.getActiveTab()?.permanent, true);
 });
+
+test("closeActive closes the active tab, and is a no-op on the list tab", () => {
+  const { controller } = setup();
+  const listId = state().order[0];
+  const a = controller.openPlant("plant-1", "A");
+
+  controller.closeActive();
+  assert.deepEqual(state().order, [listId]);
+
+  controller.closeActive();
+  assert.deepEqual(state().order, [listId]);
+  assert.ok(!state().tabs[a]);
+});

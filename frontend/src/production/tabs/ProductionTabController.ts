@@ -146,6 +146,12 @@ export class ProductionTabController {
     else this.#afterMutation();
   }
 
+  /** Convenience for the keyboard shortcut, which has no id to hand. */
+  closeActive(): void {
+    const { activeTabId } = productionTabStore.getState();
+    if (activeTabId) this.closeTab(activeTabId);
+  }
+
   closeOthers(id: string): void {
     const store = productionTabStore.getState();
     const doomed = store.order.filter(

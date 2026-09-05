@@ -7,6 +7,7 @@ import ProductionTabs from "../production/tabs/ProductionTabs";
 import TabStripBoundary from "../tabs/components/TabStripBoundary";
 import { useProductionTabStore } from "../production/tabs/productionTabStore";
 import { productionTabController } from "../production/tabs/productionTabControllerInstance";
+import { useTabShortcuts } from "../tabs/hooks/useTabShortcuts";
 
 export default function ProductionPage() {
   const navigate = useNavigate();
@@ -37,6 +38,8 @@ export default function ProductionPage() {
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useTabShortcuts(productionTabController);
 
   const openPlant = useCallback((plant) => {
     productionTabController.openPlant(plant.id, plant.name || plant.id);
