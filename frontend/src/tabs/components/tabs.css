@@ -1,7 +1,6 @@
-/* Workspace (document) tab bar. Sits above the Network Builder toolbar,
-   inside the shared .app-toolbar slot. */
+/* Tab strip styling. Domain-neutral: a strip carries a modifier class (e.g. .tab-strip--workspace) for any per-domain adjustment. */
 
-.ws-tabs {
+.tab-strip {
   display: flex;
   align-items: flex-end;
   gap: 2px;
@@ -13,7 +12,7 @@
   box-sizing: border-box;
 }
 
-.ws-tabs__strip {
+.tab-strip__list {
   display: flex;
   align-items: flex-end;
   gap: 2px;
@@ -22,7 +21,7 @@
   scrollbar-width: thin;
 }
 
-.ws-tab {
+.tab {
   position: relative;
   display: flex;
   align-items: center;
@@ -40,13 +39,13 @@
   cursor: pointer;
 }
 
-.ws-tab:hover {
+.tab:hover {
   background: #ffffff;
   border-color: #dbe3ee;
   color: #24292f;
 }
 
-.ws-tab--active {
+.tab--active {
   background: #ffffff;
   border-color: #93c5fd;
   color: #1d4ed8;
@@ -54,7 +53,7 @@
 }
 
 /* The active tab merges into the toolbar below it. */
-.ws-tab--active::after {
+.tab--active::after {
   content: "";
   position: absolute;
   left: 0;
@@ -64,20 +63,20 @@
   background: #ffffff;
 }
 
-.ws-tab--dragging {
+.tab--dragging {
   opacity: 0.6;
   z-index: 2;
 }
 
-.ws-tab--pending {
+.tab--pending {
   opacity: 0.7;
 }
 
-.ws-tab--pending .ws-tab__name {
+.tab--pending .tab__name {
   font-style: italic;
 }
 
-.ws-tab__label {
+.tab__label {
   display: flex;
   align-items: center;
   gap: 5px;
@@ -91,14 +90,14 @@
   touch-action: none; /* required for the dnd-kit pointer sensor */
 }
 
-.ws-tab__name {
+.tab__name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 140px;
 }
 
-.ws-tab__pin {
+.tab__pin {
   width: 5px;
   height: 5px;
   border-radius: 50%;
@@ -106,7 +105,7 @@
   flex: none;
 }
 
-.ws-tab__dirty {
+.tab__dirty {
   width: 6px;
   height: 6px;
   border-radius: 50%;
@@ -114,13 +113,13 @@
   flex: none;
 }
 
-.ws-tab__warn {
+.tab__warn {
   color: #dc2626;
   font-weight: 800;
   flex: none;
 }
 
-.ws-tab__close {
+.tab__close {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -138,18 +137,18 @@
   flex: none;
 }
 
-.ws-tab:hover .ws-tab__close,
-.ws-tab--active .ws-tab__close {
+.tab:hover .tab__close,
+.tab--active .tab__close {
   opacity: 0.65;
 }
 
-.ws-tab__close:hover {
+.tab__close:hover {
   background: #fee2e2;
   color: #b91c1c;
   opacity: 1;
 }
 
-.ws-tab__rename {
+.tab__rename {
   width: 130px;
   height: 19px;
   padding: 0 4px;
@@ -160,7 +159,7 @@
   font: inherit;
 }
 
-.ws-tabs__new {
+.tab-strip__new {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -177,20 +176,20 @@
   flex: none;
 }
 
-.ws-tabs__new:hover {
+.tab-strip__new:hover {
   background: #ffffff;
   border-color: #dbe3ee;
   color: #1d4ed8;
 }
 
-.ws-tabs--failed {
+.tab-strip--failed {
   padding: 6px 10px;
   color: #b91c1c;
   font-size: 0.6875rem;
 }
 
 /* Tab context menu */
-.ws-menu {
+.tab-menu {
   position: fixed;
   z-index: 4000;
   min-width: 190px;
@@ -201,7 +200,7 @@
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14);
 }
 
-.ws-menu__item {
+.tab-menu__item {
   display: block;
   width: 100%;
   padding: 6px 10px;
@@ -214,32 +213,23 @@
   cursor: pointer;
 }
 
-.ws-menu__item:hover:not(:disabled) {
+.tab-menu__item:hover:not(:disabled) {
   background: #eff6ff;
   color: #1d4ed8;
 }
 
-.ws-menu__item:disabled {
+.tab-menu__item:disabled {
   color: #b7c0cd;
   cursor: default;
 }
 
-.ws-menu__item--danger:hover:not(:disabled) {
+.tab-menu__item--danger:hover:not(:disabled) {
   background: #fee2e2;
   color: #b91c1c;
 }
 
-.ws-menu__separator {
+.tab-menu__separator {
   height: 1px;
   margin: 4px 2px;
   background: #e2e8f0;
-}
-
-/* Column wrapper so the tab bar stacks above the toolbar inside the
-   row-oriented .app-toolbar slot. */
-.nb-chrome {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  min-width: 0;
 }

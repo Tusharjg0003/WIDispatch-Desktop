@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import WorkspaceTabs from "../workspace/components/WorkspaceTabs";
-import WorkspaceTabsBoundary from "../workspace/components/WorkspaceTabsBoundary";
+import TabStripBoundary from "../tabs/components/TabStripBoundary";
 import { workspaceController } from "../workspace/services/workspaceControllerInstance";
 import { useWorkspaceStore, workspaceStore } from "../workspace/store/workspaceStore";
 import { canvasController } from "../canvas/controller/CanvasController";
@@ -3131,9 +3131,9 @@ export default function NetworkBuilderPage() {
 
     setToolbar(
       <div className="nb-chrome">
-      <WorkspaceTabsBoundary>
+      <TabStripBoundary>
         <WorkspaceTabs />
-      </WorkspaceTabsBoundary>
+      </TabStripBoundary>
       <div className="contextual-toolbar contextual-toolbar--compact contextual-toolbar--static-fit">
         <div className="contextual-toolbar__container">
           {/* File */}

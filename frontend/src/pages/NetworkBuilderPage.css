@@ -2972,3 +2972,12 @@
 .nb-shortcut-desc {
   color: #0f172a;
 }
+
+/* Column wrapper so the tab bar stacks above the toolbar inside the
+   row-oriented .app-toolbar slot. */
+.nb-chrome {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+}

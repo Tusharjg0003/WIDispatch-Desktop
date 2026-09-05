@@ -1,11 +1,21 @@
 import { useEffect, useRef } from "react";
 
-export interface WorkspaceTabContextMenuProps {
+export interface TabCapabilities {
+  rename: boolean;
+  duplicate: boolean;
+  pin: boolean;
+  /** Whether the strip offers a "+" button for a blank new tab. */
+  create: boolean;
+}
+
+export interface TabContextMenuProps {
   x: number;
   y: number;
+  capabilities: TabCapabilities;
+  pinned: boolean;
+  permanent: boolean;
   canCloseOthers: boolean;
   canCloseToRight: boolean;
-  pinned: boolean;
   onRename(): void;
   onDuplicate(): void;
   onTogglePin(): void;
@@ -19,12 +29,14 @@ export interface WorkspaceTabContextMenuProps {
  * A plain DOM popover — unrelated to the cytoscape-context-menus extension
  * used on the canvas itself.
  */
-export default function WorkspaceTabContextMenu({
+export default function TabContextMenu({
   x,
   y,
+  capabilities,
+  pinned,
+  permanent,
   canCloseOthers,
   canCloseToRight,
-  pinned,
   onRename,
   onDuplicate,
   onTogglePin,
@@ -32,7 +44,7 @@ export default function WorkspaceTabContextMenu({
   onCloseOthers,
   onCloseToRight,
   onDismiss,
-}: WorkspaceTabContextMenuProps) {
+}: TabContextMenuProps) {
   const ref = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -60,7 +72,7 @@ export default function WorkspaceTabContextMenu({
   ) => (
     <button
       type="button"
-      className={`ws-menu__item${danger ? " ws-menu__item--danger" : ""}`}
+      className={`tab-menu__item${danger ? " tab-menu__item--danger" : ""}`}
       disabled={disabled}
       onClick={() => {
         onDismiss();
@@ -72,17 +84,12 @@ export default function WorkspaceTabContextMenu({
   );
 
   return (
-    <div
-      ref={ref}
-      className="ws-menu"
-      style={{ left: x, top: y }}
-      role="menu"
-    >
-      {item("Rename", onRename)}
-      {item("Duplicate", onDuplicate)}
-      {item(pinned ? "Unpin" : "Pin", onTogglePin)}
-      <div className="ws-menu__separator" />
-      {item("Close", onClose)}
+    <div ref={ref} className="tab-menu" style={{ left: x, top: y }} role="menu">
+      {capabilities.rename && !permanent && item("Rename", onRename)}
+      {capabilities.duplicate && !permanent && item("Duplicate", onDuplicate)}
+      {capabilities.pin && !permanent && item(pinned ? "Unpin" : "Pin", onTogglePin)}
+      <div className="tab-menu__separator" />
+      {item("Close", onClose, permanent)}
       {item("Close Others", onCloseOthers, !canCloseOthers)}
       {item("Close Tabs to the Right", onCloseToRight, !canCloseToRight)}
     </div>
