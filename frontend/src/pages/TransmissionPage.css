@@ -32,50 +32,6 @@
   justify-content: flex-start;
 }
 
-.transmission-tabs {
-  display: flex;
-  gap: 2px;
-  margin-bottom: 12px;
-  border-bottom: 1px solid #d0d7de;
-}
-
-.transmission-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  border: 1px solid transparent;
-  border-bottom: none;
-  border-radius: 2px 2px 0 0;
-  background: transparent;
-  color: #4b5563;
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.transmission-tab:hover {
-  color: #111827;
-  background: #eef4ff;
-}
-
-.transmission-tab--active {
-  margin-bottom: -1px;
-  border-color: #d0d7de;
-  background: #ffffff;
-  color: #003eb1;
-}
-
-.transmission-tab span {
-  min-width: 20px;
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: #eef4ff;
-  color: #003eb1;
-  font-size: 0.68rem;
-  text-align: center;
-}
-
 .transmission-systems-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);

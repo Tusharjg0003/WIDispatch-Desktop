@@ -1,12 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import WorkspaceHeader from "../components/WorkspaceHeader";
 import { fetchCityGates } from "../api/demand";
 import "./ProductionPlantList.css";
 import "./DemandCityGateList.css";
 
 const uniqSorted = (values) => [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
 
-export default function DemandCityGateList() {
+export default function DemandCityGateList({ basePath = "/demand", onOpenGate }) {
   const navigate = useNavigate();
   const [gates, setGates] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -48,12 +49,11 @@ export default function DemandCityGateList() {
 
   return (
     <div className="ppl demand-city-gates">
-      <div className="ppl__titlebar">
-        <div>
-          <h1 className="ppl__title">City Gates</h1>
-          <p className="ppl__subtitle">Demand delivery points · view only</p>
-        </div>
-      </div>
+      <WorkspaceHeader
+        title="City Gates"
+        subtitle="Demand delivery points · view only"
+        className="ppl__header"
+      />
 
       <header className="ppl__head">
         <input className="ppl__search" placeholder="Search city gates by name, ID, city, region, entity…" value={query} onChange={(e) => setQuery(e.target.value)} />
@@ -89,7 +89,14 @@ export default function DemandCityGateList() {
             </thead>
             <tbody>
               {filtered.map((g) => (
-                <tr key={g.id} onClick={() => navigate(`/demand/${encodeURIComponent(g.id)}`)}>
+                <tr
+                  key={g.id}
+                  onClick={() =>
+                    onOpenGate
+                      ? onOpenGate(g)
+                      : navigate(`${basePath}/${encodeURIComponent(g.id)}`)
+                  }
+                >
                   <td className="mono muted">{g.external_id}</td>
                   <td><div className="ppl__name">{g.name}</div><div className="ppl__city">{g.city || "—"}</div></td>
                   <td><span className="ppl__badge">{g.asset_type || "N/A"}</span></td>

@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import cytoscape from "cytoscape";
 import {
   fetchTransmissionPumpStations,
@@ -12,6 +12,12 @@ import { buildCyStyle } from "../cytoscape/buildCyStyle";
 import { applyEntitySymbol } from "../cytoscape/entitySymbol";
 import { activeFunctionalPumps, backupPumps, totalDesignCapacity } from "../lib/pumpStation";
 import { lineDisplayName, lineSystemId } from "../lib/transmissionLines";
+import TransmissionTabs from "../transmission/tabs/TransmissionTabs";
+import TabStripBoundary from "../tabs/components/TabStripBoundary";
+import { useTransmissionTabStore } from "../transmission/tabs/transmissionTabStore";
+import { transmissionTabController } from "../transmission/tabs/transmissionTabControllerInstance";
+import { useTabShortcuts } from "../tabs/hooks/useTabShortcuts";
+import TransmissionPumpStationDetail from "./TransmissionPumpStationDetail";
 import "./ProductionPlantList.css";
 import "./TransmissionPage.css";
 
@@ -189,8 +195,55 @@ function TransmissionSystemSnapshot({ system }) {
   );
 }
 
-export default function TransmissionPage() {
+export default function TransmissionPage({ mode }) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { pumpStationId } = useParams();
+  const [searchParams] = useSearchParams();
+  const systemsView = mode === "systems" || location.pathname.startsWith("/transmission/systems");
+
+  const activeTabId = useTransmissionTabStore((state) => state.activeTabId);
+  const activeTab = useTransmissionTabStore((state) =>
+    state.activeTabId ? state.tabs[state.activeTabId] ?? null : null
+  );
+
+  useEffect(() => {
+    transmissionTabController.registerNavigator({
+      replace: (path) => navigate(path, { replace: true }),
+    });
+    return () => transmissionTabController.detach();
+  }, [navigate]);
+
+  useEffect(() => {
+    transmissionTabController.restoreSessionOnce(
+      pumpStationId ?? null,
+      searchParams.get("tab")
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useTabShortcuts(transmissionTabController);
+
+  const openPumpStation = useCallback((station) => {
+    transmissionTabController.openPumpStation(station.id, station.name || station.id);
+  }, []);
+
+  const changeSubTab = useCallback(
+    (next) => {
+      if (activeTabId) transmissionTabController.setSubTab(activeTabId, next);
+    },
+    [activeTabId]
+  );
+
+  const adoptTitle = useCallback(
+    (station) => {
+      if (activeTabId && station?.name) {
+        transmissionTabController.adoptTitle(activeTabId, station.name);
+      }
+    },
+    [activeTabId]
+  );
+
   const [stations, setStations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -198,11 +251,11 @@ export default function TransmissionPage() {
   const [status, setStatus] = useState("");
   const [entity, setEntity] = useState("");
   const [region, setRegion] = useState("");
-  const [activeTab, setActiveTab] = useState("pump-stations");
   const [systems, setSystems] = useState([]);
   const [systemsLoading, setSystemsLoading] = useState(true);
   const [systemsError, setSystemsError] = useState(null);
   const [systemsQuery, setSystemsQuery] = useState("");
+
   const [lines, setLines] = useState([]);
   const [networks, setNetworks] = useState([]);
   const [networksLoading, setNetworksLoading] = useState(true);
@@ -517,101 +570,7 @@ export default function TransmissionPage() {
         </div>
       </div>
 
-      <div className="transmission-tabs" role="tablist" aria-label="Transmission sections">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === "pump-stations"}
-          className={`transmission-tab${activeTab === "pump-stations" ? " transmission-tab--active" : ""}`}
-          onClick={() => setActiveTab("pump-stations")}
-        >
-          Pump Stations <span>{stations.length}</span>
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === "systems"}
-          className={`transmission-tab${activeTab === "systems" ? " transmission-tab--active" : ""}`}
-          onClick={() => setActiveTab("systems")}
-        >
-          Transmission Systems <span>{systems.length}</span>
-        </button>
-      </div>
-
-      {activeTab === "pump-stations" && (
-        <>
-          <header className="ppl__head">
-            <input
-              className="ppl__search"
-              placeholder="Search pump stations by name, ID, city, region, entity…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-            <select className="ppl__filter" aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value)}>
-              <option value="">All Statuses</option>
-              {filterOptions.statuses.map((item) => <option key={item} value={item}>{item}</option>)}
-            </select>
-            <select className="ppl__filter" aria-label="Entity" value={entity} onChange={(e) => setEntity(e.target.value)}>
-              <option value="">All Entities</option>
-              {filterOptions.entities.map((item) => <option key={item} value={item}>{item}</option>)}
-            </select>
-            <select className="ppl__filter" aria-label="Region" value={region} onChange={(e) => setRegion(e.target.value)}>
-              <option value="">All Regions</option>
-              {filterOptions.regions.map((item) => <option key={item} value={item}>{item}</option>)}
-            </select>
-          </header>
-
-          {loading && <div className="ppl__state">Loading pump stations…</div>}
-          {error && <div className="ppl__state ppl__state--err">Failed to load pump stations: {error}</div>}
-
-          {!loading && !error && (
-            <div className="ppl__table-wrap">
-              <table className="ppl__table">
-                <thead>
-                  <tr>
-                    <th>Asset ID</th>
-                    <th>Pump Station Name</th>
-                    <th>Entity</th>
-                    <th>Region</th>
-                    <th>Status</th>
-                    <th>Commissioning Date</th>
-                    <th>Decommissioning Date</th>
-                    <th className="ta-r">Functional Pumps</th>
-                    <th className="ta-r">Backup Pumps</th>
-                    <th className="ta-r">Design Capacity (m³/day)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((station) => (
-                    <tr key={station.id} onClick={() => navigate(`/transmission/${encodeURIComponent(station.id)}`)}>
-                      <td className="mono muted">{station.external_id}</td>
-                      <td>
-                        <div className="ppl__name">{station.name}</div>
-                        <div className="ppl__city">{station.city || "—"}</div>
-                      </td>
-                      <td className="muted">{station.entity || "—"}</td>
-                      <td className="muted">{station.region || "—"}</td>
-                      <td><span className="ppl__badge">{station.status || "N/A"}</span></td>
-                      <td className="muted">{fmtDate(station.commissioning_date)}</td>
-                      <td className="muted">{fmtDate(station.decommissioning_date)}</td>
-                      <td className="ta-r mono">{activeFunctionalPumps(station.specifications).length}</td>
-                      <td className="ta-r mono">{backupPumps(station.specifications).length}</td>
-                      <td className="ta-r mono">{totalDesignCapacity(station.specifications).toLocaleString()}</td>
-                    </tr>
-                  ))}
-                  {filtered.length === 0 && (
-                    <tr>
-                      <td colSpan={10} className="ppl__empty">No pump stations match your filters.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </>
-      )}
-
-      {activeTab === "systems" && (
+      {systemsView ? (
         <>
           <header className="ppl__head">
             <input
@@ -848,6 +807,93 @@ export default function TransmissionPage() {
                 )}
               </aside>
             </div>
+          )}
+        </>
+      ) : (
+        <>
+          <TabStripBoundary>
+            <TransmissionTabs />
+          </TabStripBoundary>
+
+          {activeTab?.key ? (
+            <TransmissionPumpStationDetail
+              key={activeTab.id}
+              pumpStationId={activeTab.key}
+              subTab={activeTab.state.subTab}
+              onSubTabChange={changeSubTab}
+              onPumpStationLoaded={adoptTitle}
+            />
+          ) : (
+            <>
+              <header className="ppl__head">
+                <input
+                  className="ppl__search"
+                  placeholder="Search pump stations by name, ID, city, region, entity…"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+                <select className="ppl__filter" aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value)}>
+                  <option value="">All Statuses</option>
+                  {filterOptions.statuses.map((item) => <option key={item} value={item}>{item}</option>)}
+                </select>
+                <select className="ppl__filter" aria-label="Entity" value={entity} onChange={(e) => setEntity(e.target.value)}>
+                  <option value="">All Entities</option>
+                  {filterOptions.entities.map((item) => <option key={item} value={item}>{item}</option>)}
+                </select>
+                <select className="ppl__filter" aria-label="Region" value={region} onChange={(e) => setRegion(e.target.value)}>
+                  <option value="">All Regions</option>
+                  {filterOptions.regions.map((item) => <option key={item} value={item}>{item}</option>)}
+                </select>
+              </header>
+
+              {loading && <div className="ppl__state">Loading pump stations…</div>}
+              {error && <div className="ppl__state ppl__state--err">Failed to load pump stations: {error}</div>}
+
+              {!loading && !error && (
+                <div className="ppl__table-wrap">
+                  <table className="ppl__table">
+                    <thead>
+                      <tr>
+                        <th>Asset ID</th>
+                        <th>Pump Station Name</th>
+                        <th>Entity</th>
+                        <th>Region</th>
+                        <th>Status</th>
+                        <th>Commissioning Date</th>
+                        <th>Decommissioning Date</th>
+                        <th className="ta-r">Functional Pumps</th>
+                        <th className="ta-r">Backup Pumps</th>
+                        <th className="ta-r">Design Capacity (m³/day)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtered.map((station) => (
+                        <tr key={station.id} onClick={() => openPumpStation(station)}>
+                          <td className="mono muted">{station.external_id}</td>
+                          <td>
+                            <div className="ppl__name">{station.name}</div>
+                            <div className="ppl__city">{station.city || "—"}</div>
+                          </td>
+                          <td className="muted">{station.entity || "—"}</td>
+                          <td className="muted">{station.region || "—"}</td>
+                          <td><span className="ppl__badge">{station.status || "N/A"}</span></td>
+                          <td className="muted">{fmtDate(station.commissioning_date)}</td>
+                          <td className="muted">{fmtDate(station.decommissioning_date)}</td>
+                          <td className="ta-r mono">{activeFunctionalPumps(station.specifications).length}</td>
+                          <td className="ta-r mono">{backupPumps(station.specifications).length}</td>
+                          <td className="ta-r mono">{totalDesignCapacity(station.specifications).toLocaleString()}</td>
+                        </tr>
+                      ))}
+                      {filtered.length === 0 && (
+                        <tr>
+                          <td colSpan={10} className="ppl__empty">No pump stations match your filters.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
           )}
         </>
       )}

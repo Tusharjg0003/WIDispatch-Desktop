@@ -8,6 +8,7 @@ import TabStripBoundary from "../tabs/components/TabStripBoundary";
 import { useProductionTabStore } from "../production/tabs/productionTabStore";
 import { productionTabController } from "../production/tabs/productionTabControllerInstance";
 import { useTabShortcuts } from "../tabs/hooks/useTabShortcuts";
+import "./ProductionPage.css";
 
 export default function ProductionPage() {
   const navigate = useNavigate();

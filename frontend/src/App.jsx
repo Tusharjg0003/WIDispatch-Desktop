@@ -8,7 +8,6 @@ import ProductionPage from "./pages/ProductionPage";
 import DemandPage from "./pages/DemandPage";
 import DemandCityGateDetail from "./pages/DemandCityGateDetail";
 import TransmissionPage from "./pages/TransmissionPage";
-import TransmissionPumpStationDetail from "./pages/TransmissionPumpStationDetail";
 import EconomicsPage from "./pages/EconomicsPage";
 import EconomicsPlantDetail from "./pages/EconomicsPlantDetail";
 import AssetRegistryPage from "./pages/AssetRegistryPage";
@@ -41,11 +40,13 @@ export default function App() {
             <Route path="/production" element={<ProductionPage />} />
             <Route path="/production/:plantId" element={<ProductionPage />} />
             <Route path="/demand" element={<DemandPage />} />
-            <Route path="/demand/:cityGateId" element={<DemandCityGateDetail />} />
+            <Route path="/demand/:cityGateId" element={<DemandPage />} />
             <Route path="/transmission" element={<TransmissionPage />} />
-            <Route path="/transmission/:pumpStationId" element={<TransmissionPumpStationDetail />} />
+            <Route path="/transmission/pump-stations" element={<TransmissionPage />} />
+            <Route path="/transmission/pump-stations/:pumpStationId" element={<TransmissionPage />} />
+            <Route path="/transmission/systems" element={<TransmissionPage mode="systems" />} />
             <Route path="/economics" element={<EconomicsPage />} />
-            <Route path="/economics/:plantId" element={<EconomicsPlantDetail />} />
+            <Route path="/economics/:plantId" element={<EconomicsPage />} />
             <Route path="/network-builder" element={<NetworkBuilderPage />} />
             <Route path="/network-builder/:id" element={<NetworkBuilderPage />} />
             <Route path="/simulation-config" element={<SimulationConfigPage />} />

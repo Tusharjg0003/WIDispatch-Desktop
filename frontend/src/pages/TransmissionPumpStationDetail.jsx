@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { useParams, useSearchParams } from "react-router-dom";
 import { fetchTransmissionPumpStationBundle } from "../api/metrics";
 import MaintenanceRecordList from "../components/production/MaintenanceRecordList";
 import OutageRecordList from "../components/production/OutageRecordList";
@@ -133,23 +132,27 @@ function PumpStationOverview({ station, bundle }) {
   );
 }
 
-export default function TransmissionPumpStationDetail() {
+export default function TransmissionPumpStationDetail({
+  pumpStationId: controlledId,
+  subTab,
+  onSubTabChange,
+  onPumpStationLoaded,
+}) {
   const { pumpStationId: rawId } = useParams();
-  const pumpStationId = decodeURIComponent(rawId);
+  const routeId = rawId ? decodeURIComponent(rawId) : null;
+  const pumpStationId = controlledId ?? routeId;
   const [searchParams, setSearchParams] = useSearchParams();
-  const requestedTab = searchParams.get("tab");
   const [bundle, setBundle] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState(TAB_KEYS.has(requestedTab) ? requestedTab : "overview");
-
-  useEffect(() => {
-    const nextTab = TAB_KEYS.has(requestedTab) ? requestedTab : "overview";
-    setActiveTab((current) => (current === nextTab ? current : nextTab));
-  }, [requestedTab]);
+  const requestedTab = searchParams.get("tab");
+  const activeTab = TAB_KEYS.has(subTab) ? subTab : (TAB_KEYS.has(requestedTab) ? requestedTab : "overview");
 
   const selectTab = (key) => {
-    setActiveTab(key);
+    if (typeof onSubTabChange === "function") {
+      onSubTabChange(key);
+      return;
+    }
     const next = new URLSearchParams(searchParams);
     if (key === "overview") next.delete("tab");
     else next.set("tab", key);
@@ -177,12 +180,17 @@ export default function TransmissionPumpStationDetail() {
     return () => { alive = false; };
   }, [pumpStationId]);
 
+  useEffect(() => {
+    if (bundle?.pumpStation && typeof onPumpStationLoaded === "function") {
+      onPumpStationLoaded(bundle.pumpStation);
+    }
+  }, [bundle, onPumpStationLoaded]);
+
   const station = bundle?.pumpStation;
 
   return (
     <div className="ppd transmission-detail">
       <header className="ppd__head">
-        <Link to="/transmission" className="ppd__back" aria-label="Back to pump stations"><ArrowLeft size={16} /></Link>
         <div>
           <h1 className="ppd__name">{station?.name || pumpStationId}</h1>
           <p className="ppd__meta">{[station?.asset_type || "Pump Station", station?.region, "View only"].filter(Boolean).join(" · ")}</p>

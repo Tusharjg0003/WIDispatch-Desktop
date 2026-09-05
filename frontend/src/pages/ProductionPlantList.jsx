@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import WorkspaceHeader from "../components/WorkspaceHeader";
 import { fetchProductionPlants } from "../api/production";
 import "./ProductionPlantList.css";
 
@@ -54,6 +55,12 @@ export default function ProductionPlantList({ basePath = "/production", onOpenPl
 
   return (
     <div className="ppl">
+      <WorkspaceHeader
+        title="Plants"
+        subtitle="Production assets · view only"
+        className="ppl__header"
+      />
+
       <header className="ppl__head">
         <input className="ppl__search" placeholder="Search name, ID, city, region, entity…" value={query} onChange={(e) => setQuery(e.target.value)} />
         <select className="ppl__filter" aria-label="Plant type" value={plantType} onChange={(e) => setPlantType(e.target.value)}>

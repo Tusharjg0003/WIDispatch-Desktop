@@ -1,6 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { useParams, Link, useSearchParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
 import { fetchEconomicsPlantBundle } from "../api/production";
 import PlantOverview from "../components/production/PlantOverview";
 import PlantFinancialTable from "../components/economics/PlantFinancialTable";
@@ -10,30 +8,16 @@ const TABS = [
   { key: "overview", label: "Overview" },
   { key: "financial", label: "Financial" },
 ];
-const TAB_KEYS = new Set(TABS.map((tab) => tab.key));
 
-export default function EconomicsPlantDetail() {
-  const { plantId: rawId } = useParams();
-  const plantId = decodeURIComponent(rawId);
-  const [searchParams, setSearchParams] = useSearchParams();
-  const requestedTab = searchParams.get("tab");
+export default function EconomicsPlantDetail({
+  plantId,
+  subTab = "overview",
+  onSubTabChange,
+  onPlantLoaded,
+}) {
   const [bundle, setBundle] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState(TAB_KEYS.has(requestedTab) ? requestedTab : "overview");
-
-  useEffect(() => {
-    const nextTab = TAB_KEYS.has(requestedTab) ? requestedTab : "overview";
-    setActiveTab((current) => (current === nextTab ? current : nextTab));
-  }, [requestedTab]);
-
-  const selectTab = (key) => {
-    setActiveTab(key);
-    const next = new URLSearchParams(searchParams);
-    if (key === "overview") next.delete("tab");
-    else next.set("tab", key);
-    setSearchParams(next, { replace: true });
-  };
 
   useEffect(() => {
     let alive = true;
@@ -41,17 +25,26 @@ export default function EconomicsPlantDetail() {
     setError(null);
     setBundle(null);
     fetchEconomicsPlantBundle(plantId)
-      .then((b) => { if (alive) { setBundle(b); setLoading(false); } })
-      .catch((e) => { if (alive) { setError(e.message); setLoading(false); } });
+      .then((b) => {
+        if (!alive) return;
+        setBundle(b);
+        setLoading(false);
+        if (b?.plant?.name) onPlantLoaded?.(b.plant);
+      })
+      .catch((e) => {
+        if (alive) {
+          setError(e.message);
+          setLoading(false);
+        }
+      });
     return () => { alive = false; };
-  }, [plantId]);
+  }, [plantId, onPlantLoaded]);
 
   const plant = bundle?.plant;
 
   return (
     <div className="ppd">
       <header className="ppd__head">
-        <Link to="/economics" className="ppd__back" aria-label="Back to plants"><ArrowLeft size={16} /></Link>
         <div>
           <h1 className="ppd__name">{plant?.name || plantId}</h1>
           <p className="ppd__meta">{[plant?.asset_type, plant?.region].filter(Boolean).join(" · ")}</p>
@@ -68,17 +61,17 @@ export default function EconomicsPlantDetail() {
               <button
                 key={t.key}
                 role="tab"
-                aria-selected={activeTab === t.key}
-                className={`ppd__tab ${activeTab === t.key ? "ppd__tab--active" : ""}`}
-                onClick={() => selectTab(t.key)}
+                aria-selected={subTab === t.key}
+                className={`ppd__tab ${subTab === t.key ? "ppd__tab--active" : ""}`}
+                onClick={() => onSubTabChange?.(t.key)}
               >
                 {t.label}
               </button>
             ))}
           </div>
           <div className="ppd__tabpanel">
-            {activeTab === "overview" && <PlantOverview plant={plant} plantId={plantId} bundle={bundle} />}
-            {activeTab === "financial" && <PlantFinancialTable entries={bundle.financialEntries} plantId={plantId} />}
+            {subTab === "overview" && <PlantOverview plant={plant} plantId={plantId} bundle={bundle} />}
+            {subTab === "financial" && <PlantFinancialTable entries={bundle.financialEntries} plantId={plantId} />}
           </div>
         </>
       )}

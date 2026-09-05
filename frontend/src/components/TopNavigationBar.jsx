@@ -24,6 +24,18 @@ const NAV_ITEMS = [
     label: "Transmission",
     path: "/transmission",
     icon: iconPath("02 Asset & Infrastructure Icons/Pipeline Network/SVG/Pipeline Network_20px.svg"),
+    children: [
+      {
+        id: "transmission-pump-stations",
+        label: "Pump Stations",
+        path: "/transmission/pump-stations",
+      },
+      {
+        id: "transmission-systems",
+        label: "Transmission Systems",
+        path: "/transmission/systems",
+      },
+    ],
   },
   {
     id: "economics",
@@ -56,6 +68,7 @@ const TopNavigationBar = () => {
   const navigate = useNavigate();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [openNavGroup, setOpenNavGroup] = useState(null);
   const userMenuRef = useRef(null);
   const searchRef = useRef(null);
   const searchInputRef = useRef(null);
@@ -70,6 +83,15 @@ const TopNavigationBar = () => {
   const handleNavClick = (path) => {
     navigate(path);
   };
+
+  useEffect(() => {
+    const activeGroup = NAV_ITEMS.find((item) => item.children?.some((child) => isActive(child.path)));
+    if (activeGroup) {
+      setOpenNavGroup(activeGroup.id);
+    } else if (isActive("/transmission")) {
+      setOpenNavGroup("transmission");
+    }
+  }, [location.pathname]);
 
   // Close user menu when clicking outside
   useEffect(() => {
@@ -132,22 +154,55 @@ const TopNavigationBar = () => {
 
         <div className="top-navigation-bar__items">
           {NAV_ITEMS.map((item) => {
-            const active = isActive(item.path);
+            const active = item.children ? item.children.some((child) => isActive(child.path)) || isActive(item.path) : isActive(item.path);
+            const isGroupOpen = openNavGroup === item.id;
+
             return (
-              <button
-                key={item.id}
-                className={`top-navigation-bar__item ${active ? "active" : ""}`}
-                onClick={() => handleNavClick(item.path)}
-              >
-                <img
-                  className="top-navigation-bar__item-icon"
-                  src={item.icon}
-                  alt=""
-                  aria-hidden="true"
-                  draggable="false"
-                />
-                <span>{item.label}</span>
-              </button>
+              <div key={item.id} className="top-navigation-bar__nav-group">
+                <button
+                  type="button"
+                  className={`top-navigation-bar__item ${active ? "active" : ""}`}
+                  onClick={() => {
+                    if (item.children) {
+                      setOpenNavGroup((prev) => (prev === item.id ? null : item.id));
+                      if (!isActive(item.path)) {
+                        handleNavClick(item.path);
+                      }
+                      return;
+                    }
+                    handleNavClick(item.path);
+                  }}
+                >
+                  <img
+                    className="top-navigation-bar__item-icon"
+                    src={item.icon}
+                    alt=""
+                    aria-hidden="true"
+                    draggable="false"
+                  />
+                  <span>{item.label}</span>
+                  {item.children && <span className="top-navigation-bar__chevron" aria-hidden="true">{isGroupOpen ? "▴" : "▾"}</span>}
+                </button>
+
+                {item.children && isGroupOpen && (
+                  <div className="top-navigation-bar__submenu" role="menu" aria-label={`${item.label} submenu`}>
+                    {item.children.map((child) => (
+                      <button
+                        key={child.id}
+                        type="button"
+                        role="menuitem"
+                        className={`top-navigation-bar__submenu-item ${isActive(child.path) ? "active" : ""}`}
+                        onClick={() => {
+                          setOpenNavGroup(item.id);
+                          handleNavClick(child.path);
+                        }}
+                      >
+                        {child.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
