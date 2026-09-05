@@ -36,6 +36,10 @@ export interface ProductionTabControllerDeps {
 export class ProductionTabController {
   #storage: TabSessionStorage;
   #navigator: TabNavigator = noopNavigator;
+  // Guards restoreSessionOnce specifically, not restoreSession: an existing
+  // test drives restoreSession twice on one controller to exercise the
+  // deep-link-to-an-unopened-plant path, and that must keep working.
+  #restoredOnce = false;
 
   constructor(deps: ProductionTabControllerDeps) {
     this.#storage = deps.storage;
@@ -57,6 +61,23 @@ export class ProductionTabController {
   // ── startup ───────────────────────────────────────────────────────────────
 
   /**
+   * Restores exactly once per controller lifetime; every later call is a
+   * no-op. ProductionPage's mount effect re-runs on every remount (navigating
+   * away and back), and re-hydrating there would clobber recentlyClosed —
+   * breaking Ctrl/Cmd+Shift+T for a tab closed before the remount — even
+   * though the module-scoped controller (and its store) already survived the
+   * round trip untouched.
+   */
+  restoreSessionOnce(
+    deepLinkPlantId?: string | null,
+    deepLinkSubTab?: string | null
+  ): void {
+    if (this.#restoredOnce) return;
+    this.#restoredOnce = true;
+    this.restoreSession(deepLinkPlantId, deepLinkSubTab);
+  }
+
+  /**
    * Hydrates from storage, then honours the route as deep-link INTENT — read
    * once, never as a live data source, so switching tabs cannot re-trigger it.
    */
@@ -64,12 +85,23 @@ export class ProductionTabController {
     deepLinkPlantId?: string | null,
     deepLinkSubTab?: string | null
   ): void {
-    const parsed = parseTabSession<ProductionTabState>(this.#storage.read(), {
-      onDroppedTab: (index, reason) =>
-        console.warn(`[tabs] dropped production tab ${index}: ${reason}`),
-      onDroppedSession: (reason) =>
-        console.warn(`[tabs] production session invalid, starting fresh: ${reason}`),
-    });
+    const parsed = parseTabSession<ProductionTabState>(
+      this.#storage.read(),
+      {
+        onDroppedTab: (index, reason) =>
+          console.warn(`[tabs] dropped production tab ${index}: ${reason}`),
+        onDroppedSession: (reason) =>
+          console.warn(`[tabs] production session invalid, starting fresh: ${reason}`),
+      },
+      // Coerce rather than drop: losing a whole plant tab to one bad sub-tab
+      // value (or a null state from an older/corrupt write) is worse than
+      // just resetting that tab to its default sub-tab.
+      (raw) => ({
+        subTab: isPlantSubTab((raw as { subTab?: unknown } | null)?.subTab)
+          ? (raw as { subTab: PlantSubTab }).subTab
+          : DEFAULT_SUB_TAB,
+      })
+    );
 
     if (parsed) {
       productionTabStore.getState().hydrate(parsed);

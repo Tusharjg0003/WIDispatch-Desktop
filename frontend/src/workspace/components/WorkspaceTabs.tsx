@@ -44,7 +44,19 @@ export default function WorkspaceTabs() {
       newTabLabel="New network (Ctrl/Cmd+Alt+N)"
       onActivate={(id) => void workspaceController.activateWorkspace(id)}
       onClose={(id) => void workspaceController.closeWorkspace(id)}
-      onReorder={(from, to) => workspaceController.reorderWorkspaces(from, to)}
+      onReorder={(from, to) => {
+        // TabStrip computes from/to over the FILTERED `tabs` array above, but
+        // reorderWorkspaces indexes the raw store `order` (which can be
+        // longer, when an id in `order` has no instance yet). Translate back
+        // through the tab ids so a drag can never move the wrong workspace.
+        const fromId = tabs[from]?.id;
+        const toId = tabs[to]?.id;
+        if (fromId == null || toId == null) return;
+        const rawFrom = order.indexOf(fromId);
+        const rawTo = order.indexOf(toId);
+        if (rawFrom === -1 || rawTo === -1) return;
+        workspaceController.reorderWorkspaces(rawFrom, rawTo);
+      }}
       onCloseOthers={(id) => void workspaceController.closeOthers(id)}
       onCloseToRight={(id) => void workspaceController.closeToRight(id)}
       onRename={(id, title) => workspaceController.renameWorkspace(id, title)}

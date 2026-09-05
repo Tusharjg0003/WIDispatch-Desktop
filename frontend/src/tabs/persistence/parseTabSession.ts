@@ -20,7 +20,13 @@ export interface TabSessionDiagnostics {
 
 export const parseTabSession = <TState>(
   raw: unknown,
-  diagnostics: TabSessionDiagnostics = {}
+  diagnostics: TabSessionDiagnostics = {},
+  // Zod types `state` as `unknown` deliberately — it cannot know a domain's
+  // shape — so without this seam a stored `null` (or any garbage) state would
+  // sail through as TState and blow up the first time a caller touches a
+  // field on it. Supplying this lets a domain validate (or coerce) its own
+  // state; omitting it preserves today's behaviour exactly.
+  parseState?: (raw: unknown) => TState | null
 ): ParsedTabSession<TState> | null => {
   const session = TabSessionSchema.safeParse(raw);
   if (!session.success) {
@@ -35,13 +41,35 @@ export const parseTabSession = <TState>(
       diagnostics.onDroppedTab?.(index, parsed.error.message);
       return;
     }
+    if (parseState) {
+      const state = parseState(parsed.data.state);
+      if (state === null) {
+        diagnostics.onDroppedTab?.(index, "state failed validation");
+        return;
+      }
+      tabs.push({ ...parsed.data, state } as TabInstance<TState>);
+      return;
+    }
     tabs.push(parsed.data as TabInstance<TState>);
   });
 
+  // Every tab can fail validation and this still returns null rather than an
+  // empty session: the caller (each domain's controller) always re-creates
+  // its permanent list tab afterwards, so the list tab is never lost even
+  // when the whole stored session is garbage.
   if (!tabs.length) return null;
 
   const byId = new Map(tabs.map((tab) => [tab.id, tab]));
-  const listed = session.data.order.filter((id) => byId.has(id));
+  // De-duplicated: a corrupted stored `order` with a repeated id would
+  // otherwise seat the same tab twice, producing duplicate React keys and
+  // duplicate useSortable ids, and index-based logic (neighbourAfterClose,
+  // reorderTabs) would then resolve to the wrong copy.
+  const seen = new Set<string>();
+  const listed = session.data.order.filter((id) => {
+    if (!byId.has(id) || seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
   const unlisted = tabs
     .filter((tab) => !listed.includes(tab.id))
     .sort((a, b) => a.createdAt - b.createdAt)

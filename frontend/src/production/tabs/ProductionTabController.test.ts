@@ -191,6 +191,80 @@ test("a corrupt stored session degrades to the list tab alone", () => {
   assert.equal(controller.getActiveTab()?.permanent, true);
 });
 
+test("a plant tab with a null or malformed stored state restores on the default sub-tab, without throwing", () => {
+  const storage = new MemoryTabSessionStorage();
+  const now = Date.now();
+  storage.write({
+    version: 1,
+    activeTabId: "list",
+    order: ["list", "a", "b"],
+    tabs: [
+      {
+        id: "list",
+        key: null,
+        title: LIST_TAB_TITLE,
+        pinned: false,
+        permanent: true,
+        state: { subTab: "overview" },
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        id: "a",
+        key: "plant-a",
+        title: "A",
+        pinned: false,
+        permanent: false,
+        state: null,
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        id: "b",
+        key: "plant-b",
+        title: "B",
+        pinned: false,
+        permanent: false,
+        state: { subTab: "nonsense" },
+        createdAt: now,
+        updatedAt: now,
+      },
+    ],
+  });
+  state().reset();
+
+  const controller = new ProductionTabController({ storage });
+  controller.registerNavigator(makeNavigator());
+  assert.doesNotThrow(() => controller.restoreSession(null));
+
+  assert.deepEqual(new Set(titles()), new Set([LIST_TAB_TITLE, "A", "B"]));
+  const plantA = Object.values(state().tabs).find((tab) => tab.key === "plant-a");
+  const plantB = Object.values(state().tabs).find((tab) => tab.key === "plant-b");
+  assert.equal(plantA?.state.subTab, "overview");
+  assert.equal(plantB?.state.subTab, "overview");
+});
+
+test("restoreSessionOnce hydrates only the first time, keeping recentlyClosed intact", () => {
+  state().reset();
+  const storage = new MemoryTabSessionStorage();
+  const controller = new ProductionTabController({ storage });
+  controller.registerNavigator(makeNavigator());
+
+  controller.restoreSessionOnce(null);
+  const a = controller.openPlant("plant-1", "A");
+  controller.openPlant("plant-2", "B");
+  controller.closeTab(a);
+
+  const closedBefore = state().recentlyClosed.length;
+  assert.equal(closedBefore, 1);
+
+  // A second restoreSessionOnce must be a no-op: re-hydrating here would wipe
+  // recentlyClosed and break Ctrl/Cmd+Shift+T for a tab closed earlier in the
+  // same page lifetime (the module-scoped controller survives remounts).
+  controller.restoreSessionOnce(null);
+  assert.equal(state().recentlyClosed.length, closedBefore);
+});
+
 test("closeActive closes the active tab, and is a no-op on the list tab", () => {
   const { controller } = setup();
   const listId = state().order[0];

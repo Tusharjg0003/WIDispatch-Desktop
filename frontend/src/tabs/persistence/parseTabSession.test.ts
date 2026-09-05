@@ -76,3 +76,36 @@ test("a single malformed tab is dropped, not the whole session", () => {
   assert.deepEqual(parsed?.order, ["a"]);
   assert.deepEqual(diagnostics, ["1"]);
 });
+
+test("duplicate ids in the stored order survive only once", () => {
+  const parsed = parseTabSession<DemoState>(
+    session({ order: ["a", "a", "b"], tabs: [tab("a"), tab("b")] })
+  );
+  assert.deepEqual(parsed?.order, ["a", "b"]);
+});
+
+test("a tab whose state is null is not handed to the caller unvalidated", () => {
+  // The Zod schema types `state` as `unknown`, which accepts `null` — without a
+  // validator a stored `null` state would reach a domain expecting an object
+  // and throw on first property access (e.g. `tab.state.subTab`).
+  const parsed = parseTabSession<DemoState>(
+    session({ tabs: [tab("a", { state: null }), tab("b")] }),
+    {},
+    (raw) => (raw && typeof raw === "object" ? (raw as DemoState) : null)
+  );
+  assert.deepEqual(parsed?.order, ["b"]);
+});
+
+test("a supplied validator that returns null drops just that tab", () => {
+  const diagnostics: string[] = [];
+  const parsed = parseTabSession<DemoState>(
+    session({ tabs: [tab("a", { state: { subTab: "bogus" } }), tab("b")] }),
+    { onDroppedTab: (index) => diagnostics.push(String(index)) },
+    (raw) => {
+      const state = raw as DemoState;
+      return state?.subTab === "overview" ? state : null;
+    }
+  );
+  assert.deepEqual(parsed?.order, ["b"]);
+  assert.deepEqual(diagnostics, ["0"]);
+});

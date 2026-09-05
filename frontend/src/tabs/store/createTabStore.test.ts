@@ -109,6 +109,28 @@ test("recentlyClosed is capped", () => {
   assert.equal(store2.getState().recentlyClosed.length, 2);
 });
 
+test("reopening a closed tab never seats it ahead of a pinned tab", () => {
+  const [list, a, b] = seed([
+    { title: "All Plants", permanent: true },
+    { title: "A" },
+    { title: "B" },
+  ]);
+
+  state().removeTab(a.id);
+  state().togglePin(b.id);
+  assert.deepEqual(state().order, [list.id, b.id]);
+
+  const closed = state().popRecentlyClosed();
+  assert.equal(closed?.tab.id, a.id);
+  assert.equal(closed?.index, 1);
+  // Reopening at the recorded index (1) would seat A ahead of the now-pinned
+  // B, breaking the permanent -> pinned -> rest invariant and leaving B
+  // undraggable (regionBounds would collapse to [1,1]). The insert must clamp
+  // into A's own (unpinned) region instead.
+  state().addTab(closed!.tab, closed!.index);
+  assert.deepEqual(state().order, [list.id, b.id, a.id]);
+});
+
 test("hydrate drops order entries with no surviving tab", () => {
   state().reset();
   const a = createTabInstance<DemoState>({ title: "A", state: { subTab: "overview" } });

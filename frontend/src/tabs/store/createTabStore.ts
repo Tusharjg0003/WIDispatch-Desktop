@@ -12,7 +12,7 @@ import { createStore } from "zustand/vanilla";
 import type { StoreApi } from "zustand/vanilla";
 import { useStore } from "zustand";
 
-import { clampReorder, pinnedCount } from "./tabOrdering.ts";
+import { clampReorder, permanentCount, pinnedCount } from "./tabOrdering.ts";
 import type { ClosedTab, TabInstance } from "../types/tab.types.ts";
 
 const DEFAULT_RECENTLY_CLOSED_LIMIT = 10;
@@ -54,9 +54,20 @@ export const createTabStore = <TState>(options: CreateTabStoreOptions = {}) => {
 
     addTab(tab, index) {
       set((prev) => {
-        const at = index === undefined ? prev.order.length : index;
         const order = [...prev.order];
-        order.splice(Math.max(0, Math.min(at, order.length)), 0, tab.id);
+        // Clamp into the tab's own region (permanent / pinned / rest): an
+        // unclamped index lets reopenLastClosed seat an unpinned tab ahead of
+        // a tab that was pinned after it closed, breaking the
+        // permanent -> pinned -> rest invariant regionBounds relies on.
+        const permanent = permanentCount(order, prev.tabs);
+        const fixed = pinnedCount(order, prev.tabs);
+        const [lower, upper] = tab.permanent
+          ? [0, permanent]
+          : tab.pinned
+            ? [permanent, fixed]
+            : [fixed, order.length];
+        const at = index === undefined ? upper : Math.max(lower, Math.min(index, upper));
+        order.splice(at, 0, tab.id);
         return { tabs: { ...prev.tabs, [tab.id]: tab }, order };
       });
     },

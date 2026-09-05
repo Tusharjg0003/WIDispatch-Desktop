@@ -53,5 +53,11 @@ export const useTabShortcuts = (
 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
+    // `target` is a stable, module-scoped controller singleton (e.g.
+    // productionTabController), so this dependency array does not thrash the
+    // listener on every render. A future caller passing an inline object
+    // literal instead (`useTabShortcuts({ activateRelative, ... })`) would
+    // get a new identity each render and re-bind the keydown listener on
+    // every keystroke-triggered re-render.
   }, [target, enabled]);
 };

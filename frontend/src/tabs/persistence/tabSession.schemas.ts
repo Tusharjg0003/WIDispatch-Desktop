@@ -11,6 +11,10 @@ export const StoredTabSchema = z.object({
   title: z.string(),
   pinned: z.boolean(),
   permanent: z.boolean(),
+  // Deliberately `unknown`, not a concrete shape: this schema is shared by
+  // every domain and cannot know any one of their TState shapes. A domain
+  // that needs its state validated (or coerced, so a bad sub-tab does not
+  // cost the whole tab) supplies a `parseState` to parseTabSession instead.
   state: z.unknown(),
   createdAt: z.number(),
   updatedAt: z.number(),
