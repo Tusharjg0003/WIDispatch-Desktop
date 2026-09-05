@@ -22,6 +22,12 @@ import type {
   WorkspaceInstance,
   WorkspaceUiState,
 } from "../types/workspace.types.ts";
+import { clampReorder, pinnedCount } from "../../tabs/store/tabOrdering.ts";
+
+// Re-exported so existing importers (WorkspaceController, the store's own
+// tests) keep their import path while the rules themselves live in the
+// shared tab core.
+export { neighbourAfterClose, pinnedCount } from "../../tabs/store/tabOrdering.ts";
 
 const RECENTLY_CLOSED_LIMIT = 10;
 
@@ -54,32 +60,6 @@ export interface WorkspaceStoreState {
   }): void;
   reset(): void;
 }
-
-/** Number of leading pinned tabs — the boundary reorder clamps against. */
-export const pinnedCount = (
-  order: string[],
-  instances: Record<string, WorkspaceInstance>
-): number => {
-  let count = 0;
-  for (const id of order) {
-    if (!instances[id]?.pinned) break;
-    count += 1;
-  }
-  return count;
-};
-
-/** Which workspace becomes active when `id` closes: right neighbour, else left. */
-export const neighbourAfterClose = (
-  order: string[],
-  closingId: string
-): string | null => {
-  const index = order.indexOf(closingId);
-  if (index === -1) return null;
-  const remaining = order.filter((id) => id !== closingId);
-  if (!remaining.length) return null;
-  // The element that shifted into this index is the right neighbour.
-  return remaining[Math.min(index, remaining.length - 1)];
-};
 
 const touch = (workspace: WorkspaceInstance): void => {
   workspace.updatedAt = Date.now();
@@ -215,20 +195,9 @@ export const workspaceStore = createStore<WorkspaceStoreState>((set, get) => ({
     set(
       produce((state: WorkspaceStoreState) => {
         const { order, instances } = state;
-        if (from < 0 || from >= order.length) return;
-        const movingId = order[from];
-        const isPinned = Boolean(instances[movingId]?.pinned);
-        const pinned = pinnedCount(order, instances);
-
-        // Clamp into the mover's own region so an unpinned tab can never land
-        // ahead of a pinned one, and vice versa.
-        const [lower, upper] = isPinned
-          ? [0, pinned - 1]
-          : [pinned, order.length - 1];
-        const target = Math.max(lower, Math.min(to, upper));
-        if (target === from) return;
-
-        order.splice(from, 1);
+        const target = clampReorder(order, instances, from, to);
+        if (target === null || target === from) return;
+        const [movingId] = order.splice(from, 1);
         order.splice(target, 0, movingId);
         // activeWorkspaceId is deliberately untouched: reordering must never
         // change which workspace is active.
