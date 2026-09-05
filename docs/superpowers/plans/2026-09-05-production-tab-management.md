@@ -404,7 +404,7 @@ test("a permanent tab is refused by remove, pin and reorder", () => {
   assert.deepEqual(state().order, [list.id, a.id]);
 });
 
-test("pinning re-seats behind the permanent tab, unpinning returns to the boundary", () => {
+test("pin and unpin both re-seat at the region boundary, behind any permanent tab", () => {
   const [list, a, b] = seed([
     { title: "All Plants", permanent: true },
     { title: "A" },
@@ -414,8 +414,11 @@ test("pinning re-seats behind the permanent tab, unpinning returns to the bounda
   state().togglePin(b.id);
   assert.deepEqual(state().order, [list.id, b.id, a.id]);
 
+  // Unpinning re-seats at the same index — the head of the unpinned region —
+  // which is the behaviour the workspace strip has always had.
   state().togglePin(b.id);
-  assert.deepEqual(state().order, [list.id, a.id, b.id]);
+  assert.deepEqual(state().order, [list.id, b.id, a.id]);
+  assert.equal(state().tabs[b.id].pinned, false);
 });
 
 test("setTabState merges rather than replaces, and renaming retitles", () => {
