@@ -247,9 +247,11 @@ export const workspaceStore = createStore<WorkspaceStoreState>((set, get) => ({
         if (index === -1) return;
         state.order.splice(index, 1);
         // Re-seat at the pinned/unpinned boundary to preserve the invariant
-        // that every pinned tab precedes every unpinned one.
+        // that every pinned tab precedes every unpinned one. With `id` already
+        // removed, that boundary is the same index in both directions: the end
+        // of the pinned block and the start of the unpinned one.
         const boundary = pinnedCount(state.order, state.instances);
-        state.order.splice(workspace.pinned ? boundary : boundary, 0, id);
+        state.order.splice(boundary, 0, id);
       })
     );
   },
