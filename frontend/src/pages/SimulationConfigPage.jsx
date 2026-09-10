@@ -9,7 +9,7 @@ import CanvasPanel from "../components/simulation/CanvasPanel";
 import { countOverrides, validateConfig } from "../lib/simulationRows";
 import {
   createSimulationConfig, deleteSimulationConfig, fetchDispatchPlan, fetchSimulationConfig,
-  fetchSimulationConfigs, publishDispatchPlan, runSimulation, updateSimulationConfig,
+  fetchSimulationConfigs, publishDispatchPlan, runSimulation, updateDispatchDecisions, updateSimulationConfig,
 } from "../api/simulation";
 import { fetchNetworks } from "../api/networks";
 import "../components/MetricDashboard.css";
@@ -147,6 +147,7 @@ export default function SimulationConfigPage() {
         from: config.from,
         to: config.to,
         overrides: config.overrides || {},
+        strategicStorageMinPct: config.strategicStorageMinPct ?? 70,
       });
       setConfig(saved);
       setConfigs((list) => list.map((c) => (c.id === saved.id ? { ...c, ...saved } : c)));
@@ -183,6 +184,7 @@ export default function SimulationConfigPage() {
         from: config.from,
         to: config.to,
         overrides: config.overrides || {},
+        strategicStorageMinPct: config.strategicStorageMinPct ?? 70,
       });
       setPlan(result);
       setTab("results");
@@ -206,6 +208,12 @@ export default function SimulationConfigPage() {
     }
   };
 
+  const handleDecisionSave = async (changes) => {
+    if (!plan) return;
+    const updated = await updateDispatchDecisions(plan.id, changes);
+    setPlan(updated);
+  };
+
   // ── Render ────────────────────────────────────────────────────────────────
   const header = (
     <WorkspaceHeader
@@ -218,6 +226,7 @@ export default function SimulationConfigPage() {
         <select
           key="picker"
           className="scp__picker"
+          aria-label="Simulation configuration"
           value={config?.id || ""}
           onChange={(e) => navigate(e.target.value ? `/simulation-config/${encodeURIComponent(e.target.value)}` : "/simulation-config")}
         >
@@ -295,6 +304,11 @@ export default function SimulationConfigPage() {
                 <span>To</span>
                 <input type="date" value={config.to || ""} onChange={(e) => patch({ to: e.target.value })} />
               </label>
+              <label>
+                <span>Strategic storage minimum (%)</span>
+                <input type="number" min="0" max="100" value={config.strategicStorageMinPct ?? 70}
+                  onChange={(e) => patch({ strategicStorageMinPct: Number(e.target.value) })} />
+              </label>
             </div>
 
             {(validation.blockers.length > 0 || validation.warnings.length > 0) && (
@@ -340,6 +354,7 @@ export default function SimulationConfigPage() {
                   publishing={publishing}
                   publishError={publishError}
                   published={published}
+                  onDecisionSave={handleDecisionSave}
                 />
               )}
               {tab === "canvas" && <CanvasPanel plan={plan} />}

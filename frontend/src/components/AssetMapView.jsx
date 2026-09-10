@@ -102,16 +102,17 @@ export default function AssetMapView({ assets, onView, onEdit }) {
                 </>
               );
               const key = `${a.category}-${a.id}`;
+              const markerLabel = `${a.name || a.id}, ${statusLabel(a.status)}`;
               return a.category === "pump" ? (
-                <Marker key={key} position={[a.latitude, a.longitude]} icon={triangleIcon(color)}>
+                <Marker key={key} position={[a.latitude, a.longitude]} icon={triangleIcon(color)} title={markerLabel} alt={markerLabel}>
                   {body}
                 </Marker>
               ) : a.category === "tank" ? (
-                <Marker key={key} position={[a.latitude, a.longitude]} icon={diamondIcon(color)}>
+                <Marker key={key} position={[a.latitude, a.longitude]} icon={diamondIcon(color)} title={markerLabel} alt={markerLabel}>
                   {body}
                 </Marker>
               ) : a.category === "handover_point" ? (
-                <Marker key={key} position={[a.latitude, a.longitude]} icon={squareIcon(color)}>
+                <Marker key={key} position={[a.latitude, a.longitude]} icon={squareIcon(color)} title={markerLabel} alt={markerLabel}>
                   {body}
                 </Marker>
               ) : (

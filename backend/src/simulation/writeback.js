@@ -58,8 +58,11 @@ export async function publishPlan(plan) {
           desktop_approved_m3: row.approved,
           desktop_decision_status: row.status,
           // Kept in step with the desktop's own Demand tab, which reads this.
-          desktop_approval_status: row.status === "shortfall" ? "rejected" : "approved",
-          desktop_decision_comments: row.reason,
+          desktop_approval_status: (row.decision ?? row.status === "approved") ? "approved" : "rejected",
+          desktop_decision_comments: row.operatorComment || row.reason,
+          desktop_decision_reason: row.reason,
+          desktop_recommended_m3: row.recommendedApproved ?? row.approved,
+          desktop_recommended_status: row.recommendedStatus ?? row.status,
           desktop_approved_at: now,
           dispatch_plan_id: planId,
           updated_at: now,
@@ -78,9 +81,11 @@ export async function publishPlan(plan) {
           // The existing PATCH endpoint only allows approved|rejected, so keep
           // this field to that vocabulary and carry the richer verdict
           // (postponed) alongside it.
-          desktop_approval_status: row.status === "approved" ? "approved" : "rejected",
+          desktop_approval_status: (row.decision ?? row.status === "approved") ? "approved" : "rejected",
           desktop_decision_status: row.status,
-          desktop_decision_comments: row.reason,
+          desktop_decision_comments: row.operatorComment || row.reason,
+          desktop_decision_reason: row.reason,
+          desktop_recommended_status: row.recommendedStatus ?? row.status,
           desktop_approved_at: now,
           dispatch_plan_id: planId,
           updated_at: now,

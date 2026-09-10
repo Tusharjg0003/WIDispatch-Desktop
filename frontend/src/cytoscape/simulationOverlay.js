@@ -58,7 +58,7 @@ export function applyOverlay(cy, overlay, { staleIds = [] } = {}) {
       if (!state) return;
 
       const category = node.data("category") || node.data("type");
-      const prefix = category === "plant" ? "sim-plant" : category === "pump" ? "sim-pump" : "sim-gate";
+      const prefix = category === "plant" ? "sim-plant" : category === "pump" ? "sim-pump" : category === "tank" ? "sim-tank" : "sim-gate";
       node.addClass(`${prefix}--${state}`);
       if (overridden.has(id)) node.addClass("sim-overridden");
     });

@@ -3446,6 +3446,7 @@ export default function NetworkBuilderPage() {
       <input
         ref={fileInputRef}
         type="file"
+        aria-label="Import network JSON"
         accept="application/json,.json"
         style={{ display: "none" }}
         onChange={(e) => {

@@ -268,6 +268,11 @@ export function buildCyStyle() {
         "overlay-color": "#dc2626", "overlay-padding": 5, "overlay-opacity": 0.12,
       },
     },
+    // Storage tanks: end-of-day inventory relative to reserve and maximum.
+    { selector: "node.sim-tank--empty", style: { "border-color": "#dc2626", "border-width": 4 } },
+    { selector: "node.sim-tank--reserve", style: { "border-color": "#f59e0b", "border-width": 4 } },
+    { selector: "node.sim-tank--available", style: { "border-color": "#22c55e", "border-width": 3 } },
+    { selector: "node.sim-tank--full", style: { "border-color": "#0ea5e9", "border-width": 4 } },
     // An element the displayed run never saw, because the canvas was edited
     // after the plan was produced.
     { selector: "edge.sim-stale", style: { opacity: 0.25, "line-style": "dotted", width: 1.5 } },
@@ -341,9 +346,7 @@ export function buildCyStyle() {
     { selector: 'node[type="note"][noteSize="small"]', style: { "font-size": 10 } },
     { selector: 'node[type="note"][noteSize="large"]', style: { "font-size": 13 } },
     { selector: 'node[type="note"][noteSize="xlarge"]', style: { "font-size": 15 } },
-    { selector: 'node[type="note"][noteBold="true"]', style: { "font-weight": "700" } },
     { selector: 'node[type="note"][noteItalic="true"]', style: { "font-style": "italic" } },
-    { selector: 'node[type="note"][noteUnderline="true"]', style: { "text-decoration-line": "underline" } },
     // ── Group box (Annotate → Group Box) ─────────────────────────────────
     {
       selector: 'node[type="group-box"]',

@@ -68,7 +68,7 @@ const round = (x) => Math.round(x * 100) / 100;
 // Canvas categories that the engine produces a per-day row for. Junctions and
 // annotations legitimately have none, so they must never be mistaken for
 // elements added to the canvas after the run.
-const TRACKED_CATEGORIES = new Set(["plant", "pump", "handover_point"]);
+const TRACKED_CATEGORIES = new Set(["plant", "pump", "tank", "handover_point"]);
 
 const elData = (el) => el?.data || el || {};
 
@@ -76,6 +76,7 @@ const elData = (el) => el?.data || el || {};
 function bottleneckIds(day) {
   const edges = new Set();
   const nodes = new Set();
+  if (!(day?.totalShortage > EPS)) return { edges, nodes };
   for (const c of day.bindingConstraints || []) {
     if (!c.id) continue;
     if (c.kind === "pipe") edges.add(c.id);
@@ -127,6 +128,12 @@ export function dayOverlay(plan, dayIdx = 0) {
     nodeStates[pump.nodeId] = pumpState(pump, bnNodes.has(pump.nodeId));
     if (pump.overridden) overriddenIds.push(pump.nodeId);
   }
+  for (const tank of day.tanks || []) {
+    nodeStates[tank.nodeId] = tank.endLevel <= EPS ? "empty"
+      : tank.endLevel <= tank.minStorage + EPS ? "reserve"
+        : tank.endLevel >= tank.maxStorage - EPS ? "full" : "available";
+    if (tank.overridden) overriddenIds.push(tank.nodeId);
+  }
   for (const gate of day.gates || []) {
     nodeStates[gate.nodeId] = gateState(gate);
     if (gate.overridden) overriddenIds.push(gate.nodeId);
@@ -157,7 +164,7 @@ function planElementIds(plan) {
   const nodes = new Set();
   const edges = new Set((plan?.pipes || []).map((p) => p.id));
   for (const day of plan?.days || []) {
-    for (const key of ["plants", "pumps", "gates"]) {
+    for (const key of ["plants", "pumps", "tanks", "gates"]) {
       for (const row of day[key] || []) nodes.add(row.nodeId);
     }
   }
@@ -287,6 +294,9 @@ export function nodeDetail(plan, dayIdx, nodeId) {
     return { kind: "pump", inRun: true, isBinding, ...pump, state: pumpState(pump, isBinding) };
   }
 
+  const tank = (day.tanks || []).find((row) => row.nodeId === nodeId);
+  if (tank) return { kind: "tank", inRun: true, isBinding, ...tank };
+
   const gate = (day.gates || []).find((g) => g.nodeId === nodeId);
   if (gate) {
     return {
@@ -308,6 +318,9 @@ function findNodeRow(day, nodeId) {
 
   const pump = (day?.pumps || []).find((p) => p.nodeId === nodeId);
   if (pump) return { kind: "pump", row: pump };
+
+  const tank = (day?.tanks || []).find((row) => row.nodeId === nodeId);
+  if (tank) return { kind: "tank", row: tank };
 
   const gate = (day?.gates || []).find((g) => g.nodeId === nodeId);
   if (gate) return { kind: "gate", row: gate };
@@ -344,6 +357,11 @@ export function nodeInsight(plan, dayIdx, nodeId) {
         alert: (found.row.shortage || 0) > EPS,
         extra: round(found.row.shortage || 0),
       };
+    }
+
+    if (found.kind === "tank") {
+      return { dayIdx: idx, date: day.date, value: found.row.endLevel, reference: found.row.maxStorage,
+        alert: found.row.endLevel <= found.row.minStorage + EPS, extra: found.row.outflow };
     }
 
     return {
@@ -394,6 +412,14 @@ export function nodeInsight(plan, dayIdx, nodeId) {
       series,
       active,
       max,
+    };
+  }
+
+  if (current.kind === "tank") {
+    return {
+      kind: "tank", name: current.name, eyebrow: "Storage", metricLabel: "End level", referenceLabel: "Maximum",
+      currentValue: current.endLevel, referenceValue: current.maxStorage, noteLabel: "Fill", noteValue: current.fillPct,
+      tone: current.endLevel <= current.minStorage + EPS ? "bad" : "good", series, active, max,
     };
   }
 

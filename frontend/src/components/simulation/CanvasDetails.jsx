@@ -93,6 +93,19 @@ function PumpDetail({ detail }) {
   );
 }
 
+function TankDetail({ detail }) {
+  return <>
+    <Row label="Start level" value={`${fmt(detail.startLevel)} m³`} />
+    <Row label="Inflow" value={`${fmt(detail.inflow)} m³`} />
+    <Row label="Outflow" value={`${fmt(detail.outflow)} m³`} />
+    <Row label="End level" value={`${fmt(detail.endLevel)} m³`} />
+    <Row label="Fill" value={pct(detail.fillPct)} />
+    <Row label="Minimum reserve" value={`${fmt(detail.minStorage)} m³ (${detail.minPct}%)`} />
+    <Row label="Maximum level" value={`${fmt(detail.maxStorage)} m³ (${detail.maxPct}%)`} />
+    {detail.strategic && <p className="simdetail__note">Strategic storage reserve applies.</p>}
+  </>;
+}
+
 function TraceDetail({ traceInfo, onFocus }) {
   return (
     <>
@@ -202,7 +215,7 @@ export default function CanvasDetails({ plan, dayIdx, selectedId, selectedKind, 
     );
   }
 
-  const EYEBROW = { plant: "Plant", pump: "Pump station", gate: "City gate" };
+  const EYEBROW = { plant: "Plant", pump: "Pump station", tank: "Tank", gate: "City gate" };
   return (
     <aside className="simdetail">
       <header className="simdetail__head">
@@ -212,6 +225,7 @@ export default function CanvasDetails({ plan, dayIdx, selectedId, selectedKind, 
       {detail.kind === "plant" && <PlantDetail detail={detail} />}
       {detail.kind === "gate" && <GateDetail detail={detail} />}
       {detail.kind === "pump" && <PumpDetail detail={detail} />}
+      {detail.kind === "tank" && <TankDetail detail={detail} />}
     </aside>
   );
 }

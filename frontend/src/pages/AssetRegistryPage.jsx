@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Archive } from "lucide-react";
+import { Archive, List, Map, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { fetchAssets, fetchAsset } from "../api/metrics";
 import { computeCategoryKpis } from "../lib/assetFilters";
 import { filterAllowedAssets } from "../lib/assetTypes";
@@ -11,7 +11,7 @@ import AssetKpiCards from "../components/AssetKpiCards";
 import AssetHelpModal from "../components/AssetHelpModal";
 import AssetRegistrySidebar from "../components/AssetRegistrySidebar";
 import AssetForm from "../components/AssetForm";
-import WorkspaceHeader from "../components/WorkspaceHeader";
+import WorkspaceHeader, { WorkspaceHeaderButton } from "../components/WorkspaceHeader";
 import "../components/MetricDashboard.css";
 import "./AssetRegistryPage.css";
 
@@ -19,14 +19,29 @@ export default function AssetRegistryPage({ mode = "list" }) {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const [view, setView] = useState("map"); // "list" | "map"
+  const isPhoneViewport = () => typeof window !== "undefined" && window.matchMedia("(max-width: 640px)").matches;
+  const [view, setView] = useState(() => isPhoneViewport() ? "list" : "map"); // "list" | "map"
   const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showHelp, setShowHelp] = useState(false);
+  const [railOpen, setRailOpen] = useState(() => !isPhoneViewport());
 
   const [editAsset, setEditAsset] = useState(null);
   const [editError, setEditError] = useState(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const phoneQuery = window.matchMedia("(max-width: 640px)");
+    const collapseForPhone = (event) => {
+      if (event.matches) {
+        setRailOpen(false);
+        setView("list");
+      }
+    };
+    phoneQuery.addEventListener?.("change", collapseForPhone);
+    return () => phoneQuery.removeEventListener?.("change", collapseForPhone);
+  }, []);
 
   // Load the full registry (all three categories) once; filtering is client-side.
   useEffect(() => {
@@ -63,8 +78,8 @@ export default function AssetRegistryPage({ mode = "list" }) {
   const statusText = mode === "create" ? "Create" : mode === "edit" ? "Edit" : `${visibleAssets.length} assets`;
 
   return (
-    <div className="ar-shell">
-      <aside className="ar-rail">
+    <div className={`ar-shell ${railOpen ? "" : "ar-shell--rail-collapsed"}`.trim()}>
+      {railOpen && <aside className="ar-rail">
         <AssetRegistrySidebar
           view={view}
           onShowMap={() => setView("map")}
@@ -73,7 +88,7 @@ export default function AssetRegistryPage({ mode = "list" }) {
           onShowHelp={() => setShowHelp(true)}
           onExport={exportCsv}
         />
-      </aside>
+      </aside>}
 
       <div className="metric ar-page assets-tagging-page page-transition">
         <WorkspaceHeader
@@ -82,6 +97,11 @@ export default function AssetRegistryPage({ mode = "list" }) {
           icon={Archive}
           status={statusText}
           statusTone={mode === "list" ? "green" : "blue"}
+          actions={mode === "list" ? [
+            <WorkspaceHeaderButton key="rail" icon={railOpen ? PanelLeftClose : PanelLeftOpen} onClick={() => setRailOpen((value) => !value)}>{railOpen ? "Hide browse" : "Show browse"}</WorkspaceHeaderButton>,
+            <WorkspaceHeaderButton key="map" icon={Map} tone={view === "map" ? "primary" : "default"} onClick={() => setView("map")}>Map</WorkspaceHeaderButton>,
+            <WorkspaceHeaderButton key="list" icon={List} tone={view === "list" ? "primary" : "default"} onClick={() => setView("list")}>List</WorkspaceHeaderButton>,
+          ] : undefined}
         />
 
         {mode === "create" && (

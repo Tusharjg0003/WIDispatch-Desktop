@@ -18,6 +18,7 @@ import { useTransmissionTabStore } from "../transmission/tabs/transmissionTabSto
 import { transmissionTabController } from "../transmission/tabs/transmissionTabControllerInstance";
 import { useTabShortcuts } from "../tabs/hooks/useTabShortcuts";
 import TransmissionPumpStationDetail from "./TransmissionPumpStationDetail";
+import { StatusBadge } from "../components/ui/WorkspacePrimitives";
 import "./ProductionPlantList.css";
 import "./TransmissionPage.css";
 
@@ -130,7 +131,6 @@ function TransmissionSystemSnapshot({ system }) {
       autounselectify: true,
       userPanningEnabled: false,
       userZoomingEnabled: false,
-      wheelSensitivity: 0.2,
     });
     cyRef.current = cy;
 
@@ -566,7 +566,7 @@ export default function TransmissionPage({ mode }) {
       <div className="ppl__titlebar">
         <div>
           <h1 className="ppl__title">Transmission</h1>
-          <p className="ppl__subtitle">Transmission assets · view only</p>
+          <p className="ppl__subtitle">Transmission assets - view only</p>
         </div>
       </div>
 
@@ -876,7 +876,7 @@ export default function TransmissionPage({ mode }) {
                           </td>
                           <td className="muted">{station.entity || "—"}</td>
                           <td className="muted">{station.region || "—"}</td>
-                          <td><span className="ppl__badge">{station.status || "N/A"}</span></td>
+                          <td><StatusBadge status={station.status} /></td>
                           <td className="muted">{fmtDate(station.commissioning_date)}</td>
                           <td className="muted">{fmtDate(station.decommissioning_date)}</td>
                           <td className="ta-r mono">{activeFunctionalPumps(station.specifications).length}</td>

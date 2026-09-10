@@ -64,7 +64,6 @@ export default function CanvasPanel({ plan }) {
       minZoom: 0.05,
       maxZoom: 4,
       boxSelectionEnabled: true,
-      wheelSensitivity: 0.2,
       // Read-only: positions come from the saved canvas and stay there.
       autoungrabify: true,
     });

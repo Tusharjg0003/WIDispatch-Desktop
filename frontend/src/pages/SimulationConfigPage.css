@@ -13,6 +13,24 @@
   border-radius: 6px;
 }
 
+.scp > .workspace-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  box-shadow: 0 5px 16px rgba(15, 23, 42, 0.08);
+}
+
+.scp > .metric__notice:not(.metric__notice--error) {
+  min-height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-style: dashed;
+  border-radius: var(--radius-lg, 9px);
+  background: linear-gradient(135deg, #ffffff, #f7faff);
+  color: #53657a;
+}
+
 /* ---- Setup ---- */
 .scp__setup {
   margin-bottom: 18px;
@@ -116,6 +134,10 @@
   gap: 4px;
   margin-bottom: 18px;
   border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 55px;
+  z-index: 15;
+  background: var(--surface-subtle);
 }
 
 .scp__tab {

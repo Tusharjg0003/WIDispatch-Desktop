@@ -22,14 +22,34 @@ import { listCityGates, getCityGateBundle, updateDemandDesktopApproval } from ".
 import {
   listSimulationConfigs, getSimulationConfig, createSimulationConfig,
   updateSimulationConfig, deleteSimulationConfig, runSimulationConfig,
-  getDispatchPlan, publishDispatchPlan,
+  getDispatchPlan, updateDispatchPlanDecisions, publishDispatchPlan,
 } from "./simulationConfigs.js";
+import { getOperationsOverview } from "./operations.js";
+import { searchWorkspace } from "./search.js";
 
 const app = express();
 const PORT = Number(process.env.PORT ?? 4000);
 
 app.use(cors());
 app.use(express.json());
+
+app.get("/api/operations/overview", async (req, res) => {
+  try {
+    res.json(await getOperationsOverview({ date: req.query.date }));
+  } catch (err) {
+    console.error("operations overview error:", err);
+    res.status(err.statusCode || 500).json({ error: err.message || "Failed to build operations overview" });
+  }
+});
+
+app.get("/api/search", async (req, res) => {
+  try {
+    res.json(await searchWorkspace({ q: req.query.q, types: req.query.types, limit: req.query.limit }));
+  } catch (err) {
+    console.error("workspace search error:", err);
+    res.status(500).json({ error: "Failed to search the workspace" });
+  }
+});
 
 function filtersFrom(req) {
   const { from, to, plant } = req.query;
@@ -406,6 +426,15 @@ app.get("/api/dispatch-plans/:id", async (req, res) => {
   } catch (err) {
     console.error(`dispatch plan get error (id=${req.params.id}):`, err);
     res.status(err.statusCode || 500).json({ error: err.message || "Failed to fetch dispatch plan" });
+  }
+});
+
+app.put("/api/dispatch-plans/:id/decisions", async (req, res) => {
+  try {
+    res.json(await updateDispatchPlanDecisions(req.params.id, req.body || {}));
+  } catch (err) {
+    console.error(`dispatch plan decisions error (id=${req.params.id}):`, err);
+    res.status(err.statusCode || 500).json({ error: err.message || "Failed to update dispatch decisions" });
   }
 });
 

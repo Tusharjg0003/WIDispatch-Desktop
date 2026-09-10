@@ -13,6 +13,82 @@
   --light-border: #e2e8f0;
   --light-ink: #1e293b;
   --light-ink-dim: #64748b;
+
+  /* Operator workspace design system */
+  --shell: #0b1324;
+  --shell-raised: #111c31;
+  --shell-border: rgba(148, 163, 184, 0.2);
+  --workspace: #f4f7fb;
+  --surface: #ffffff;
+  --surface-raised: #f8fafc;
+  --surface-hover: #f0f5fb;
+  --border: #d8e0ea;
+  --border-strong: #b8c4d2;
+  --text-strong: #142033;
+  --text: #334155;
+  --text-muted: #64748b;
+  --brand: #1259a7;
+  --brand-strong: #0b4382;
+  --brand-soft: #eaf3ff;
+  --success: #08765d;
+  --success-accent: #10b981;
+  --success-soft: #ecfdf7;
+  --success-border: #9ee4cd;
+  --warning: #9a5a07;
+  --warning-accent: #f59e0b;
+  --warning-soft: #fff9e8;
+  --warning-border: #f3d38a;
+  --critical: #b42336;
+  --critical-accent: #e5484d;
+  --critical-soft: #fff1f2;
+  --critical-border: #fecdd3;
+  --info: #1556a3;
+  --info-accent: #3b82f6;
+  --info-soft: #eff6ff;
+  --info-border: #bfdbfe;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 9px;
+  --radius-full: 999px;
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 14px 38px rgba(15, 23, 42, 0.16);
+  --focus-ring: 0 0 0 3px rgba(37, 99, 235, 0.22);
+  --text-2xs: 0.66rem;
+  --text-xs: 0.72rem;
+  --text-sm: 0.8rem;
+  --text-md: 0.9rem;
+  --text-lg: 1.05rem;
+  --text-xl: 1.28rem;
+
+  /* Fixed ultra-compact density scale. Keep operational type readable and
+     recover space from chrome, padding, and repeated vertical rhythm. */
+  --density-shell-height: 44px;
+  --density-page-gutter: 6px;
+  --density-page-gutter-mobile: 4px;
+  --density-gap-xs: 4px;
+  --density-gap-sm: 6px;
+  --density-gap-md: 8px;
+  --density-control-sm: 24px;
+  --density-control: 26px;
+  --density-row: 28px;
+  --density-panel-header: 32px;
+  --density-overlay-header: 38px;
+  --density-badge: 18px;
+  --density-body-font: 0.71875rem;
+  --density-label-font: 0.625rem;
+  --density-section-font: 0.8125rem;
+  --density-page-title: 1.0625rem;
+  --density-radius: 3px;
+  --density-rail-registry: 160px;
+  --density-rail-builder: 144px;
+  --density-inspector-builder: 210px;
+  --density-panel-simulation: 220px;
 }
 
 * {
@@ -27,6 +103,19 @@ body,
 }
 
 body {
-  background: #0a0b0f;
+  background: var(--shell);
   color: #e8eaf0;
+  font-size: var(--density-body-font);
 }
+
+button,
+input,
+select,
+textarea { font: inherit; }
+
+button,
+a { -webkit-tap-highlight-color: transparent; }
+
+:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+::selection { background: #bfdbfe; color: #10213a; }

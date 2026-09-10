@@ -378,9 +378,12 @@
 
 .nb-inspector {
   width: 300px;
-  flex-shrink: 0;
+  min-width: 250px;
+  max-width: 430px;
+  flex: 0 0 auto;
   border-left: 1px solid var(--line);
-  overflow: hidden;
+  overflow: auto;
+  resize: horizontal;
   background: var(--surface);
   padding: 6px;
 }
@@ -2486,12 +2489,17 @@
 
 /* ── Asset library panel (toggled from the toolbar) ───────────────────────── */
 .nb-library {
-  flex: 0 0 212px;
+  flex: 0 0 auto;
+  width: 232px;
+  min-width: 190px;
+  max-width: 380px;
   height: 100%;
   margin: 0;
   background: #ffffff;
   border-top: 0;
   border-bottom: 0;
+  overflow: auto;
+  resize: horizontal;
 }
 .nb-library__close {
   width: 24px;

@@ -103,6 +103,40 @@ export function summarisePumps(days = []) {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
+/** One row per storage tank with the inventory carried through the horizon. */
+export function summariseTanks(days = []) {
+  const byNode = byNodeAcrossDays(days, "tanks");
+  return [...byNode.entries()].map(([nodeId, entries]) => {
+    const first = entries[0];
+    const last = entries[entries.length - 1];
+    return {
+      nodeId,
+      assetId: first.assetId,
+      name: first.name,
+      capacity: round(first.capacity),
+      strategic: first.strategic,
+      reserveRule: first.reserveRule,
+      minPct: first.minPct,
+      maxPct: first.maxPct,
+      initialPct: first.initialPct,
+      startLevel: round(first.startLevel),
+      endLevel: round(last.endLevel),
+      fillPct: last.fillPct,
+      totalInflow: round(sum(entries, (entry) => entry.inflow)),
+      totalOutflow: round(sum(entries, (entry) => entry.outflow)),
+      overridden: entries.some((entry) => entry.overridden),
+      days: entries.map((entry) => ({
+        date: entry.date,
+        startLevel: round(entry.startLevel),
+        inflow: round(entry.inflow),
+        outflow: round(entry.outflow),
+        endLevel: round(entry.endLevel),
+        fillPct: entry.fillPct,
+      })),
+    };
+  }).sort((a, b) => a.name.localeCompare(b.name));
+}
+
 /** One row per city gate across the horizon, with its worst day surfaced. */
 export function summariseGates(days = []) {
   const byNode = new Map();
@@ -240,6 +274,7 @@ export function chartSeries(days = []) {
     required: day.totalRequired,
     delivered: day.totalDelivered,
     shortage: day.totalShortage,
+    shortageCeiling: day.totalShortage > 0 ? day.totalRequired : null,
     cost: day.variableOmCost,
   }));
 }
@@ -281,6 +316,62 @@ export function plantMixSeries(plan, { limit = 5 } = {}) {
   });
 
   return { series, plants };
+}
+
+/**
+ * Daily storage behavior for the results chart. Inventory remains per tank,
+ * while the bars show the network-wide movement into and out of storage. The
+ * nested detail is kept on each point so a custom tooltip can reconcile the
+ * chart with the Tanks table without re-reading the plan.
+ */
+export function tankBehaviorSeries(days = []) {
+  const byNode = byNodeAcrossDays(days, "tanks");
+  const tanks = [...byNode.entries()]
+    .map(([nodeId, entries]) => {
+      const first = entries[0];
+      return {
+        nodeId,
+        assetId: first.assetId,
+        name: first.name,
+        capacity: round(first.capacity),
+      };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((tank, index) => ({ ...tank, key: `tank${index}` }));
+
+  const tankByNode = new Map(tanks.map((tank) => [tank.nodeId, tank]));
+  const series = days.map((day) => {
+    const point = {
+      date: day.date,
+      label: day.date.slice(5),
+      totalInflow: round(sum(day.tanks || [], (tank) => tank.inflow)),
+      totalOutflow: round(sum(day.tanks || [], (tank) => tank.outflow)),
+      tankDetails: {},
+    };
+    for (const tank of tanks) point[tank.key] = null;
+
+    for (const row of day.tanks || []) {
+      const tank = tankByNode.get(row.nodeId);
+      if (!tank) continue;
+      const capacity = Number(row.capacity) || 0;
+      const minLevel = row.minStorage ?? capacity * (Number(row.minPct) || 0) / 100;
+      const maxLevel = row.maxStorage ?? capacity * (Number(row.maxPct) || 0) / 100;
+      const endLevel = round(row.endLevel);
+      point[tank.key] = endLevel;
+      point.tankDetails[row.nodeId] = {
+        startLevel: round(row.startLevel),
+        inflow: round(row.inflow),
+        outflow: round(row.outflow),
+        endLevel,
+        fillPct: row.fillPct ?? (capacity > 0 ? round(endLevel / capacity * 100) : null),
+        minLevel: round(minLevel),
+        maxLevel: round(maxLevel),
+      };
+    }
+    return point;
+  });
+
+  return { series, tanks };
 }
 
 /** Count the constraints named by the solver each day, with shortfall alongside. */
