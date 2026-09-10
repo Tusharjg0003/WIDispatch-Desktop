@@ -1,244 +1,140 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ICONS } from "./IconAssets";
+import {
+  BarChart3, Boxes, Building2, ChevronDown, CircleHelp, Command, Factory,
+  Home, Menu, Network, Search, SlidersHorizontal, UserRound, Waves, X,
+} from "lucide-react";
+import CommandPalette from "./CommandPalette";
+import HelpDrawer from "./HelpDrawer";
 import "./TopNavigationBar.css";
 
-const iconPath = (path) => encodeURI(`/All Icons Zipped/${path}`);
-
-// Pages are wired into routes later; for now each item just navigates to its path.
 const NAV_ITEMS = [
-  {
-    id: "production",
-    label: "Production",
-    path: "/production",
-    icon: iconPath("02 Asset & Infrastructure Icons/Desalination Plant/SVG/Desalination Plant_20px.svg"),
-  },
-  {
-    id: "demand",
-    label: "Demand",
-    path: "/demand",
-    icon: iconPath("05 Data, Analytics & Reporting/Line Chart/SVG/Line Chart_20px.svg"),
-  },
-  {
-    id: "transmission",
-    label: "Transmission",
-    path: "/transmission",
-    icon: iconPath("02 Asset & Infrastructure Icons/Pipeline Network/SVG/Pipeline Network_20px.svg"),
-  },
-  {
-    id: "economics",
-    label: "Economics",
-    path: "/economics",
-    icon: iconPath("05 Data, Analytics & Reporting/Bar Chart/SVG/Bar Chart_20px.svg"),
-  },
-  {
-    id: "network-builder",
-    label: "Network Builder",
-    path: "/network-builder",
-    icon: iconPath("02 Asset & Infrastructure Icons/Distribution Network/SVG/Distribution Network_20px.svg"),
-  },
-  {
-    id: "simulation-config",
-    label: "Simulation Config",
-    path: "/simulation-config",
-    icon: iconPath("07 Operations & Control/Control Panel/SVG/Control Panel_20px.svg"),
-  },
-  {
-    id: "asset-registry",
-    label: "Asset Registry",
-    path: "/asset-registry",
-    icon: iconPath("11 Map & Location (GIS)/Asset Location/SVG/Asset Location_20px.svg"),
-  },
+  { id: "production", label: "Production", path: "/production", icon: Factory },
+  { id: "demand", label: "Demand", path: "/demand", icon: Waves },
+  { id: "transmission", label: "Transmission", path: "/transmission", icon: Network },
+  { id: "economics", label: "Economics", path: "/economics", icon: BarChart3 },
+  { id: "network-builder", label: "Network Builder", path: "/network-builder", icon: Boxes, secondary: true },
+  { id: "simulation-config", label: "Simulation Config", path: "/simulation-config", icon: SlidersHorizontal, secondary: true },
+  { id: "asset-registry", label: "Asset Registry", path: "/asset-registry", icon: Building2, secondary: true },
 ];
 
-const TopNavigationBar = () => {
+export default function TopNavigationBar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const menuRef = useRef(null);
   const [searchOpen, setSearchOpen] = useState(false);
-  const userMenuRef = useRef(null);
-  const searchRef = useRef(null);
-  const searchInputRef = useRef(null);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [modulesOpen, setModulesOpen] = useState(false);
+  const [userOpen, setUserOpen] = useState(false);
 
-  const isActive = (path) => {
-    if (path === "/") {
-      return location.pathname === "/";
-    }
-    return location.pathname.startsWith(path);
-  };
+  const isActive = (path) => path === "/" ? location.pathname === "/" : location.pathname.startsWith(path);
 
-  const handleNavClick = (path) => {
-    navigate(path);
-  };
-
-  // Close user menu when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
-        setUserMenuOpen(false);
-      }
-    };
+    setModulesOpen(false);
+    setUserOpen(false);
+  }, [location.pathname]);
 
-    if (userMenuOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [userMenuOpen]);
-
-  // Toggle the collapsible search; focus the input when it expands
-  const toggleSearch = () => {
-    setSearchOpen((prev) => {
-      const next = !prev;
-      if (next) {
-        requestAnimationFrame(() => searchInputRef.current?.focus());
-      }
-      return next;
-    });
-  };
-
-  // Collapse the search on outside click or Escape
   useEffect(() => {
-    if (!searchOpen) return undefined;
-
-    const handleClickOutside = (event) => {
-      if (searchRef.current && !searchRef.current.contains(event.target)) {
-        setSearchOpen(false);
+    const handleKey = (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setSearchOpen(true);
       }
-    };
-    const handleKeyDown = (event) => {
       if (event.key === "Escape") {
-        setSearchOpen(false);
+        setModulesOpen(false);
+        setUserOpen(false);
       }
     };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, []);
 
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleKeyDown);
+  useEffect(() => {
+    const closeOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setModulesOpen(false);
+        setUserOpen(false);
+      }
     };
-  }, [searchOpen]);
+    document.addEventListener("mousedown", closeOutside);
+    return () => document.removeEventListener("mousedown", closeOutside);
+  }, []);
+
+  const go = (path) => navigate(path);
 
   return (
-    <nav className="top-navigation-bar">
-      <div className="top-navigation-bar__container">
-        <div className="top-navigation-bar__logo" aria-label="WIDispatch">
-          <img
-            className="top-navigation-bar__logo-mark"
-            src="/SVG(No background)_Horizontal_Outlined for Dark BG_WIDISPATCH.svg"
-            alt="WIDispatch"
-          />
-        </div>
+    <>
+      <nav className="top-navigation-bar" aria-label="Primary navigation">
+        <div className="top-navigation-bar__container" ref={menuRef}>
+          <button type="button" className="top-navigation-bar__logo" onClick={() => go("/")} aria-label="WIDispatch Operations">
+            <img src="/SVG(No background)_Horizontal_Outlined for Dark BG_WIDISPATCH.svg" alt="WIDispatch" />
+          </button>
 
-        <div className="top-navigation-bar__items">
-          {NAV_ITEMS.map((item) => {
-            const active = isActive(item.path);
-            return (
+          <div className="top-navigation-bar__items">
+            {NAV_ITEMS.map(({ id, label, path, icon: Icon, secondary }) => (
               <button
-                key={item.id}
-                className={`top-navigation-bar__item ${active ? "active" : ""}`}
-                onClick={() => handleNavClick(item.path)}
+                type="button"
+                key={id}
+                title={label}
+                className={`top-navigation-bar__item ${secondary ? "top-navigation-bar__item--secondary" : ""} ${isActive(path) ? "active" : ""}`}
+                onClick={() => go(path)}
               >
-                <img
-                  className="top-navigation-bar__item-icon"
-                  src={item.icon}
-                  alt=""
-                  aria-hidden="true"
-                  draggable="false"
-                />
-                <span>{item.label}</span>
+                <Icon size={15} />
+                <span>{label}</span>
               </button>
-            );
-          })}
-        </div>
+            ))}
+          </div>
 
-        <div
-          className={`top-navigation-bar__global-search ${searchOpen ? "is-open" : ""}`}
-          ref={searchRef}
-        >
-          <button
-            type="button"
-            className="top-navigation-bar__icon-btn top-navigation-bar__global-search-toggle"
-            title="Search"
-            aria-label="Search"
-            aria-expanded={searchOpen}
-            onClick={toggleSearch}
-          >
-            <ICONS.search className="top-navigation-bar__utility-icon" size={16} />
-          </button>
-          <input
-            ref={searchInputRef}
-            type="search"
-            placeholder="Search..."
-            aria-label="Search"
-            tabIndex={searchOpen ? 0 : -1}
-          />
-        </div>
+          <div className="top-navigation-bar__module-menu">
+            <button
+              type="button"
+              className={`top-navigation-bar__module-trigger ${modulesOpen ? "is-open" : ""}`}
+              aria-haspopup="menu"
+              aria-expanded={modulesOpen}
+              onClick={() => { setModulesOpen((value) => !value); setUserOpen(false); }}
+            >
+              {modulesOpen ? <X size={16} /> : <Menu size={16} />}
+              <span>Modules</span>
+              <ChevronDown className="top-navigation-bar__module-chevron" size={13} />
+            </button>
+            {modulesOpen && (
+              <div className="top-navigation-bar__modules" role="menu">
+                <p>Operational workspaces</p>
+                {NAV_ITEMS.map(({ id, label, path, icon: Icon }) => (
+                  <button type="button" role="menuitem" key={id} className={isActive(path) ? "active" : ""} onClick={() => go(path)}>
+                    <span><Icon size={16} /></span>
+                    <strong>{label}</strong>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
-        <button
-          type="button"
-          className={`top-navigation-bar__icon-btn ${isActive("/") ? "active" : ""}`}
-          title="Home"
-          aria-label="Home"
-          onClick={() => handleNavClick("/")}
-        >
-          <ICONS.home className="top-navigation-bar__utility-icon" size={16} />
-        </button>
-
-        <button className="top-navigation-bar__icon-btn" title="Help" aria-label="Help">
-          <ICONS.help className="top-navigation-bar__utility-icon" size={16} />
-        </button>
-
-        <div className="top-navigation-bar__divider" />
-
-        {/* User Menu */}
-        <div className="top-navigation-bar__user-menu" ref={userMenuRef}>
-          <button
-            className="top-navigation-bar__user-btn"
-            onClick={() => setUserMenuOpen(!userMenuOpen)}
-          >
-            <div className="top-navigation-bar__user-avatar">U</div>
-            <span className="top-navigation-bar__user-name">User</span>
-            <span className="top-navigation-bar__chevron" aria-hidden="true">
-              &#9660;
-            </span>
-          </button>
-
-          {userMenuOpen && (
-            <div className="top-navigation-bar__user-dropdown">
-              <div className="top-navigation-bar__user-dropdown-header">
-                <div className="top-navigation-bar__user-dropdown-avatar">U</div>
-                <div>
-                  <div className="top-navigation-bar__user-dropdown-name">User</div>
-                  <div className="top-navigation-bar__user-dropdown-role">Administrator</div>
+          <div className="top-navigation-bar__utilities">
+            <button type="button" className="top-navigation-bar__search" onClick={() => setSearchOpen(true)} aria-label="Search WIDispatch">
+              <Search size={15} /><span>Search</span><kbd>Ctrl K</kbd>
+            </button>
+            <button type="button" className={`top-navigation-bar__icon-btn ${isActive("/") ? "active" : ""}`} onClick={() => go("/")} title="Operations" aria-label="Operations"><Home size={16} /></button>
+            <button type="button" className="top-navigation-bar__icon-btn" onClick={() => setHelpOpen(true)} title="Help" aria-label="Help"><CircleHelp size={16} /></button>
+            <div className="top-navigation-bar__divider" />
+            <div className="top-navigation-bar__user-menu">
+              <button type="button" className="top-navigation-bar__user-btn" onClick={() => { setUserOpen((value) => !value); setModulesOpen(false); }} aria-haspopup="menu" aria-expanded={userOpen}>
+                <span className="top-navigation-bar__user-avatar">U</span>
+                <span className="top-navigation-bar__user-copy"><strong>User</strong><small>Operator</small></span>
+                <ChevronDown size={12} />
+              </button>
+              {userOpen && (
+                <div className="top-navigation-bar__user-card" role="menu">
+                  <span className="top-navigation-bar__user-card-avatar"><UserRound size={18} /></span>
+                  <div><strong>User</strong><small>Operations administrator</small><em>Local workspace</em></div>
                 </div>
-              </div>
-              <div className="top-navigation-bar__user-dropdown-actions">
-                <button
-                  className="top-navigation-bar__user-dropdown-item"
-                  onClick={() => {
-                    setUserMenuOpen(false);
-                    navigate("/modules");
-                  }}
-                >
-                  Change Modules
-                </button>
-                <button
-                  className="top-navigation-bar__user-dropdown-item"
-                  onClick={() => {
-                    setUserMenuOpen(false);
-                    navigate("/login");
-                  }}
-                >
-                  Sign Out
-                </button>
-              </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
-      </div>
-    </nav>
+      </nav>
+      <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
+      <HelpDrawer open={helpOpen} onClose={() => setHelpOpen(false)} />
+    </>
   );
-};
-
-export default TopNavigationBar;
+}

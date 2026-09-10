@@ -13,8 +13,71 @@ import {
   summariseGates,
   summarisePlants,
   summarisePumps,
+  summariseTanks,
+  tankBehaviorSeries,
   validateConfig,
 } from "./simulationRows.js";
+
+test("summariseTanks: keeps daily inventory and horizon movements", () => {
+  const tank = (date, startLevel, inflow, outflow, endLevel) => ({ date, tanks: [{
+    nodeId: "tank", assetId: "TK", name: "Strategic Tank", capacity: 100, strategic: true,
+    reserveRule: null, minPct: 70, maxPct: 100, initialPct: 100, startLevel, inflow, outflow,
+    endLevel, fillPct: endLevel, overridden: false,
+  }] });
+  const [row] = summariseTanks([tank("2026-08-10", 100, 0, 20, 80), tank("2026-08-11", 80, 10, 0, 90)]);
+  assert.equal(row.startLevel, 100);
+  assert.equal(row.endLevel, 90);
+  assert.equal(row.totalInflow, 10);
+  assert.equal(row.totalOutflow, 20);
+  assert.deepEqual(row.days.map((day) => day.endLevel), [80, 90]);
+});
+
+test("tankBehaviorSeries: keeps daily carryover and totals storage movements", () => {
+  const days = [
+    { date: "2026-08-10", tanks: [{ nodeId: "tk", assetId: "TK", name: "Demo Tank", capacity: 120, minPct: 0, maxPct: 100, startLevel: 120, inflow: 0, outflow: 60, endLevel: 60, fillPct: 50 }] },
+    { date: "2026-08-11", tanks: [{ nodeId: "tk", assetId: "TK", name: "Demo Tank", capacity: 120, minPct: 0, maxPct: 100, startLevel: 60, inflow: 60, outflow: 0, endLevel: 120, fillPct: 100 }] },
+  ];
+  const result = tankBehaviorSeries(days);
+
+  assert.deepEqual(result.tanks, [{ nodeId: "tk", assetId: "TK", name: "Demo Tank", capacity: 120, key: "tank0" }]);
+  assert.deepEqual(result.series.map((point) => [point.tank0, point.totalInflow, point.totalOutflow]), [
+    [60, 0, 60],
+    [120, 60, 0],
+  ]);
+  assert.deepEqual(result.series[1].tankDetails.tk, {
+    startLevel: 60, inflow: 60, outflow: 0, endLevel: 120, fillPct: 100, minLevel: 0, maxLevel: 120,
+  });
+});
+
+test("tankBehaviorSeries: gives every tank a stable line and sums their flows", () => {
+  const { tanks, series } = tankBehaviorSeries([{ date: "2026-08-10", tanks: [
+    { nodeId: "z", name: "Zulu", capacity: 100, startLevel: 50, inflow: 10, outflow: 2, endLevel: 58, minStorage: 20, maxStorage: 90 },
+    { nodeId: "a", name: "Alpha", capacity: 200, startLevel: 100, inflow: 5, outflow: 20, endLevel: 85, minStorage: 0, maxStorage: 200 },
+  ] }]);
+
+  assert.deepEqual(tanks.map((tank) => [tank.name, tank.key]), [["Alpha", "tank0"], ["Zulu", "tank1"]]);
+  assert.equal(series[0].tank0, 85);
+  assert.equal(series[0].tank1, 58);
+  assert.equal(series[0].totalInflow, 15);
+  assert.equal(series[0].totalOutflow, 22);
+});
+
+test("tankBehaviorSeries: missing daily tank data leaves a chart gap", () => {
+  const { series } = tankBehaviorSeries([
+    { date: "2026-08-10", tanks: [{ nodeId: "tk", name: "Tank", capacity: 100, startLevel: 100, inflow: 0, outflow: 0, endLevel: 100 }] },
+    { date: "2026-08-11", tanks: [] },
+  ]);
+  assert.equal(series[1].tank0, null);
+  assert.deepEqual(series[1].tankDetails, {});
+  assert.equal(series[1].totalInflow, 0);
+});
+
+test("tankBehaviorSeries: supports empty and one-day runs", () => {
+  assert.deepEqual(tankBehaviorSeries([]), { series: [], tanks: [] });
+  const oneDay = tankBehaviorSeries([{ date: "2026-08-18", tanks: [{ nodeId: "tk", name: "Tank", capacity: 120, startLevel: 120, inflow: 0, outflow: 120, endLevel: 0 }] }]);
+  assert.equal(oneDay.series.length, 1);
+  assert.equal(oneDay.series[0].tank0, 0);
+});
 
 const plant = (over) => ({
   nodeId: "n_cheap",
@@ -268,7 +331,13 @@ test("groupDemandVerdicts: worst-affected gates sort to the top", () => {
 
 test("chartSeries: one point per day with an MM-DD label", () => {
   const series = chartSeries([day("2026-08-10")]);
-  assert.deepEqual(series, [{ date: "2026-08-10", label: "08-10", required: 1000, delivered: 1000, shortage: 0, cost: 1000 }]);
+  assert.deepEqual(series, [{ date: "2026-08-10", label: "08-10", required: 1000, delivered: 1000, shortage: 0, shortageCeiling: null, cost: 1000 }]);
+});
+
+test("chartSeries: shortage is exactly the gap from delivered supply to required demand", () => {
+  const [point] = chartSeries([day("2026-08-11", { totalRequired: 1000, totalDelivered: 700, totalShortage: 300 })]);
+  assert.equal(point.delivered + point.shortage, point.required);
+  assert.equal(point.shortageCeiling, point.required);
 });
 
 test("costTrendSeries: derives daily spend and blended delivered cost", () => {

@@ -48,3 +48,7 @@ export function fetchDispatchPlan(id) {
 export function publishDispatchPlan(id) {
   return request(`/api/dispatch-plans/${encodeURIComponent(id)}/publish`, "POST", {});
 }
+
+export function updateDispatchDecisions(id, body) {
+  return request(`/api/dispatch-plans/${encodeURIComponent(id)}/decisions`, "PUT", body);
+}

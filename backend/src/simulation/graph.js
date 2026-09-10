@@ -108,22 +108,41 @@ export function readNetwork(network) {
  * @param {FlowNetwork} args.network                                 an empty FlowNetwork to populate
  * @returns {{ supplyArcs:Map, demandArcs:Map, pipeArcs:Map, activeNodeIds:Set<string> }}
  */
-export function buildDayNetwork({ topology, supply, throughput, demand, dateIso, network }) {
+export function buildDayNetwork({
+  topology,
+  supply,
+  throughput,
+  demand,
+  dateIso,
+  network,
+  tankSupply = new Map(),
+  tankDemand = new Map(),
+  edgeRemaining = new Map(),
+  throughputRemaining = new Map(),
+  disabledNodeIds = new Set(),
+}) {
   const supplyArcs = new Map();
   const demandArcs = new Map();
+  const tankSupplyArcs = new Map();
+  const tankDemandArcs = new Map();
   const pipeArcs = new Map();
+  const throughputArcs = new Map();
   const activeNodeIds = new Set();
 
   for (const node of topology.nodes) {
     if (INACTIVE_STATUSES.has(node.status)) continue;
+    if (disabledNodeIds.has(node.id)) continue;
     const meta = node.meta || {};
     if (!inServiceOn(meta.commissioning_date, meta.decommissioning_date, dateIso)) continue;
     activeNodeIds.add(node.id);
 
     // Internal arc. Only pump stations constrain throughput; everything else
     // passes water through freely.
-    const limit = node.category === "pump" ? throughput.get(node.id) : null;
-    network.addArc(
+    const configuredLimit = node.category === "pump" ? throughput.get(node.id) : null;
+    const limit = node.category === "pump" && throughputRemaining.has(node.id)
+      ? throughputRemaining.get(node.id)
+      : configuredLimit;
+    const internalArc = network.addArc(
       IN(node.id),
       OUT(node.id),
       limit == null ? UNLIMITED : limit,
@@ -132,6 +151,7 @@ export function buildDayNetwork({ topology, supply, throughput, demand, dateIso,
         ? { kind: "pump", nodeId: node.id, assetId: node.assetId, label: node.label }
         : null,
     );
+    if (node.category === "pump") throughputArcs.set(node.id, internalArc);
 
     if (node.category === "plant") {
       const s = supply.get(node.id);
@@ -158,6 +178,21 @@ export function buildDayNetwork({ topology, supply, throughput, demand, dateIso,
         demandArcs.set(node.id, arc);
       }
     }
+
+    if (node.category === "tank") {
+      const stored = tankSupply.get(node.id);
+      if (stored > 0) {
+        tankSupplyArcs.set(node.id, network.addArc(SUPER_SRC, OUT(node.id), stored, 0, {
+          kind: "tank_supply", nodeId: node.id, assetId: node.assetId, label: node.label,
+        }));
+      }
+      const room = tankDemand.get(node.id);
+      if (room > 0) {
+        tankDemandArcs.set(node.id, network.addArc(OUT(node.id), SUPER_SNK, room, 0, {
+          kind: "tank_storage", nodeId: node.id, assetId: node.assetId, label: node.label,
+        }));
+      }
+    }
   }
 
   for (const edge of topology.edges) {
@@ -165,7 +200,9 @@ export function buildDayNetwork({ topology, supply, throughput, demand, dateIso,
     if (!activeNodeIds.has(edge.source) || !activeNodeIds.has(edge.target)) continue;
     if (!inServiceOn(edge.commissioningDate, edge.decommissioningDate, dateIso)) continue;
 
-    const { capacity, unconstrained } = pipeCapacity(edge.specs);
+    const resolved = pipeCapacity(edge.specs);
+    const unconstrained = resolved.unconstrained;
+    const capacity = edgeRemaining.has(edge.id) ? edgeRemaining.get(edge.id) : resolved.capacity;
     if (capacity <= 0) continue;
 
     const meta = { kind: "pipe", edgeId: edge.id, label: edge.label, unconstrained };
@@ -180,7 +217,10 @@ export function buildDayNetwork({ topology, supply, throughput, demand, dateIso,
     pipeArcs.set(edge.id, arcs);
   }
 
-  return { supplyArcs, demandArcs, pipeArcs, activeNodeIds };
+  return {
+    supplyArcs, demandArcs, tankSupplyArcs, tankDemandArcs,
+    pipeArcs, throughputArcs, activeNodeIds,
+  };
 }
 
 export { HOP_COST, IN, OUT };

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { bottleneckSeries, causeLabel, summariseGates } from "../../lib/simulationRows";
+import { bottleneckSeries, causeLabel, summariseGates, summariseTanks } from "../../lib/simulationRows";
 import SimulationGraphGrid from "./SimulationGraphGrid";
 import "./ResultsPanel.css";
 
@@ -26,12 +26,15 @@ export default function ResultsPanel({ plan }) {
   const k = plan.kpis;
 
   const gates = useMemo(() => summariseGates(plan.days), [plan.days]);
+  const tanks = useMemo(() => summariseTanks(plan.days), [plan.days]);
   const shortGates = gates.filter((g) => g.shortageM3 > 0);
+  const bottleneckDays = (plan.days || []).filter((day) => day.totalShortage > 0 &&
+    (day.bindingConstraints || []).some((constraint) => constraint.kind !== "plant_supply")).length;
   const bottleneckRows = useMemo(() => {
     const byDate = new Map((plan.days || []).map((day) => [day.date, day]));
     return bottleneckSeries(plan.days)
       .map((row) => ({ ...row, constraints: byDate.get(row.date)?.bindingConstraints || [] }))
-      .filter((row) => row.shortage > 0 || row.constraints.length > 0);
+      .filter((row) => row.shortage > 0);
   }, [plan.days]);
 
   return (
@@ -63,13 +66,22 @@ export default function ResultsPanel({ plan }) {
         />
         <Kpi
           eyebrow="Bottleneck days"
-          value={k.bottleneckDays}
+          value={bottleneckDays}
           sub={`Of ${k.days} day(s)`}
-          tone={k.bottleneckDays > 0 ? "kpi--warn" : ""}
+          tone={bottleneckDays > 0 ? "kpi--warn" : ""}
         />
       </section>
 
       <SimulationGraphGrid plan={plan} />
+
+      {tanks.length > 0 && (
+        <section className="sheet">
+          <header className="sheet__head sheet__head--simple"><h2 className="sheet__name sheet__name--sm">Tank Storage<span className="sheet__count">{tanks.length}</span></h2><span className="rp__hint">Inventory at the end of the simulation horizon.</span></header>
+          <div className="sheet__table-wrap"><table className="ledger"><thead><tr><th>Tank</th><th className="num">Capacity</th><th className="num">Start</th><th className="num">End</th><th className="num">Fill</th><th className="num">Total inflow</th><th className="num">Total outflow</th><th>Reserve</th></tr></thead>
+            <tbody>{tanks.map((tank) => <tr key={tank.nodeId}><td><span className="rp__name">{tank.name}</span><span className="rp__sub mono">{tank.assetId}</span></td><td className="num mono">{fmt(tank.capacity)}</td><td className="num mono">{fmt(tank.startLevel)}</td><td className="num mono">{fmt(tank.endLevel)}</td><td className="num mono">{tank.fillPct == null ? "—" : `${tank.fillPct}%`}</td><td className="num mono">{fmt(tank.totalInflow)}</td><td className="num mono">{fmt(tank.totalOutflow)}</td><td>{tank.minPct}% minimum{tank.strategic ? " · Strategic" : ""}</td></tr>)}</tbody>
+          </table></div>
+        </section>
+      )}
 
       {shortGates.length > 0 && (
         <section className="sheet">

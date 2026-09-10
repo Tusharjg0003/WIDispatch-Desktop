@@ -32,33 +32,59 @@
   border-radius: 6px;
 }
 
-.simgraph__placeholder {
-  height: 220px;
-  display: grid;
-  align-content: center;
-  justify-items: center;
-  gap: 8px;
-  color: var(--ink-dim);
-  background:
-    linear-gradient(180deg, rgba(26, 74, 138, 0.06), rgba(16, 185, 129, 0.05)),
-    var(--surface-subtle);
-  border: 1px dashed var(--line);
-  border-radius: 6px;
-  text-align: center;
+.simgraph__tooltip {
+  min-width: 220px;
+  max-width: 340px;
+  padding: 10px 12px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14);
+  font-size: 0.72rem;
 }
 
-.simgraph__placeholder-value {
-  font-size: 0.76rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--accent);
-}
-
-.simgraph__placeholder-copy {
-  max-width: 280px;
+.simgraph__tooltip > strong {
+  display: block;
+  margin-bottom: 7px;
   font-size: 0.78rem;
-  line-height: 1.4;
+}
+
+.simgraph__tooltip-flows,
+.simgraph__tooltip-tank {
+  display: grid;
+  gap: 3px;
+}
+
+.simgraph__tooltip-flows {
+  grid-template-columns: 1fr 1fr;
+  padding-bottom: 7px;
+}
+
+.simgraph__tooltip-flows span,
+.simgraph__tooltip-tank span:not(.simgraph__tooltip-name) {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.simgraph__tooltip-tank {
+  padding: 7px 0;
+  border-top: 1px solid var(--line);
+}
+
+.simgraph__tooltip-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+}
+
+.simgraph__tooltip-name i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: 0 0 auto;
 }
 
 .simgraph .recharts-default-legend {

@@ -28,16 +28,6 @@ export default function SupplyDemandChart({ plan, compact = false, className = "
             />
             <Tooltip formatter={(v, name) => [`${nf.format(Math.round(v))} m³`, name]} />
             <Legend />
-            <Area
-              type="monotone"
-              dataKey="shortage"
-              name="Shortfall"
-              stroke="#dc2626"
-              strokeWidth={1}
-              fill="#dc2626"
-              fillOpacity={0.14}
-              isAnimationActive={false}
-            />
             <Line
               type="monotone"
               dataKey="required"
@@ -46,6 +36,39 @@ export default function SupplyDemandChart({ plan, compact = false, className = "
               strokeWidth={2}
               strokeDasharray="6 3"
               dot={false}
+              isAnimationActive={false}
+            />
+            <Area
+              type="monotone"
+              dataKey="delivered"
+              stackId="shortageGap"
+              stroke="none"
+              fill="transparent"
+              fillOpacity={0}
+              legendType="none"
+              tooltipType="none"
+              isAnimationActive={false}
+            />
+            <Area
+              type="monotone"
+              dataKey="shortage"
+              stackId="shortageGap"
+              name="Shortfall"
+              stroke="none"
+              fill="#dc2626"
+              fillOpacity={0.22}
+              isAnimationActive={false}
+            />
+            <Line
+              type="monotone"
+              dataKey="shortageCeiling"
+              stroke="#dc2626"
+              strokeWidth={2}
+              dot={{ r: 2 }}
+              activeDot={{ r: 3 }}
+              connectNulls={false}
+              legendType="none"
+              tooltipType="none"
               isAnimationActive={false}
             />
             <Line

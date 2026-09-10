@@ -26,11 +26,12 @@ export async function buildEconomics(filters = {}) {
     ...dateMatch("created_at", filters, true),
   };
 
-  const rows = await db
-    .collection("financialEntries")
-    .find(match)
-    .sort({ created_at: -1 })
-    .toArray();
+  const [rows, plants] = await Promise.all([
+    db.collection("financialEntries").find(match).sort({ created_at: -1 }).toArray(),
+    db.collection("plants").find({}, { projection: {
+      _id: 0, id: 1, name: 1, external_id: 1, region: 1, entity: 1, status: 1, specifications: 1,
+    } }).sort({ name: 1 }).toArray(),
+  ]);
 
   const names = await userNames(db, rows.map((r) => r.approved_by));
 
@@ -46,6 +47,34 @@ export async function buildEconomics(filters = {}) {
     }
   }
 
+  const latestByPlant = new Map();
+  const effectiveKey = (row) => String(row.effective_start || row.created_at || "");
+  for (const row of rows) {
+    if (row.scope_type !== "plant" || !row.scope_id) continue;
+    const current = latestByPlant.get(row.scope_id);
+    if (!current || effectiveKey(row) > effectiveKey(current)) latestByPlant.set(row.scope_id, row);
+  }
+  const plantRows = plants.map((plant) => {
+    const entry = latestByPlant.get(plant.id);
+    const entryVariableOm = finite(entry?.variable_om);
+    const specVariableOm = finite(plant.specifications?.variable_om ?? plant.specifications?.variable_om_sar_m3);
+    return {
+      id: plant.id,
+      externalId: plant.external_id ?? null,
+      name: plant.name || plant.id,
+      region: plant.region ?? null,
+      entity: plant.entity ?? null,
+      status: plant.status ?? null,
+      variableOm: entryVariableOm ?? specVariableOm,
+      source: entryVariableOm != null ? "economics" : specVariableOm != null ? "plant_spec" : "missing",
+      effectiveFrom: dayIso(entry?.effective_start),
+      updatedAt: entry?.updated_at ?? entry?.created_at ?? null,
+    };
+  });
+  const variableValues = plantRows.map((plant) => plant.variableOm).filter((value) => value != null);
+  const plantsWithEconomics = plantRows.filter((plant) => plant.source === "economics").length;
+  const plantsUsingFallback = plantRows.filter((plant) => plant.source === "plant_spec").length;
+
   return {
     kpis: {
       entries: rows.length,
@@ -54,6 +83,13 @@ export async function buildEconomics(filters = {}) {
       totalVariableOm: variableOm,
       totalCcr: ccr,
       avgLifetimeYears: lifetimeCount ? Math.round((lifetimeSum / lifetimeCount) * 10) / 10 : null,
+      plantsTotal: plantRows.length,
+      plantsWithEconomics,
+      plantsUsingFallback,
+      plantsMissingVariableOm: plantRows.length - plantsWithEconomics - plantsUsingFallback,
+      variableOmMin: variableValues.length ? Math.min(...variableValues) : null,
+      variableOmMax: variableValues.length ? Math.max(...variableValues) : null,
+      variableOmAvg: variableValues.length ? Math.round((variableValues.reduce((sum, value) => sum + value, 0) / variableValues.length) * 100) / 100 : null,
     },
     composition: [
       { label: "CapEx", value: capex },
@@ -63,6 +99,10 @@ export async function buildEconomics(filters = {}) {
     ],
     entries: rows.map((r) => ({
       id: r.id,
+      scopeType: r.scope_type ?? null,
+      scopeId: r.scope_id ?? null,
+      effectiveFrom: dayIso(r.effective_start),
+      effectiveTo: dayIso(r.effective_end),
       ccr: finite(r.ccr),
       capex: finite(r.capex),
       fixedOm: finite(r.fixed_om),
@@ -71,6 +111,7 @@ export async function buildEconomics(filters = {}) {
       approvedBy: names.get(String(r.approved_by)) || null,
       approvedAt: r.approved_at ?? null,
     })),
+    plants: plantRows,
   };
 }
 

@@ -1,134 +1,32 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
+import { apiRequest, withQuery } from "./client";
 
-function buildQuery(filters = {}) {
-  const params = new URLSearchParams();
-  if (filters.from) params.set("from", filters.from);
-  if (filters.to) params.set("to", filters.to);
-  if (filters.plant) params.set("plant", filters.plant);
-  const qs = params.toString();
-  return qs ? `?${qs}` : "";
-}
+const metricQuery = (filters = {}) => ({ from: filters.from, to: filters.to, plant: filters.plant });
 
-async function getJson(path) {
-  const res = await fetch(`${API_BASE}${path}`);
-  if (!res.ok) throw new Error(`Request failed (${res.status})`);
-  return res.json();
-}
-
-// domain is "production" | "demand"
 export function fetchSummary(domain, filters) {
-  return getJson(`/api/${domain}/summary${buildQuery(filters)}`);
+  return apiRequest(withQuery(`/api/${domain}/summary`, metricQuery(filters)));
 }
 
 export function fetchRecords(domain, filters) {
-  return getJson(`/api/${domain}/records${buildQuery(filters)}`);
+  return apiRequest(withQuery(`/api/${domain}/records`, metricQuery(filters)));
 }
 
 export function fetchTransmission(filters) {
-  return getJson(`/api/transmission/summary${buildQuery(filters)}`);
+  return apiRequest(withQuery("/api/transmission/summary", metricQuery(filters)));
 }
 
-export function fetchTransmissionPumpStations() {
-  return getJson("/api/transmission/pump-stations");
-}
-
-export function fetchTransmissionPumpStationBundle(id) {
-  return getJson(`/api/transmission/pump-station/${encodeURIComponent(id)}/bundle`);
-}
-
-export function fetchQuality(filters) {
-  return getJson(`/api/quality${buildQuery(filters)}`);
-}
-
-export function fetchEconomics(filters) {
-  return getJson(`/api/economics${buildQuery(filters)}`);
-}
-
-export function fetchAssets(filters = {}) {
-  const params = new URLSearchParams();
-  for (const [k, v] of Object.entries(filters)) {
-    if (v) params.set(k, v);
-  }
-  const qs = params.toString();
-  return getJson(`/api/assets${qs ? `?${qs}` : ""}`);
-}
-
-export function fetchAsset(id) {
-  return getJson(`/api/assets/${encodeURIComponent(id)}`);
-}
-
-export async function createAsset(payload) {
-  const res = await fetch(`${API_BASE}/api/assets`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
-  return data;
-}
-
-export async function updateAsset(id, payload) {
-  const res = await fetch(`${API_BASE}/api/assets/${encodeURIComponent(id)}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
-  return data;
-}
-
-export async function deleteAsset(id) {
-  const res = await fetch(`${API_BASE}/api/assets/${encodeURIComponent(id)}`, {
-    method: "DELETE",
-  });
-  if (res.status === 204) return true;
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
-  return true;
-}
-
-async function postJson(path, payload) {
-  const res = await fetch(`${API_BASE}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
-  return data;
-}
-
-export function fetchTransmissionSystems() {
-  return getJson("/api/transmission-systems");
-}
-
-export function createTransmissionSystem(payload) {
-  return postJson("/api/transmission-systems", payload);
-}
-
-export function fetchTransmissionSystemLibrary() {
-  return getJson("/api/transmission-systems/library");
-}
-
-export function fetchTransmissionSystemNetwork(id) {
-  return getJson(`/api/transmission-systems/${encodeURIComponent(id)}/network`);
-}
-
-export function fetchTransmissionLines() {
-  return getJson("/api/transmission-lines");
-}
-
-export function createTransmissionLine(payload) {
-  return postJson("/api/transmission-lines", payload);
-}
-
-export async function deleteTransmissionLine(id) {
-  const res = await fetch(`${API_BASE}/api/transmission-lines/${encodeURIComponent(id)}`, {
-    method: "DELETE",
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
-  return data;
-}
+export const fetchTransmissionPumpStations = () => apiRequest("/api/transmission/pump-stations");
+export const fetchTransmissionPumpStationBundle = (id) => apiRequest(`/api/transmission/pump-station/${encodeURIComponent(id)}/bundle`);
+export const fetchQuality = (filters) => apiRequest(withQuery("/api/quality", metricQuery(filters)));
+export const fetchEconomics = (filters) => apiRequest(withQuery("/api/economics", metricQuery(filters)));
+export const fetchAssets = (filters = {}) => apiRequest(withQuery("/api/assets", filters));
+export const fetchAsset = (id) => apiRequest(`/api/assets/${encodeURIComponent(id)}`);
+export const createAsset = (payload) => apiRequest("/api/assets", { method: "POST", body: payload });
+export const updateAsset = (id, payload) => apiRequest(`/api/assets/${encodeURIComponent(id)}`, { method: "PUT", body: payload });
+export const deleteAsset = (id) => apiRequest(`/api/assets/${encodeURIComponent(id)}`, { method: "DELETE" });
+export const fetchTransmissionSystems = () => apiRequest("/api/transmission-systems");
+export const createTransmissionSystem = (payload) => apiRequest("/api/transmission-systems", { method: "POST", body: payload });
+export const fetchTransmissionSystemLibrary = () => apiRequest("/api/transmission-systems/library");
+export const fetchTransmissionSystemNetwork = (id) => apiRequest(`/api/transmission-systems/${encodeURIComponent(id)}/network`);
+export const fetchTransmissionLines = () => apiRequest("/api/transmission-lines");
+export const createTransmissionLine = (payload) => apiRequest("/api/transmission-lines", { method: "POST", body: payload });
+export const deleteTransmissionLine = (id) => apiRequest(`/api/transmission-lines/${encodeURIComponent(id)}`, { method: "DELETE" });

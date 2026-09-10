@@ -38,4 +38,50 @@
   flex: 1;
   min-width: 0;
   overflow: auto;
+  background: var(--workspace);
+}
+
+.route-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 240px;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.route-loading__spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border);
+  border-top-color: var(--brand);
+  border-radius: 50%;
+  animation: route-spin .7s linear infinite;
+}
+
+.route-failure {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  min-height: 100%;
+  padding: 48px 24px;
+  background: var(--workspace);
+  color: var(--text);
+  text-align: center;
+}
+.route-failure__mark { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 14px; background: var(--critical-soft); color: var(--critical); font-size: 1.5rem; font-weight: 800; }
+.route-failure__eyebrow { margin: 18px 0 4px; color: var(--critical); font-size: var(--text-xs); font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.route-failure h1 { margin: 0; color: var(--text-strong); font-size: 1.6rem; }
+.route-failure > p:not(.route-failure__eyebrow) { max-width: 520px; color: var(--text-muted); }
+.route-failure__actions { display: flex; gap: 8px; margin-top: 10px; }
+.route-failure__actions button,
+.route-failure__actions a { display: inline-flex; align-items: center; height: 34px; padding: 0 13px; border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: var(--surface); color: var(--text-strong); font-size: var(--text-sm); font-weight: 700; text-decoration: none; cursor: pointer; }
+.route-failure__actions button { border-color: var(--brand); background: var(--brand); color: #fff; }
+
+@keyframes route-spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .route-loading__spinner { animation: none; }
 }

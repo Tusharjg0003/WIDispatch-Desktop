@@ -788,7 +788,6 @@ export default function NetworkBuilderPage() {
       minZoom: 0.05,
       maxZoom: 4,
       boxSelectionEnabled: true, // shift-drag box-selects; plain drag pans
-      wheelSensitivity: 0.2,
     });
     cyRef.current = cy;
 
@@ -2596,6 +2595,7 @@ export default function NetworkBuilderPage() {
       <input
         ref={fileInputRef}
         type="file"
+        aria-label="Import network JSON"
         accept="application/json,.json"
         style={{ display: "none" }}
         onChange={(e) => {

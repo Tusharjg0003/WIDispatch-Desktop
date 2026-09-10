@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { causeLabel, summariseGates, summarisePlants, summarisePumps } from "../../lib/simulationRows";
+import { causeLabel, summariseGates, summarisePlants, summarisePumps, summariseTanks } from "../../lib/simulationRows";
 import "./SimulationTables.css";
 
 // The four config tables. Every number is read from the portals via the last
@@ -19,7 +19,7 @@ const OM_SOURCE_LABEL = {
   override: "Override",
 };
 
-function OverrideCell({ value, placeholder, onChange, suffix }) {
+function OverrideCell({ value, placeholder, onChange, suffix, label }) {
   return (
     <span className="simt__override">
       <input
@@ -27,6 +27,7 @@ function OverrideCell({ value, placeholder, onChange, suffix }) {
         step="any"
         min="0"
         className="simt__override-input"
+        aria-label={label}
         value={value ?? ""}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value === "" ? undefined : Number(e.target.value))}
@@ -135,6 +136,19 @@ function GateDayBreakdown({ row }) {
   );
 }
 
+function TankDayBreakdown({ row }) {
+  return (
+    <div className="simt__breakdown"><table className="simt__days">
+      <thead><tr><th>Date</th><th className="num">Start</th><th className="num">Inflow</th><th className="num">Outflow</th><th className="num">End</th><th className="num">Fill</th></tr></thead>
+      <tbody>{row.days.map((day) => <tr key={day.date}>
+        <td className="mono">{day.date}</td><td className="num mono">{fmt(day.startLevel)}</td>
+        <td className="num mono">{fmt(day.inflow)}</td><td className="num mono">{fmt(day.outflow)}</td>
+        <td className="num mono">{fmt(day.endLevel)}</td><td className="num mono">{day.fillPct == null ? "—" : `${day.fillPct}%`}</td>
+      </tr>)}</tbody>
+    </table></div>
+  );
+}
+
 function ExpandCell({ expanded, onToggle }) {
   return (
     <button className="simt__expand" onClick={onToggle} aria-expanded={expanded} aria-label="Show daily breakdown">
@@ -162,6 +176,7 @@ export default function SimulationTables({ plan, overrides, onOverrideChange }) 
   const [expanded, setExpanded] = useState(null);
   const plants = summarisePlants(plan.days);
   const pumps = summarisePumps(plan.days);
+  const tanks = summariseTanks(plan.days);
   const gates = summariseGates(plan.days);
   const pipes = plan.pipes || [];
 
@@ -221,11 +236,11 @@ export default function SimulationTables({ plan, overrides, onOverrideChange }) 
                     <td className="num mono">{fmt(row.allocatedM3)}</td>
                     <td className="num mono">{row.utilisationPct == null ? "—" : `${row.utilisationPct}%`}</td>
                     <td>
-                      <OverrideCell value={o.available} placeholder={fmt(row.contracted)} suffix="m³/d"
+                      <OverrideCell value={o.available} placeholder={fmt(row.contracted)} suffix="m³/d" label={`${row.name} available capacity override`}
                         onChange={set(row.nodeId, "available")} />
                     </td>
                     <td>
-                      <OverrideCell value={o.variableOm} placeholder={fmt2(row.variableOm)} suffix="SAR/m³"
+                      <OverrideCell value={o.variableOm} placeholder={fmt2(row.variableOm)} suffix="SAR/m³" label={`${row.name} Variable O&M override`}
                         onChange={set(row.nodeId, "variableOm")} />
                     </td>
                   </tr>
@@ -239,6 +254,32 @@ export default function SimulationTables({ plan, overrides, onOverrideChange }) 
             })}
             {!plants.length && <tr><td colSpan={12} className="simt__empty">No plants on this network.</td></tr>}
           </tbody>
+        </table>
+      </Sheet>
+
+      <Sheet title="Tanks" count={tanks.length} hint="Levels carry from one day to the next; strategic storage respects the configured reserve.">
+        <table className="ledger simt">
+          <thead><tr><th className="simt__tick" /><th className="simt__tick">On</th><th>Tank</th><th className="num">Capacity</th><th className="num">Start</th><th className="num">End</th><th className="num">Inflow</th><th className="num">Outflow</th><th>Initial %</th><th>Minimum %</th><th>Maximum %</th><th>Reserve rule</th></tr></thead>
+          <tbody>{tanks.map((row) => {
+            const o = overrides[row.nodeId] || {};
+            const open = expanded === row.nodeId;
+            return <React.Fragment key={row.nodeId}>
+              <tr className={o.active === false ? "simt__row--off" : undefined}>
+                <td className="simt__tick"><ExpandCell expanded={open} onToggle={toggle(row.nodeId)} /></td>
+                <td className="simt__tick"><ActiveCell active={o.active} onChange={set(row.nodeId, "active")} /></td>
+                <td><span className="simt__name">{row.name}</span><span className="simt__sub mono">{row.assetId}</span></td>
+                <td className="num mono">{fmt(row.capacity)}</td><td className="num mono">{fmt(row.startLevel)}</td><td className="num mono">{fmt(row.endLevel)}</td>
+                <td className="num mono">{fmt(row.totalInflow)}</td><td className="num mono">{fmt(row.totalOutflow)}</td>
+                <td><OverrideCell value={o.initialLevelPct} placeholder={String(row.initialPct)} suffix="%" label={`${row.name} initial level override`} onChange={set(row.nodeId, "initialLevelPct")} /></td>
+                <td><OverrideCell value={o.minLevelPct} placeholder={String(row.minPct)} suffix="%" label={`${row.name} minimum level override`} onChange={set(row.nodeId, "minLevelPct")} /></td>
+                <td><OverrideCell value={o.maxLevelPct} placeholder={String(row.maxPct)} suffix="%" label={`${row.name} maximum level override`} onChange={set(row.nodeId, "maxLevelPct")} /></td>
+                <td><select aria-label={`${row.name} reserve rule`} value={o.reserveRule ?? row.reserveRule ?? "preserve"} onChange={(event) => set(row.nodeId, "reserveRule")(event.target.value === "preserve" ? undefined : event.target.value)}>
+                  <option value="preserve">Preserve minimum</option><option value="ignore">Ignore reserve</option><option value="emergency-drawdown">Emergency drawdown</option>
+                </select></td>
+              </tr>
+              {open && <tr className="simt__detail-row"><td colSpan={12}><TankDayBreakdown row={row} /></td></tr>}
+            </React.Fragment>;
+          })}{!tanks.length && <tr><td colSpan={12} className="simt__empty">No tanks on this network.</td></tr>}</tbody>
         </table>
       </Sheet>
 
@@ -280,7 +321,7 @@ export default function SimulationTables({ plan, overrides, onOverrideChange }) 
                     </td>
                     <td><AffectedChip row={row} /></td>
                     <td>
-                      <OverrideCell value={o.capacity} placeholder={row.unconstrained ? "Unlimited" : fmt(row.design)}
+                      <OverrideCell value={o.capacity} placeholder={row.unconstrained ? "Unlimited" : fmt(row.design)} label={`${row.name} capacity override`}
                         suffix="m³/d" onChange={set(row.nodeId, "capacity")} />
                     </td>
                   </tr>
@@ -335,7 +376,7 @@ export default function SimulationTables({ plan, overrides, onOverrideChange }) 
                     <td className="num mono">{row.shortDays || "—"}</td>
                     <td className="mono">{row.worstDay ? row.worstDay.date : "—"}</td>
                     <td>
-                      <OverrideCell value={o.demand} placeholder={fmt(row.avgRequired)} suffix="m³/d"
+                      <OverrideCell value={o.demand} placeholder={fmt(row.avgRequired)} suffix="m³/d" label={`${row.name} demand override`}
                         onChange={set(row.nodeId, "demand")} />
                     </td>
                   </tr>

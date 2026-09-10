@@ -4,7 +4,7 @@
 // request, and a verdict on each city-gate demand request.
 
 import { getDb } from "../db.js";
-import { availableForDay, eachDay, overlapsDay } from "./capacity.js";
+import { availableForDay, eachDay, inServiceOn, overlapsDay, recordDaySpan } from "./capacity.js";
 import { indexFinancialEntries, variableOmForDay } from "./cost.js";
 import { buildDayNetwork, pipeCapacity, readNetwork, SUPER_SNK, SUPER_SRC, UNLIMITED } from "./graph.js";
 import { FlowNetwork, minCostMaxFlow, minCutArcs, EPS } from "./mcmf.js";
@@ -14,6 +14,38 @@ const num = (value) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
 };
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+const tankSpec = (asset = {}) => asset.specifications || {};
+const tankCapacity = (asset = {}) => Math.max(0, num(
+  tankSpec(asset).total_capacity_m3 ?? asset["TotalCapacity (m3)"] ?? asset.capacity,
+) ?? 0);
+const isStrategicTank = (asset = {}) => [asset.activity, asset.Activity, asset.asset_type, asset.AssetType, asset.EntityType]
+  .some((value) => String(value || "").trim().toLowerCase() === "strategic storage");
+
+function tankSettings(asset, override = {}, strategicStorageMinPct = 70) {
+  const spec = tankSpec(asset);
+  const capacity = tankCapacity(asset);
+  const rule = String(override.reserveRule ?? spec.reserve_rule ?? spec.reserveRule ?? "").trim().toLowerCase();
+  const initialPct = clamp(num(override.initialLevelPct ?? spec.initial_level_pct ?? spec.initialLevelPct) ?? 100, 0, 100);
+  const maxPct = clamp(num(override.maxLevelPct ?? spec.max_level_pct ?? spec.maxLevelPct) ?? 100, 0, 100);
+  const explicitMin = num(override.minLevelPct ?? spec.min_level_pct ?? spec.minLevelPct);
+  const defaultMin = isStrategicTank(asset) ? strategicStorageMinPct : 0;
+  const minPct = ["ignore", "emergency-drawdown"].includes(rule)
+    ? 0
+    : clamp(explicitMin ?? defaultMin, 0, maxPct);
+  return {
+    capacity,
+    initialPct,
+    minPct,
+    maxPct,
+    reserveRule: rule || null,
+    minStorage: capacity * minPct / 100,
+    maxStorage: capacity * maxPct / 100,
+    initialStorage: Math.min(capacity * initialPct / 100, capacity * maxPct / 100),
+    strategic: isStrategicTank(asset),
+  };
+}
 
 function notFound(message) {
   const err = new Error(message);
@@ -55,7 +87,7 @@ export async function loadDispatchInputs({ networkId, from, to }) {
   if (!network) throw notFound("Network not found");
 
   const topology = readNetwork(network);
-  const byCategory = { plant: [], pump: [], handover_point: [], node: [] };
+  const byCategory = { plant: [], pump: [], tank: [], handover_point: [], node: [] };
   for (const node of topology.nodes) {
     (byCategory[node.category] ||= []).push(node);
   }
@@ -63,13 +95,15 @@ export async function loadDispatchInputs({ networkId, from, to }) {
   const assetIdsFor = (category) => byCategory[category].map((n) => n.assetId).filter(Boolean);
   const plantIds = assetIdsFor("plant");
   const pumpIds = assetIdsFor("pump");
+  const tankIds = assetIdsFor("tank");
   const gateIds = assetIdsFor("handover_point");
   const allAssetIds = [...new Set([...plantIds, ...pumpIds, ...gateIds])];
 
-  const [plants, pumps, cityGates, maintenanceRows, outageRows, capacityRows, demandRows, financialRows] =
+  const [plants, pumps, tanks, cityGates, maintenanceRows, outageRows, capacityRows, demandRows, financialRows] =
     await Promise.all([
       db.collection("plants").find({ id: { $in: plantIds } }, { projection: { _id: 0 } }).toArray(),
       db.collection("pumps").find({ id: { $in: pumpIds } }, { projection: { _id: 0 } }).toArray(),
+      db.collection("tanks").find({ $or: [{ id: { $in: tankIds } }, { StorageID: { $in: tankIds } }] }, { projection: { _id: 0 } }).toArray(),
       db.collection("cityGates").find({ id: { $in: gateIds } }, { projection: { _id: 0 } }).toArray(),
       db.collection("maintenanceRecords").find({ plant_id: { $in: allAssetIds } }).toArray(),
       db.collection("outages").find({ plant_id: { $in: allAssetIds } }, { projection: { _id: 0 } }).toArray(),
@@ -92,6 +126,7 @@ export async function loadDispatchInputs({ networkId, from, to }) {
   const assetById = new Map();
   for (const p of plants) assetById.set(p.id, { asset: p, kind: "plant" });
   for (const p of pumps) assetById.set(p.id, { asset: p, kind: "pump" });
+  for (const t of tanks) assetById.set(t.id || t.StorageID, { asset: t, kind: "tank" });
   for (const g of cityGates) assetById.set(g.id, { asset: g, kind: "handover_point" });
 
   return {
@@ -132,11 +167,13 @@ function requiredForGate(demandRecords = [], dateIso) {
  * Resolve the day's supply / throughput / demand for every canvas node,
  * applying per-run overrides last so an operator what-if always wins.
  */
-export function resolveDayInputs(inputs, dateIso, { overrides = {}, excludeMaintenanceIds } = {}) {
+export function resolveDayInputs(inputs, dateIso, {
+  overrides = {}, excludeMaintenanceIds, tankState = new Map(), strategicStorageMinPct = 70,
+} = {}) {
   const supply = new Map();
   const throughput = new Map();
   const demand = new Map();
-  const detail = { plants: [], pumps: [], gates: [] };
+  const detail = { plants: [], pumps: [], tanks: [], gates: [] };
 
   const ctxFor = (assetId) => ({
     maintenanceRecords: inputs.maintenanceByAsset.get(assetId) || [],
@@ -196,6 +233,24 @@ export function resolveDayInputs(inputs, dateIso, { overrides = {}, excludeMaint
       limit,
       unconstrained: limit == null,
       overridden: override.active === false || override.capacity != null,
+    });
+  }
+
+  for (const node of inputs.byCategory.tank || []) {
+    const override = overrides[node.id] || {};
+    const entry = inputs.assetById.get(node.assetId);
+    const settings = tankSettings(entry?.asset, override, strategicStorageMinPct);
+    const stored = tankState.has(node.id) ? tankState.get(node.id) : settings.initialStorage;
+    const inService = override.active !== false && !["decommissioned", "inactive"].includes(node.status) &&
+      inServiceOn(node.meta?.commissioning_date, node.meta?.decommissioning_date, dateIso);
+    detail.tanks.push({
+      nodeId: node.id,
+      assetId: node.assetId,
+      name: node.label,
+      ...settings,
+      startLevel: clamp(stored, 0, settings.maxStorage),
+      inService,
+      overridden: Object.keys(override).length > 0,
     });
   }
 
@@ -264,68 +319,136 @@ function reachableFromSupply(topology, activeNodeIds, supply) {
 /** Solve one day and report flows, shortages and their binding constraints. */
 export function solveDay(inputs, dateIso, options = {}) {
   const { supply, throughput, demand, detail } = resolveDayInputs(inputs, dateIso, options);
+  const totalRequired = detail.gates.reduce((sum, g) => sum + g.required, 0);
+  const usedPipes = new Map();
+  const usedPumps = new Map();
+  const plantOutput = new Map(detail.plants.map((p) => [p.nodeId, 0]));
+  const gateDelivery = new Map(detail.gates.map((g) => [g.nodeId, 0]));
+  const tankInflow = new Map(detail.tanks.map((t) => [t.nodeId, 0]));
+  const tankOutflow = new Map(detail.tanks.map((t) => [t.nodeId, 0]));
+  const disabledNodeIds = new Set(detail.tanks.filter((t) => !t.inService).map((t) => t.nodeId));
 
-  const network = new FlowNetwork();
-  const { supplyArcs, demandArcs, pipeArcs, activeNodeIds } = buildDayNetwork({
-    topology: inputs.topology,
-    supply,
-    throughput,
-    demand,
-    dateIso,
-    network,
+  const runPhase = ({ plantSupply = new Map(), gateDemand = new Map(), tankSupply = new Map(), tankDemand = new Map() }) => {
+    const network = new FlowNetwork();
+    const edgeRemaining = new Map(inputs.topology.edges.map((edge) => {
+      const { capacity } = pipeCapacity(edge.specs);
+      return [edge.id, Math.max(0, capacity - (usedPipes.get(edge.id) || 0))];
+    }));
+    const throughputRemaining = new Map();
+    for (const [nodeId, limit] of throughput) {
+      if (limit != null) throughputRemaining.set(nodeId, Math.max(0, limit - (usedPumps.get(nodeId) || 0)));
+    }
+    const arcs = buildDayNetwork({
+      topology: inputs.topology, supply: plantSupply, throughput, demand: gateDemand,
+      tankSupply, tankDemand, edgeRemaining, throughputRemaining, disabledNodeIds,
+      dateIso, network,
+    });
+    const hasSource = arcs.supplyArcs.size || arcs.tankSupplyArcs.size;
+    const hasSink = arcs.demandArcs.size || arcs.tankDemandArcs.size;
+    if (!hasSource || !hasSink) return { flow: 0, cost: 0, cut: [], arcs, network };
+    const solved = minCostMaxFlow(network, SUPER_SRC, SUPER_SNK);
+    for (const [id, phaseArcs] of arcs.pipeArcs) {
+      const value = phaseArcs.reduce((sum, arc) => sum + network.flowOn(arc), 0);
+      usedPipes.set(id, (usedPipes.get(id) || 0) + value);
+    }
+    for (const [id, arc] of arcs.throughputArcs) {
+      usedPumps.set(id, (usedPumps.get(id) || 0) + network.flowOn(arc));
+    }
+    for (const [id, arc] of arcs.supplyArcs) plantOutput.set(id, (plantOutput.get(id) || 0) + network.flowOn(arc));
+    for (const [id, arc] of arcs.demandArcs) gateDelivery.set(id, (gateDelivery.get(id) || 0) + network.flowOn(arc));
+    for (const [id, arc] of arcs.tankSupplyArcs) tankOutflow.set(id, (tankOutflow.get(id) || 0) + network.flowOn(arc));
+    for (const [id, arc] of arcs.tankDemandArcs) tankInflow.set(id, (tankInflow.get(id) || 0) + network.flowOn(arc));
+    return { ...solved, cut: minCutArcs(network, solved.reachable), arcs, network };
+  };
+
+  // WIPlan priority: plants serve gates first, then remaining production fills
+  // storage, operational storage may top up strategic storage, and stored water
+  // is finally released only to cover demand the plants could not serve.
+  const direct = runPhase({ plantSupply: supply, gateDemand: demand });
+  const remainingPlants = new Map([...supply].map(([id, row]) => [id, {
+    ...row, available: Math.max(0, row.available - (plantOutput.get(id) || 0)),
+  }]));
+  const chargeDemand = new Map(detail.tanks.filter((t) => t.inService)
+    .map((t) => [t.nodeId, Math.max(0, t.maxStorage - t.startLevel)]));
+  const charge = runPhase({ plantSupply: remainingPlants, tankDemand: chargeDemand });
+
+  const levelAfterCharge = new Map(detail.tanks.map((t) => [t.nodeId, t.startLevel + (tankInflow.get(t.nodeId) || 0)]));
+  const transferSupply = new Map(detail.tanks.filter((t) => t.inService && !t.strategic).map((t) => [
+    t.nodeId, Math.max(0, (levelAfterCharge.get(t.nodeId) || 0) - t.minStorage),
+  ]));
+  const transferDemand = new Map(detail.tanks.filter((t) => t.inService && t.strategic).map((t) => [
+    t.nodeId, Math.max(0, t.maxStorage - (levelAfterCharge.get(t.nodeId) || 0)),
+  ]));
+  runPhase({ tankSupply: transferSupply, tankDemand: transferDemand });
+
+  const levelBeforeRelease = new Map(detail.tanks.map((t) => [
+    t.nodeId, t.startLevel + (tankInflow.get(t.nodeId) || 0) - (tankOutflow.get(t.nodeId) || 0),
+  ]));
+  const storedSupply = new Map(detail.tanks.filter((t) => t.inService).map((t) => [
+    t.nodeId, Math.max(0, (levelBeforeRelease.get(t.nodeId) || 0) - t.minStorage),
+  ]));
+  const unmetDemand = new Map(detail.gates.map((g) => [
+    g.nodeId, Math.max(0, g.intakeCap - (gateDelivery.get(g.nodeId) || 0)),
+  ]));
+  const supplement = runPhase({ tankSupply: storedSupply, gateDemand: unmetDemand });
+
+  const tanks = detail.tanks.map((tank) => {
+    const inflow = tankInflow.get(tank.nodeId) || 0;
+    const outflow = tankOutflow.get(tank.nodeId) || 0;
+    const endLevel = clamp(tank.startLevel + inflow - outflow, 0, tank.maxStorage);
+    options.tankState?.set(tank.nodeId, endLevel);
+    return {
+      ...tank,
+      inflow: round(inflow), outflow: round(outflow), endLevel: round(endLevel),
+      fillPct: tank.capacity > 0 ? round(endLevel / tank.capacity * 100) : null,
+    };
   });
 
-  // A day with no demand still needs a well-formed (empty) result.
-  const totalRequired = detail.gates.reduce((sum, g) => sum + g.required, 0);
-  if (!demandArcs.size || !supplyArcs.size) {
-    return emptyDay(dateIso, detail, totalRequired, supplyArcs.size ? "no_demand" : "no_supply");
-  }
-
-  const { flow, cost, reachable } = minCostMaxFlow(network, SUPER_SRC, SUPER_SNK);
-  const cut = minCutArcs(network, reachable);
-  const reachableNodes = reachableFromSupply(inputs.topology, activeNodeIds, supply);
-  const cutHasTransmission = cut.some((c) => c.kind === "pipe" || c.kind === "pump");
-
-  const plantOutputs = {};
-  for (const p of detail.plants) {
-    const arc = supplyArcs.get(p.nodeId);
-    plantOutputs[p.nodeId] = round(arc == null ? 0 : network.flowOn(arc));
-  }
-
-  const pipeFlows = {};
-  for (const [edgeId, arcs] of pipeArcs) {
-    pipeFlows[edgeId] = round(arcs.reduce((sum, arc) => sum + network.flowOn(arc), 0));
-  }
+  const totalDelivered = round([...gateDelivery.values()].reduce((sum, value) => sum + value, 0));
+  const totalShortage = round(Math.max(0, totalRequired - totalDelivered));
+  const supplyReachability = new Map(supply);
+  for (const [id, available] of storedSupply) supplyReachability.set(id, { available });
+  const activeIds = new Set(inputs.topology.nodes.filter((n) => !disabledNodeIds.has(n.id)).map((n) => n.id));
+  const reachableNodes = reachableFromSupply(inputs.topology, activeIds, supplyReachability);
+  const rawCut = [...direct.cut, ...supplement.cut];
+  const bindingConstraints = totalShortage > EPS
+    ? [...new Map(rawCut
+      .filter((c) => ["plant_supply", "pipe", "pump", "gate_intake"].includes(c.kind))
+      .map((c) => [`${c.kind}:${c.edgeId || c.nodeId}`, c])).values()]
+    : [];
+  const cutHasTransmission = bindingConstraints.some((c) => c.kind === "pipe" || c.kind === "pump");
 
   const gates = detail.gates.map((gate) => {
-    const arc = demandArcs.get(gate.nodeId);
-    const delivered = arc == null ? 0 : network.flowOn(arc);
+    const delivered = gateDelivery.get(gate.nodeId) || 0;
     const shortage = Math.max(0, gate.required - delivered);
-
     let cause = null;
     if (shortage > EPS) {
       if (!reachableNodes.has(gate.nodeId)) cause = "isolated";
       else if (gate.intakeLimited && gate.intakeCap <= delivered + EPS) cause = "intake_limited";
       else cause = cutHasTransmission ? "transmission_bottleneck" : "insufficient_capacity";
     }
-
     return { ...gate, delivered: round(delivered), shortage: round(shortage), cause };
   });
 
-  const totalDelivered = round(flow);
+  const plantOutputs = Object.fromEntries([...plantOutput].map(([id, value]) => [id, round(value)]));
+  const pipeFlows = Object.fromEntries([...usedPipes].map(([id, value]) => [id, round(value)]));
+  const startStorage = detail.tanks.reduce((sum, tank) => sum + tank.startLevel, 0);
+  const endStorage = tanks.reduce((sum, tank) => sum + tank.endLevel, 0);
+  const totalPlantOutput = [...plantOutput.values()].reduce((sum, value) => sum + value, 0);
   return {
     date: dateIso,
     plants: detail.plants,
     pumps: detail.pumps,
+    tanks,
     gates,
     plantOutputs,
     pipeFlows,
     totalRequired: round(totalRequired),
     totalDelivered,
-    totalShortage: round(Math.max(0, totalRequired - totalDelivered)),
-    variableOmCost: round(cost),
+    totalShortage,
+    variableOmCost: round(direct.cost + charge.cost),
     satisfactionPct: totalRequired > 0 ? round((totalDelivered / totalRequired) * 100) : null,
-    bindingConstraints: cut.map((c) => ({
+    bindingConstraints: bindingConstraints.map((c) => ({
       kind: c.kind,
       label: c.label,
       id: c.edgeId || c.nodeId,
@@ -333,6 +456,13 @@ export function solveDay(inputs, dateIso, options = {}) {
       flow: round(c.flow),
       capacity: c.capacity >= UNLIMITED ? null : round(c.capacity),
     })),
+    massBalance: {
+      startStorage: round(startStorage),
+      plantOutput: round(totalPlantOutput),
+      delivered: totalDelivered,
+      endStorage: round(endStorage),
+      difference: round(totalPlantOutput + startStorage - totalDelivered - endStorage),
+    },
   };
 }
 
@@ -360,7 +490,8 @@ function emptyDay(dateIso, detail, totalRequired, reason) {
 
 /** Solve a list of days. */
 export function solveDays(inputs, dates, options = {}) {
-  return dates.map((date) => solveDay(inputs, date, options));
+  const tankState = new Map(options.tankState || []);
+  return dates.map((date) => solveDay(inputs, date, { ...options, tankState }));
 }
 
 // ── Verdicts ────────────────────────────────────────────────────────────────
@@ -378,9 +509,9 @@ const shortageOn = (days, dateSet) =>
 /**
  * Decide each pending maintenance request.
  *
- * The cheap path is the common one: if the baseline already serves all demand
- * across the record's window, the work cannot be what causes a shortage, so it
- * is approved without a second solve. Only records overlapping a shortfall get
+ * The desktop's strict operational rule is window-based: a request is
+ * recommended only when every overlapping day is shortage-free. The previous
+ * implementation used
  * a counterfactual run — and that run only needs the record's own window,
  * since removing a derate cannot change any day outside it.
  */
@@ -416,7 +547,10 @@ export function decideMaintenance(inputs, baselineDays, options = {}) {
         start: record.start_datetime ?? null,
         end: record.end_datetime ?? null,
         windowDays: window,
+        recommendedStatus: "approved",
         status: "approved",
+        decision: true,
+        operatorComment: "",
         shortageCaused: 0,
         affectedGates: [],
         reason: "All demand is met across the maintenance window.",
@@ -424,39 +558,13 @@ export function decideMaintenance(inputs, baselineDays, options = {}) {
       continue;
     }
 
-    const without = solveDays(inputs, window, {
-      ...options,
-      excludeMaintenanceIds: new Set([String(record.id)]),
-    });
-    const counterfactualShortage = without.reduce((sum, d) => sum + d.totalShortage, 0);
-    const delta = round(baselineShortage - counterfactualShortage);
-
-    if (delta <= EPS) {
-      verdicts.push({
-        recordId: record.id,
-        assetId: record.plant_id,
-        assetName,
-        maintenanceType: record.maintenance_type ?? null,
-        start: record.start_datetime ?? null,
-        end: record.end_datetime ?? null,
-        windowDays: window,
-        status: "approved",
-        shortageCaused: 0,
-        affectedGates: [],
-        reason: "The shortage in this window occurs with or without this work.",
-      });
-      continue;
-    }
-
-    // Name the gates that this record specifically makes worse.
-    const withoutByDate = new Map(without.map((d) => [d.date, d]));
+    // Strict rule: any shortage in the maintenance window recommends a cross,
+    // even when the system would remain short without this specific work.
     const affected = new Map();
     for (const date of window) {
       const base = byDate.get(date);
-      const alt = withoutByDate.get(date);
       for (const gate of base?.gates || []) {
-        const altGate = alt?.gates.find((g) => g.nodeId === gate.nodeId);
-        const diff = round(gate.shortage - (altGate?.shortage ?? 0));
+        const diff = round(gate.shortage || 0);
         if (diff > EPS) {
           const prev = affected.get(gate.assetId || gate.nodeId) || { name: gate.name, assetId: gate.assetId, m3: 0 };
           prev.m3 = round(prev.m3 + diff);
@@ -466,7 +574,7 @@ export function decideMaintenance(inputs, baselineDays, options = {}) {
     }
     const affectedGates = [...affected.values()].sort((a, b) => b.m3 - a.m3);
 
-    const reschedule = findRescheduleWindow(record, baselineDays, window.length);
+    const reschedule = findRescheduleWindow(record, inputs, options);
     verdicts.push({
       recordId: record.id,
       assetId: record.plant_id,
@@ -475,25 +583,95 @@ export function decideMaintenance(inputs, baselineDays, options = {}) {
       start: record.start_datetime ?? null,
       end: record.end_datetime ?? null,
       windowDays: window,
-      status: reschedule ? "postponed" : "rejected",
-      shortageCaused: delta,
+      recommendedStatus: "rejected",
+      status: "rejected",
+      decision: false,
+      operatorComment: "",
+      shortageCaused: round(baselineShortage),
       affectedGates,
       suggestedWindow: reschedule,
       reason: reschedule
-        ? `Would cause a ${delta.toLocaleString()} m³ shortage. A clear ${window.length}-day window starts ${reschedule.from}.`
-        : `Would cause a ${delta.toLocaleString()} m³ shortage at ${affectedGates.length} city gate(s).`,
+        ? `A ${baselineShortage.toLocaleString()} m³ shortage exists in this window. A clear ${recordDaySpan(record)}-day window starts ${reschedule.from}.`
+        : `A ${baselineShortage.toLocaleString()} m³ shortage exists at ${affectedGates.length} city gate(s) in this window.`,
     });
   }
 
   return verdicts;
 }
 
-/** The earliest run of `length` consecutive horizon days with no baseline shortage. */
-function findRescheduleWindow(record, baselineDays, length) {
-  for (let i = 0; i + length <= baselineDays.length; i += 1) {
-    const slice = baselineDays.slice(i, i + length);
-    if (slice.every((d) => d.totalShortage <= EPS)) {
-      return { from: slice[0].date, to: slice[slice.length - 1].date };
+const dateAtUtcMidnight = (dateIso) => Date.parse(`${String(dateIso).slice(0, 10)}T00:00:00.000Z`);
+
+function shiftDate(dateIso, dayDelta) {
+  const time = dateAtUtcMidnight(dateIso);
+  if (!Number.isFinite(time)) return dateIso;
+  return new Date(time + dayDelta * 86400000).toISOString().slice(0, 10);
+}
+
+function shiftTimestamp(value, dayDelta) {
+  if (!value) return value;
+  const time = Date.parse(value);
+  if (!Number.isFinite(time)) return value;
+  return new Date(time + dayDelta * 86400000).toISOString();
+}
+
+/** Move one maintenance record by whole calendar days without changing its shape or duration. */
+function shiftedMaintenance(record, candidateStart) {
+  const originalStart = String(record.start_datetime || "").slice(0, 10);
+  const from = dateAtUtcMidnight(originalStart);
+  const to = dateAtUtcMidnight(candidateStart);
+  const dayDelta = Number.isFinite(from) && Number.isFinite(to) ? Math.round((to - from) / 86400000) : 0;
+  return {
+    ...record,
+    start_datetime: shiftTimestamp(record.start_datetime, dayDelta),
+    end_datetime: shiftTimestamp(record.end_datetime, dayDelta),
+    daily_losses: Array.isArray(record.daily_losses)
+      ? record.daily_losses.map((row) => ({ ...row, date: shiftDate(row.date, dayDelta) }))
+      : record.daily_losses,
+  };
+}
+
+/** Clone only the maintenance indexes that a trial changes; all portal inputs remain read-only. */
+function withShiftedMaintenance(inputs, original, shifted) {
+  const sameRecord = (row) => String(row.id) === String(original.id);
+  const replace = (rows = []) => {
+    let found = false;
+    const replaced = rows.map((row) => {
+      if (!sameRecord(row)) return row;
+      found = true;
+      return shifted;
+    });
+    return found ? replaced : [...replaced, shifted];
+  };
+  const maintenanceByAsset = new Map(inputs.maintenanceByAsset);
+  maintenanceByAsset.set(original.plant_id, replace(maintenanceByAsset.get(original.plant_id)));
+  return { ...inputs, maintenance: replace(inputs.maintenance), maintenanceByAsset };
+}
+
+/**
+ * Earliest shortage-free slot after actually moving the work and rerunning the
+ * sequential dispatch through that slot. Looking only at the baseline days is
+ * invalid: the shifted loss can overlap outages and changes tank carryover.
+ */
+function findRescheduleWindow(record, inputs, options = {}) {
+  if (!record.start_datetime || !record.end_datetime) return null;
+  const length = recordDaySpan(record);
+  const dates = inputs.dates || [];
+  if (length > dates.length) return null;
+
+  const simulationOptions = {
+    overrides: options.overrides || {},
+    strategicStorageMinPct: options.strategicStorageMinPct ?? 70,
+  };
+  for (let i = 0; i + length <= dates.length; i += 1) {
+    const candidateDates = dates.slice(i, i + length);
+    const shifted = shiftedMaintenance(record, candidateDates[0]);
+    const trialInputs = withShiftedMaintenance(inputs, record, shifted);
+    // The prefix matters for storage: inventory entering a candidate must be
+    // whatever the preceding outage, demand and production days left behind.
+    const trialDays = solveDays(trialInputs, dates.slice(0, i + length), simulationOptions);
+    const candidateSet = new Set(candidateDates);
+    if (trialDays.filter((day) => candidateSet.has(day.date)).every((day) => day.totalShortage <= EPS)) {
+      return { from: candidateDates[0], to: candidateDates[candidateDates.length - 1] };
     }
   }
   return null;
@@ -512,8 +690,12 @@ export function decideDemand(inputs, baselineDays) {
         gateName: gate.name,
         date: day.date,
         required: gate.required,
+        recommendedApproved: gate.delivered,
         approved: gate.delivered,
+        recommendedStatus: status,
         status,
+        decision: status === "approved",
+        operatorComment: "",
         cause: gate.cause,
         reason:
           status === "approved"
@@ -545,10 +727,10 @@ function causeText(cause) {
 // ── Orchestration ───────────────────────────────────────────────────────────
 
 /** Run a full dispatch: baseline solve, then both sets of verdicts, then KPIs. */
-export async function runDispatch({ networkId, from, to, overrides = {} }) {
+export async function runDispatch({ networkId, from, to, overrides = {}, strategicStorageMinPct = 70 }) {
   const inputs = await loadDispatchInputs({ networkId, from, to });
-  const days = solveDays(inputs, inputs.dates, { overrides });
-  const maintenanceVerdicts = decideMaintenance(inputs, days, { overrides });
+  const days = solveDays(inputs, inputs.dates, { overrides, strategicStorageMinPct });
+  const maintenanceVerdicts = decideMaintenance(inputs, days, { overrides, strategicStorageMinPct });
   const demandVerdicts = decideDemand(inputs, days);
 
   const totals = days.reduce(
@@ -579,6 +761,7 @@ export async function runDispatch({ networkId, from, to, overrides = {} }) {
     network: inputs.network,
     from,
     to,
+    strategicStorageMinPct,
     days,
     pipes: summarisePipes(inputs, days),
     plantAllocations,

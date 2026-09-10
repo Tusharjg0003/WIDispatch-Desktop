@@ -20,6 +20,24 @@ test("edgeState: no flow is idle regardless of capacity", () => {
   assert.equal(edgeState({ flow: 0, capacity: null, unconstrained: true }), "idle");
 });
 
+test("nodeDetail: exposes tank inventory for the canvas", () => {
+  const plan = { days: [{ tanks: [{ nodeId: "tank", name: "Tank", startLevel: 100, inflow: 0, outflow: 30,
+    endLevel: 70, fillPct: 70, minStorage: 50, minPct: 50, maxStorage: 100, maxPct: 100 }],
+    plants: [], pumps: [], gates: [], bindingConstraints: [] }] };
+  const detail = nodeDetail(plan, 0, "tank");
+  assert.equal(detail.kind, "tank");
+  assert.equal(detail.endLevel, 70);
+});
+
+test("dayOverlay: ignores stored constraints on a zero-shortage legacy plan", () => {
+  const plan = { pipes: [{ id: "p", capacity: 100, unconstrained: false }], days: [{ date: "2026-08-02",
+    totalShortage: 0, totalRequired: 100, totalDelivered: 100, variableOmCost: 0, pipeFlows: { p: 100 },
+    bindingConstraints: [{ kind: "pipe", id: "p" }], plants: [], pumps: [], tanks: [], gates: [] }] };
+  const overlay = dayOverlay(plan, 0);
+  assert.equal(overlay.edgeStates.p, "high");
+  assert.deepEqual(overlay.bottleneckEdgeIds, []);
+});
+
 test("edgeState: utilisation buckets sit on the documented boundaries", () => {
   assert.equal(edgeState({ flow: 699, capacity: 1000 }), "low");
   assert.equal(edgeState({ flow: 700, capacity: 1000 }), "medium");
@@ -162,6 +180,7 @@ test("dayOverlay: plant supply binding does not turn low-utilisation pipes into 
       ...PLAN.days[0],
       plantOutputs: { n_plant: 500 },
       pipeFlows: { p1: 220 },
+      totalShortage: 1,
       bindingConstraints: [{ kind: "plant_supply", label: "Plant 1", id: "n_plant", flow: 500, capacity: 500 }],
     }],
   };
@@ -303,6 +322,7 @@ test("nodeInsight: series alert follows each day's node binding state", () => {
     ...PLAN,
     days: [{
       ...PLAN.days[0],
+      totalShortage: 1,
       bindingConstraints: [{ kind: "plant_supply", label: "Plant 1", id: "n_plant", flow: 500, capacity: 500 }],
     }, PLAN.days[1]],
   };

@@ -38,6 +38,52 @@ function notFound(message) {
   return err;
 }
 
+export function validatePlanDecisions(plan) {
+  for (const row of plan.maintenanceVerdicts || []) {
+    const decision = row.decision ?? row.status === "approved";
+    if (!decision && !String(row.operatorComment || "").trim()) {
+      throw badRequest(`A comment is required to reject maintenance for ${row.assetName || row.assetId}`);
+    }
+  }
+  for (const row of plan.demandVerdicts || []) {
+    const approved = Number(row.approved);
+    const required = Number(row.required);
+    if (!Number.isFinite(approved) || approved < 0 || approved > required) {
+      throw badRequest(`Approved volume for ${row.gateName || row.assetId} on ${row.date} must be between 0 and ${required}`);
+    }
+    if (approved < required && !String(row.operatorComment || "").trim()) {
+      throw badRequest(`A comment is required to revise ${row.gateName || row.assetId} on ${row.date}`);
+    }
+  }
+}
+
+export function applyDecisionPatches(plan, body = {}) {
+  const maintenancePatches = new Map((body.maintenanceVerdicts || []).map((row) => [String(row.recordId), row]));
+  const demandPatches = new Map((body.demandVerdicts || []).map((row) => [`${row.assetId}:${row.date}`, row]));
+  const maintenanceVerdicts = (plan.maintenanceVerdicts || []).map((row) => {
+    const patch = maintenancePatches.get(String(row.recordId));
+    if (!patch) return row;
+    if (typeof patch.decision !== "boolean") throw badRequest("Maintenance decision must be a tick or cross");
+    const operatorComment = String(patch.operatorComment || "").trim();
+    if (!patch.decision && !operatorComment) throw badRequest("A comment is required for a maintenance rejection");
+    return { ...row, decision: patch.decision, status: patch.decision ? "approved" : "rejected", operatorComment };
+  });
+  const demandVerdicts = (plan.demandVerdicts || []).map((row) => {
+    const patch = demandPatches.get(`${row.assetId}:${row.date}`);
+    if (!patch) return row;
+    const approved = Number(patch.approved);
+    const required = Number(row.required);
+    if (!Number.isFinite(approved) || approved < 0 || approved > required) {
+      throw badRequest(`Approved volume must be between 0 and ${required}`);
+    }
+    const status = approved >= required ? "approved" : approved > 0 ? "adjusted" : "shortfall";
+    const operatorComment = String(patch.operatorComment || "").trim();
+    if (status !== "approved" && !operatorComment) throw badRequest("A comment is required for a demand revision");
+    return { ...row, approved, decision: status === "approved", status, operatorComment };
+  });
+  return { maintenanceVerdicts, demandVerdicts };
+}
+
 const rid = (prefix) => `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 const isIsoDate = (value) => typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
 
@@ -69,6 +115,13 @@ function normalise(body = {}, existing = {}) {
       throw badRequest("overrides must be an object keyed by canvas element id");
     }
     out.overrides = body.overrides;
+  }
+  if (body.strategicStorageMinPct != null) {
+    const value = Number(body.strategicStorageMinPct);
+    if (!Number.isFinite(value) || value < 0 || value > 100) {
+      throw badRequest("strategicStorageMinPct must be between 0 and 100");
+    }
+    out.strategicStorageMinPct = value;
   }
 
   const from = out.from ?? existing.from;
@@ -104,6 +157,7 @@ export async function createSimulationConfig(body = {}) {
     from: range.from,
     to: range.to,
     overrides: {},
+    strategicStorageMinPct: 70,
     latestPlanId: null,
     latestRunAt: null,
     createdAt: now,
@@ -148,8 +202,9 @@ export async function runSimulationConfig(id, body = {}) {
   const from = body.from ?? config.from;
   const to = body.to ?? config.to;
   const overrides = body.overrides ?? config.overrides ?? {};
+  const strategicStorageMinPct = body.strategicStorageMinPct ?? config.strategicStorageMinPct ?? 70;
 
-  const result = await runDispatch({ networkId: config.networkId, from, to, overrides });
+  const result = await runDispatch({ networkId: config.networkId, from, to, overrides, strategicStorageMinPct });
 
   const db = await getDb();
   const now = new Date().toISOString();
@@ -179,8 +234,25 @@ export async function getDispatchPlan(id) {
   return plan;
 }
 
+export async function updateDispatchPlanDecisions(id, body = {}) {
+  const db = await getDb();
+  const plan = await db.collection(PLANS).findOne({ id }, { projection: { _id: 0 } });
+  if (!plan) throw notFound("Dispatch plan not found");
+  if (plan.status !== "draft") throw badRequest("Published plans cannot be edited");
+
+  const { maintenanceVerdicts, demandVerdicts } = applyDecisionPatches(plan, body);
+  const updated = { ...plan, maintenanceVerdicts, demandVerdicts };
+  const updatedAt = new Date().toISOString();
+  const result = await db.collection(PLANS).updateOne({ id, status: "draft" }, {
+    $set: { maintenanceVerdicts, demandVerdicts, updatedAt },
+  });
+  if (!result.modifiedCount) throw badRequest("This draft changed while decisions were being saved; reload it and try again");
+  return { ...updated, updatedAt };
+}
+
 export async function publishDispatchPlan(id) {
   const plan = await getDispatchPlan(id);
   if (plan.status === "published") throw badRequest("This plan has already been published");
+  validatePlanDecisions(plan);
   return publishPlan(plan);
 }

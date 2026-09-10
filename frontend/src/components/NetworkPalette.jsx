@@ -215,6 +215,7 @@ export default function NetworkPalette({ onPick, onPickSystem, placedIds, armedI
         <input
           className="ns2-input"
           type="search"
+          aria-label={activeTab === "assets" ? "Search network assets" : "Search transmission systems"}
           placeholder={activeTab === "assets" ? "Search assets..." : "Search systems..."}
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -223,6 +224,7 @@ export default function NetworkPalette({ onPick, onPickSystem, placedIds, armedI
           <>
             <select
               className="ns2-input"
+              aria-label="Filter assets by category"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
             >
@@ -235,6 +237,7 @@ export default function NetworkPalette({ onPick, onPickSystem, placedIds, armedI
             </select>
             <select
               className="ns2-input"
+              aria-label="Filter assets by region"
               value={region}
               onChange={(e) => setRegion(e.target.value)}
             >

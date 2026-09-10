@@ -1,50 +1,7 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
+import { apiRequest } from "./client";
 
-async function getJson(path) {
-  const res = await fetch(`${API_BASE}${path}`);
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.error || `Request failed (${res.status})`);
-  }
-  return res.json();
-}
-
-async function sendJson(path, method, payload) {
-  const res = await fetch(`${API_BASE}${path}`, {
-    method,
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
-  return data;
-}
-
-// Lightweight list for the Load picker: { networks: [{ id, name, nodeCount, ... }] }.
-export function fetchNetworks() {
-  return getJson("/api/networks");
-}
-
-// Full document with nodes + edges for hydrating the canvas.
-export function fetchNetwork(id) {
-  return getJson(`/api/networks/${id}`);
-}
-
-// Create a new saved network → returns the created document (with its id).
-export function saveNetwork(payload) {
-  return sendJson("/api/networks", "POST", payload);
-}
-
-// Update an existing network in place.
-export function updateNetwork(id, payload) {
-  return sendJson(`/api/networks/${id}`, "PUT", payload);
-}
-
-// Delete a saved network. No response body (204).
-export async function deleteNetwork(id) {
-  const res = await fetch(`${API_BASE}/api/networks/${id}`, { method: "DELETE" });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.error || `Request failed (${res.status})`);
-  }
-}
+export const fetchNetworks = () => apiRequest("/api/networks");
+export const fetchNetwork = (id) => apiRequest(`/api/networks/${encodeURIComponent(id)}`);
+export const saveNetwork = (payload) => apiRequest("/api/networks", { method: "POST", body: payload });
+export const updateNetwork = (id, payload) => apiRequest(`/api/networks/${encodeURIComponent(id)}`, { method: "PUT", body: payload });
+export const deleteNetwork = (id) => apiRequest(`/api/networks/${encodeURIComponent(id)}`, { method: "DELETE" });

@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from "react";
-import { AlertTriangle, CalendarClock, CheckCircle2, Download, Send, XCircle } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { AlertTriangle, CalendarClock, Check, ChevronDown, ChevronRight, Download, Send, X } from "lucide-react";
 import { allocationGrid, allocationsToCsv, groupDemandVerdicts } from "../../lib/simulationRows";
 import { downloadCsv } from "../../lib/exportCsv";
 import "./DecisionsPanel.css";
@@ -12,11 +12,11 @@ const nf = new Intl.NumberFormat("en-US");
 const fmt = (v) => (v == null ? "—" : nf.format(Math.round(v)));
 
 const STATUS = {
-  approved: { label: "Approve", tone: "good", Icon: CheckCircle2 },
+  approved: { label: "Approve", tone: "good", Icon: Check },
   adjusted: { label: "Revise", tone: "warn", Icon: AlertTriangle },
   postponed: { label: "Postpone", tone: "warn", Icon: CalendarClock },
-  rejected: { label: "Reject", tone: "bad", Icon: XCircle },
-  shortfall: { label: "Shortfall", tone: "bad", Icon: XCircle },
+  rejected: { label: "Reject", tone: "bad", Icon: X },
+  shortfall: { label: "Shortfall", tone: "bad", Icon: X },
 };
 
 function StatusBadge({ status }) {
@@ -27,6 +27,28 @@ function StatusBadge({ status }) {
       {label}
     </span>
   );
+}
+
+function DecisionToggle({ checked, onChange, disabled, label }) {
+  return (
+    <button type="button" aria-label={label}
+      className={`dp__decision-btn ${checked ? "dp__decision-btn--yes" : "dp__decision-btn--no"} is-active`}
+      onClick={() => onChange(!checked)} disabled={disabled}
+      title={disabled ? label : checked ? "Approved in full — click to change" : "Rejected or revised — click to change"}>
+      {checked ? <Check size={16} /> : <X size={16} />}
+    </button>
+  );
+}
+
+function DemandVolumeEditor({ row, disabled, onCommit }) {
+  const [value, setValue] = useState(row.approved);
+  useEffect(() => setValue(row.approved), [row.approved]);
+  return <input className="dp__volume" type="number" min="0" max={row.required} value={value}
+    disabled={disabled} onChange={(event) => setValue(event.target.value)}
+    onBlur={async () => {
+      if (Number(value) === row.approved) return;
+      if (!(await onCommit(value))) setValue(row.approved);
+    }} />;
 }
 
 function Tally({ verdicts, keyOf = (v) => v.status }) {
@@ -47,14 +69,45 @@ function Tally({ verdicts, keyOf = (v) => v.status }) {
   );
 }
 
-export default function DecisionsPanel({ plan, onPublish, publishing, publishError, published }) {
+export default function DecisionsPanel({ plan, onPublish, publishing, publishError, published, onDecisionSave }) {
   const [expanded, setExpanded] = useState(null);
+  const [savingKey, setSavingKey] = useState(null);
+  const [editError, setEditError] = useState(null);
   const maintenance = plan.maintenanceVerdicts || [];
   const demandByGate = useMemo(() => groupDemandVerdicts(plan.demandVerdicts), [plan.demandVerdicts]);
   const grid = useMemo(() => allocationGrid(plan), [plan]);
 
   const allocationCount = (plan.plantAllocations || []).length;
   const isPublished = published || plan.status === "published";
+
+  const save = async (key, payload) => {
+    setSavingKey(key);
+    setEditError(null);
+    try { await onDecisionSave(payload); return true; }
+    catch (error) { setEditError(error.message); return false; }
+    finally { setSavingKey(null); }
+  };
+
+  const changeMaintenance = (row, decision) => {
+    let operatorComment = decision ? "" : row.operatorComment;
+    if (!decision) {
+      operatorComment = window.prompt("Add a required comment for this maintenance rejection:", operatorComment || "");
+      if (operatorComment == null) return;
+    }
+    save(`m:${row.recordId}`, { maintenanceVerdicts: [{ recordId: row.recordId, decision, operatorComment }] });
+  };
+
+  const changeDemand = async (row, approved) => {
+    const value = Math.max(0, Math.min(row.required, Number(approved)));
+    let operatorComment = value >= row.required ? "" : row.operatorComment;
+    if (value < row.required) {
+      operatorComment = window.prompt("Add a required comment for this demand revision:", operatorComment || "");
+      if (operatorComment == null) return false;
+    }
+    return save(`d:${row.assetId}:${row.date}`, {
+      demandVerdicts: [{ assetId: row.assetId, date: row.date, approved: value, operatorComment }],
+    });
+  };
 
   return (
     <>
@@ -67,13 +120,14 @@ export default function DecisionsPanel({ plan, onPublish, publishing, publishErr
               : `Writes ${allocationCount} production allocation(s), ${plan.demandVerdicts.length} demand decision(s) and ${maintenance.length} maintenance decision(s). Nothing has been written yet.`}
           </p>
         </div>
-        <button className="dp__publish-btn" onClick={onPublish} disabled={publishing || isPublished}>
+        <button className="dp__publish-btn" onClick={onPublish} disabled={publishing || isPublished || !!savingKey}>
           <Send size={14} />
           {isPublished ? "Published" : publishing ? "Publishing…" : "Publish decisions"}
         </button>
       </section>
 
       {publishError && <div className="metric__notice metric__notice--error"><span>{publishError}</span></div>}
+      {editError && <div className="metric__notice metric__notice--error"><span>{editError}</span></div>}
 
       <section className="sheet">
         <header className="sheet__head sheet__head--simple">
@@ -113,8 +167,20 @@ export default function DecisionsPanel({ plan, onPublish, publishing, publishErr
                     <td className={`num mono ${v.shortageCaused > 0 ? "dp__bad" : ""}`}>
                       {v.shortageCaused > 0 ? fmt(v.shortageCaused) : "—"}
                     </td>
-                    <td><StatusBadge status={v.status} /></td>
-                    <td className="dp__reason">{v.reason}</td>
+                    <td>
+                      <DecisionToggle checked={v.decision ?? v.status === "approved"}
+                        disabled={isPublished || savingKey === `m:${v.recordId}`}
+                        onChange={(decision) => changeMaintenance(v, decision)} label={`Decision for ${v.assetName}`} />
+                    </td>
+                    <td className="dp__reason">
+                      {v.reason}
+                      {!(v.decision ?? v.status === "approved") && (
+                        <button type="button" className={`dp__comment ${v.operatorComment ? "" : "dp__comment--required"}`}
+                          disabled={isPublished} onClick={() => changeMaintenance(v, false)}>
+                          {v.operatorComment ? `Operator: ${v.operatorComment}` : "Add required comment before publishing"}
+                        </button>
+                      )}
+                    </td>
                   </tr>
                   {expanded === v.recordId && (
                     <tr className="dp__detail-row">
@@ -174,23 +240,54 @@ export default function DecisionsPanel({ plan, onPublish, publishing, publishErr
               </tr>
             </thead>
             <tbody>
-              {demandByGate.map((gate) => (
-                <tr key={gate.assetId}>
-                  <td>
-                    <span className="dp__name">{gate.gateName}</span>
-                    <span className="dp__sub mono">{gate.assetId}</span>
-                  </td>
-                  <td className="num mono">{fmt(gate.requiredM3)}</td>
-                  <td className="num mono">{fmt(gate.approvedM3)}</td>
-                  <td className="num mono">{gate.revisedDays || "—"}</td>
-                  <td><StatusBadge status={gate.status} /></td>
-                  <td className="dp__reason">
-                    {gate.status === "approved"
-                      ? "Requested volume is deliverable on every day."
-                      : gate.days.find((d) => d.status !== "approved")?.reason}
-                  </td>
-                </tr>
-              ))}
+              {demandByGate.map((gate) => {
+                const open = expanded === `gate:${gate.assetId}`;
+                const fullyApproved = gate.days.every((day) => day.approved >= day.required);
+                return (
+                  <React.Fragment key={gate.assetId}>
+                    <tr className="dp__row--click" onClick={() => setExpanded(open ? null : `gate:${gate.assetId}`)}>
+                      <td>
+                        <span className="dp__name">{open ? <ChevronDown size={13} /> : <ChevronRight size={13} />} {gate.gateName}</span>
+                        <span className="dp__sub mono">{gate.assetId}</span>
+                      </td>
+                      <td className="num mono">{fmt(gate.requiredM3)}</td>
+                      <td className="num mono">{fmt(gate.approvedM3)}</td>
+                      <td className="num mono">{gate.revisedDays || "—"}</td>
+                      <td><DecisionToggle checked={fullyApproved} disabled label={`Summary decision for ${gate.gateName}`} onChange={() => {}} /></td>
+                      <td className="dp__reason">{fullyApproved ? "Every day is approved in full." : "Expand to edit daily revisions."}</td>
+                    </tr>
+                    {open && (
+                      <tr className="dp__detail-row">
+                        <td colSpan={6}>
+                          <table className="dp__days">
+                            <thead><tr><th>Date</th><th className="num">Requested</th><th className="num">Approved</th><th>Decision</th><th>Comment</th></tr></thead>
+                            <tbody>{gate.days.map((day) => {
+                              const key = `d:${day.assetId}:${day.date}`;
+                              const full = day.approved >= day.required;
+                              return (
+                                <tr key={day.date}>
+                                  <td className="mono">{day.date}</td>
+                                  <td className="num mono">{fmt(day.required)}</td>
+                                  <td className="num"><DemandVolumeEditor row={day} disabled={isPublished || savingKey === key}
+                                    onCommit={(value) => changeDemand(day, value)} /></td>
+                                  <td><DecisionToggle checked={full} disabled={isPublished || savingKey === key}
+                                    label={`Decision for ${gate.gateName} on ${day.date}`}
+                                    onChange={(checked) => changeDemand(day, checked ? day.required : 0)} /></td>
+                                  <td className="dp__reason">{full ? "—" : <button type="button"
+                                    className={`dp__comment ${day.operatorComment ? "" : "dp__comment--required"}`}
+                                    disabled={isPublished} onClick={() => changeDemand(day, day.approved)}>
+                                    {day.operatorComment || "Add required comment before publishing"}
+                                  </button>}</td>
+                                </tr>
+                              );
+                            })}</tbody>
+                          </table>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
               {!demandByGate.length && (
                 <tr><td colSpan={6} className="dp__empty">No approved demand in this range.</td></tr>
               )}

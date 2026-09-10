@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Network } from "lucide-react";
 import cytoscape from "cytoscape";
 import {
   fetchTransmissionPumpStations,
@@ -12,6 +13,7 @@ import { buildCyStyle } from "../cytoscape/buildCyStyle";
 import { applyCardIcon } from "../cytoscape/nodeCard";
 import { activeFunctionalPumps, backupPumps, totalDesignCapacity } from "../lib/pumpStation";
 import { lineDisplayName, lineSystemId } from "../lib/transmissionLines";
+import { PageHeader, StatusBadge } from "../components/ui/WorkspacePrimitives";
 import "./ProductionPlantList.css";
 import "./TransmissionPage.css";
 
@@ -124,7 +126,6 @@ function TransmissionSystemSnapshot({ system }) {
       autounselectify: true,
       userPanningEnabled: false,
       userZoomingEnabled: false,
-      wheelSensitivity: 0.2,
     });
     cyRef.current = cy;
 
@@ -510,12 +511,6 @@ export default function TransmissionPage() {
 
   return (
     <div className="ppl transmission-stations">
-      <div className="ppl__titlebar">
-        <div>
-          <h1 className="ppl__title">Transmission</h1>
-          <p className="ppl__subtitle">Transmission assets · view only</p>
-        </div>
-      </div>
 
       <div className="transmission-tabs" role="tablist" aria-label="Transmission sections">
         <button
@@ -591,7 +586,7 @@ export default function TransmissionPage() {
                       </td>
                       <td className="muted">{station.entity || "—"}</td>
                       <td className="muted">{station.region || "—"}</td>
-                      <td><span className="ppl__badge">{station.status || "N/A"}</span></td>
+                      <td><StatusBadge status={station.status} /></td>
                       <td className="muted">{fmtDate(station.commissioning_date)}</td>
                       <td className="muted">{fmtDate(station.decommissioning_date)}</td>
                       <td className="ta-r mono">{activeFunctionalPumps(station.specifications).length}</td>

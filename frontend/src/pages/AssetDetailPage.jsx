@@ -6,6 +6,7 @@ import "leaflet/dist/leaflet.css";
 import { deleteAsset, fetchAsset } from "../api/metrics";
 import AssetDetailFields from "../components/AssetDetailFields";
 import WorkspaceHeader, { WorkspaceHeaderButton } from "../components/WorkspaceHeader";
+import CompactSection from "../components/ui/CompactSection";
 import "./AssetDetailPage.css";
 
 const CATEGORY_LABEL = { plant: "Plants", pump: "Pump Stations", handover_point: "Handover Points" };
@@ -145,37 +146,43 @@ export default function AssetDetailPage() {
         {actionError && <div className="metric__notice metric__notice--error">{actionError}</div>}
 
         {showTopRow && (
-          <div className={`view-asset-top-row${showProduction && hasLocation ? "" : " view-asset-top-row--single"}`}>
-            {showProduction && (
-              <div className="form-section view-asset-top-row__chart">
-                <h3>Historical Production</h3>
-                <div className="view-asset-top-row__visual">
-                  <ProductionPlaceholder bars={productionBars} />
+          <CompactSection
+            title="Visual context"
+            summary={[showProduction && "production history", hasLocation && "map location"].filter(Boolean).join(" · ")}
+            className="asset-detail-visual-context"
+          >
+            <div className={`view-asset-top-row${showProduction && hasLocation ? "" : " view-asset-top-row--single"}`}>
+              {showProduction && (
+                <div className="form-section view-asset-top-row__chart">
+                  <h3>Historical Production</h3>
+                  <div className="view-asset-top-row__visual">
+                    <ProductionPlaceholder bars={productionBars} />
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {hasLocation && (
-              <aside className="form-section view-asset-top-row__map">
-                <h3>Geographic Location</h3>
-                <div className="map-section">
-                  <MapContainer
-                    center={[latitude, longitude]}
-                    zoom={10}
-                    className="view-asset-top-row__map-canvas"
-                  >
-                    <TileLayer
-                      url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-                      maxZoom={18}
-                    />
-                    <Marker position={[latitude, longitude]}>
-                      <Popup>Asset Location<br />{latitude.toFixed(6)}, {longitude.toFixed(6)}</Popup>
-                    </Marker>
-                  </MapContainer>
-                </div>
-              </aside>
-            )}
-          </div>
+              {hasLocation && (
+                <aside className="form-section view-asset-top-row__map">
+                  <h3>Geographic Location</h3>
+                  <div className="map-section">
+                    <MapContainer
+                      center={[latitude, longitude]}
+                      zoom={10}
+                      className="view-asset-top-row__map-canvas"
+                    >
+                      <TileLayer
+                        url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                        maxZoom={18}
+                      />
+                      <Marker position={[latitude, longitude]}>
+                        <Popup>Asset Location<br />{latitude.toFixed(6)}, {longitude.toFixed(6)}</Popup>
+                      </Marker>
+                    </MapContainer>
+                  </div>
+                </aside>
+              )}
+            </div>
+          </CompactSection>
         )}
 
         <div className="view-asset-split">
