@@ -16,6 +16,30 @@ const num = (value) => {
 };
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
+const norm = (value) => String(value ?? "").trim().toLowerCase();
+
+// Plant sub-type, mirroring the frontend executiveSummary.plantKind: desalination
+// vs purification, inferred from the asset's type/technology fields, else "other".
+function plantKind(asset = {}) {
+  const spec = asset.specifications || {};
+  const hay = norm(`${asset.asset_type ?? asset.AssetType ?? ""} ${spec.technology ?? ""} ${spec.plant_type ?? asset.plant_type ?? ""} ${asset.EntityType ?? ""}`);
+  if (hay.includes("desalination") || hay.includes("seawater") || hay.includes("swro") || hay.includes("reverse osmosis")) return "desalination";
+  if (hay.includes("purification") || hay.includes("purif") || hay.includes("treatment")) return "purification";
+  return "other";
+}
+
+// Design / maximum nameplate capacity from the plant record, independent of the
+// effective-dated contracted figure. Surfaced so the config tables can show the
+// SWIIMS-style Design / Maximum / Contracted columns.
+function plantDesignCapacity(asset = {}) {
+  const spec = asset.specifications || {};
+  return num(spec.design_capacity ?? spec.designCapacity ?? asset.capacity) ?? null;
+}
+function plantMaximumCapacity(asset = {}) {
+  const spec = asset.specifications || {};
+  return num(spec.maximum_capacity ?? spec.maximumCapacity ?? spec.max_capacity) ?? null;
+}
+
 const tankSpec = (asset = {}) => asset.specifications || {};
 const tankCapacity = (asset = {}) => Math.max(0, num(
   tankSpec(asset).total_capacity_m3 ?? asset["TotalCapacity (m3)"] ?? asset.capacity,
@@ -198,6 +222,9 @@ export function resolveDayInputs(inputs, dateIso, {
       nodeId: node.id,
       assetId: node.assetId,
       name: node.label,
+      kind: plantKind(entry?.asset),
+      design: plantDesignCapacity(entry?.asset),
+      maximum: plantMaximumCapacity(entry?.asset),
       ...capacity,
       available,
       // Unlike a pipe or a pump station, a plant with no capacity anywhere on

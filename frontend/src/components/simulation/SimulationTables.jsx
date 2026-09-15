@@ -172,6 +172,89 @@ function Sheet({ title, count, hint, children }) {
   );
 }
 
+/**
+ * One plant table. Split out so Desalination and Purification render the same
+ * columns (matching the SWIIMS config layout), with Design / Maximum / Contracted
+ * shown side by side.
+ */
+function PlantsSheet({ title, hint, rows, overrides, expanded, setExpanded, onOverrideChange }) {
+  const set = (id, key) => (value) => onOverrideChange(id, key, value);
+  const toggle = (id) => () => setExpanded((cur) => (cur === id ? null : id));
+  return (
+    <Sheet title={title} count={rows.length} hint={hint}>
+      <table className="ledger simt">
+        <thead>
+          <tr>
+            <th className="simt__tick" />
+            <th className="simt__tick">On</th>
+            <th>Plant</th>
+            <th className="num">Design</th>
+            <th className="num">Maximum</th>
+            <th className="num">Contracted</th>
+            <th className="num">Min available</th>
+            <th>Derated</th>
+            <th className="num">Var O&amp;M</th>
+            <th>Cost source</th>
+            <th className="num">Allocated</th>
+            <th className="num">Util.</th>
+            <th>Capacity override</th>
+            <th>Cost override</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => {
+            const o = overrides[row.nodeId] || {};
+            const open = expanded === row.nodeId;
+            return (
+              <React.Fragment key={row.nodeId}>
+                <tr className={o.active === false ? "simt__row--off" : undefined}>
+                  <td className="simt__tick"><ExpandCell expanded={open} onToggle={toggle(row.nodeId)} /></td>
+                  <td className="simt__tick"><ActiveCell active={o.active} onChange={set(row.nodeId, "active")} /></td>
+                  <td>
+                    <span className="simt__name">{row.name}</span>
+                    <span className="simt__sub mono">{row.assetId}</span>
+                  </td>
+                  <td className="num mono">{row.design == null ? "—" : fmt(row.design)}</td>
+                  <td className="num mono">{row.maximum == null ? "—" : fmt(row.maximum)}</td>
+                  <td className="num mono">{row.noCapacity ? "—" : fmt(row.contracted)}</td>
+                  <td className="num mono">
+                    {row.noCapacity
+                      ? <span className="simt__badge simt__badge--warn">No capacity on record</span>
+                      : fmt(row.minAvailable)}
+                  </td>
+                  <td><AffectedChip row={row} /></td>
+                  <td className="num mono">{fmt2(row.variableOm)}</td>
+                  <td>
+                    <span className={`simt__badge simt__badge--${row.variableOmSource}`}>
+                      {OM_SOURCE_LABEL[row.variableOmSource] || row.variableOmSource}
+                    </span>
+                  </td>
+                  <td className="num mono">{fmt(row.allocatedM3)}</td>
+                  <td className="num mono">{row.utilisationPct == null ? "—" : `${row.utilisationPct}%`}</td>
+                  <td>
+                    <OverrideCell value={o.available} placeholder={fmt(row.contracted)} suffix="m³/d" label={`${row.name} available capacity override`}
+                      onChange={set(row.nodeId, "available")} />
+                  </td>
+                  <td>
+                    <OverrideCell value={o.variableOm} placeholder={fmt2(row.variableOm)} suffix="SAR/m³" label={`${row.name} Variable O&M override`}
+                      onChange={set(row.nodeId, "variableOm")} />
+                  </td>
+                </tr>
+                {open && (
+                  <tr className="simt__detail-row">
+                    <td colSpan={14}><PerDayBreakdown row={row} showAllocated /></td>
+                  </tr>
+                )}
+              </React.Fragment>
+            );
+          })}
+          {!rows.length && <tr><td colSpan={14} className="simt__empty">No plants in this group.</td></tr>}
+        </tbody>
+      </table>
+    </Sheet>
+  );
+}
+
 export default function SimulationTables({ plan, overrides, onOverrideChange }) {
   const [expanded, setExpanded] = useState(null);
   const plants = summarisePlants(plan.days);
@@ -183,83 +266,38 @@ export default function SimulationTables({ plan, overrides, onOverrideChange }) 
   const set = (id, key) => (value) => onOverrideChange(id, key, value);
   const toggle = (id) => () => setExpanded((cur) => (cur === id ? null : id));
 
+  // Split by plant kind to match the SWIIMS "Desalination Plants" /
+  // "Purification Plants" layout. Anything unclassified falls into a generic
+  // Plants sheet so nothing is hidden.
+  const desal = plants.filter((p) => p.kind === "desalination");
+  const purif = plants.filter((p) => p.kind === "purification");
+  const otherPlants = plants.filter((p) => p.kind !== "desalination" && p.kind !== "purification");
+  const plantGroups = [
+    ["Desalination Plants", "Cheapest first — the dispatch merit order.", desal],
+    ["Purification Plants", "Cheapest first — the dispatch merit order.", purif],
+    ["Plants", "Plants with no recorded technology.", otherPlants],
+  ].filter(([, , rows]) => rows.length > 0);
+  // Fall back to a single Plants sheet when nothing is classified at all.
+  if (!plantGroups.length) plantGroups.push(["Plants", "Cheapest first — the dispatch merit order.", plants]);
+
   return (
     <>
-      <Sheet
-        title="Plants"
-        count={plants.length}
-        hint="Cheapest first — the dispatch merit order. Expand a row for its day-by-day capacity."
-      >
-        <table className="ledger simt">
-          <thead>
-            <tr>
-              <th className="simt__tick" />
-              <th className="simt__tick">On</th>
-              <th>Plant</th>
-              <th className="num">Contracted</th>
-              <th className="num">Min available</th>
-              <th>Derated</th>
-              <th className="num">Var O&amp;M</th>
-              <th>Cost source</th>
-              <th className="num">Allocated</th>
-              <th className="num">Util.</th>
-              <th>Capacity override</th>
-              <th>Cost override</th>
-            </tr>
-          </thead>
-          <tbody>
-            {plants.map((row) => {
-              const o = overrides[row.nodeId] || {};
-              const open = expanded === row.nodeId;
-              return (
-                <React.Fragment key={row.nodeId}>
-                  <tr className={o.active === false ? "simt__row--off" : undefined}>
-                    <td className="simt__tick"><ExpandCell expanded={open} onToggle={toggle(row.nodeId)} /></td>
-                    <td className="simt__tick"><ActiveCell active={o.active} onChange={set(row.nodeId, "active")} /></td>
-                    <td>
-                      <span className="simt__name">{row.name}</span>
-                      <span className="simt__sub mono">{row.assetId}</span>
-                    </td>
-                    <td className="num mono">{row.noCapacity ? "—" : fmt(row.contracted)}</td>
-                    <td className="num mono">
-                      {row.noCapacity
-                        ? <span className="simt__badge simt__badge--warn">No capacity on record</span>
-                        : fmt(row.minAvailable)}
-                    </td>
-                    <td><AffectedChip row={row} /></td>
-                    <td className="num mono">{fmt2(row.variableOm)}</td>
-                    <td>
-                      <span className={`simt__badge simt__badge--${row.variableOmSource}`}>
-                        {OM_SOURCE_LABEL[row.variableOmSource] || row.variableOmSource}
-                      </span>
-                    </td>
-                    <td className="num mono">{fmt(row.allocatedM3)}</td>
-                    <td className="num mono">{row.utilisationPct == null ? "—" : `${row.utilisationPct}%`}</td>
-                    <td>
-                      <OverrideCell value={o.available} placeholder={fmt(row.contracted)} suffix="m³/d" label={`${row.name} available capacity override`}
-                        onChange={set(row.nodeId, "available")} />
-                    </td>
-                    <td>
-                      <OverrideCell value={o.variableOm} placeholder={fmt2(row.variableOm)} suffix="SAR/m³" label={`${row.name} Variable O&M override`}
-                        onChange={set(row.nodeId, "variableOm")} />
-                    </td>
-                  </tr>
-                  {open && (
-                    <tr className="simt__detail-row">
-                      <td colSpan={12}><PerDayBreakdown row={row} showAllocated /></td>
-                    </tr>
-                  )}
-                </React.Fragment>
-              );
-            })}
-            {!plants.length && <tr><td colSpan={12} className="simt__empty">No plants on this network.</td></tr>}
-          </tbody>
-        </table>
-      </Sheet>
+      {plantGroups.map(([title, hint, rows]) => (
+        <PlantsSheet
+          key={title}
+          title={title}
+          hint={hint}
+          rows={rows}
+          overrides={overrides}
+          expanded={expanded}
+          setExpanded={setExpanded}
+          onOverrideChange={onOverrideChange}
+        />
+      ))}
 
       <Sheet title="Tanks" count={tanks.length} hint="Levels carry from one day to the next; strategic storage respects the configured reserve.">
         <table className="ledger simt">
-          <thead><tr><th className="simt__tick" /><th className="simt__tick">On</th><th>Tank</th><th className="num">Capacity</th><th className="num">Start</th><th className="num">End</th><th className="num">Inflow</th><th className="num">Outflow</th><th>Initial %</th><th>Minimum %</th><th>Maximum %</th><th>Reserve rule</th></tr></thead>
+          <thead><tr><th className="simt__tick" /><th className="simt__tick">On</th><th>Tank</th><th>Type</th><th className="num">Capacity</th><th className="num">Start</th><th className="num">End</th><th className="num">Inflow</th><th className="num">Outflow</th><th>Initial %</th><th>Minimum %</th><th>Maximum %</th><th>Reserve rule</th></tr></thead>
           <tbody>{tanks.map((row) => {
             const o = overrides[row.nodeId] || {};
             const open = expanded === row.nodeId;
@@ -268,6 +306,7 @@ export default function SimulationTables({ plan, overrides, onOverrideChange }) 
                 <td className="simt__tick"><ExpandCell expanded={open} onToggle={toggle(row.nodeId)} /></td>
                 <td className="simt__tick"><ActiveCell active={o.active} onChange={set(row.nodeId, "active")} /></td>
                 <td><span className="simt__name">{row.name}</span><span className="simt__sub mono">{row.assetId}</span></td>
+                <td>{row.strategic ? "Strategic" : "Operational"}</td>
                 <td className="num mono">{fmt(row.capacity)}</td><td className="num mono">{fmt(row.startLevel)}</td><td className="num mono">{fmt(row.endLevel)}</td>
                 <td className="num mono">{fmt(row.totalInflow)}</td><td className="num mono">{fmt(row.totalOutflow)}</td>
                 <td><OverrideCell value={o.initialLevelPct} placeholder={String(row.initialPct)} suffix="%" label={`${row.name} initial level override`} onChange={set(row.nodeId, "initialLevelPct")} /></td>
@@ -277,9 +316,9 @@ export default function SimulationTables({ plan, overrides, onOverrideChange }) 
                   <option value="preserve">Preserve minimum</option><option value="ignore">Ignore reserve</option><option value="emergency-drawdown">Emergency drawdown</option>
                 </select></td>
               </tr>
-              {open && <tr className="simt__detail-row"><td colSpan={12}><TankDayBreakdown row={row} /></td></tr>}
+              {open && <tr className="simt__detail-row"><td colSpan={13}><TankDayBreakdown row={row} /></td></tr>}
             </React.Fragment>;
-          })}{!tanks.length && <tr><td colSpan={12} className="simt__empty">No tanks on this network.</td></tr>}</tbody>
+          })}{!tanks.length && <tr><td colSpan={13} className="simt__empty">No tanks on this network.</td></tr>}</tbody>
         </table>
       </Sheet>
 

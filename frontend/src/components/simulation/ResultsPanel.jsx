@@ -1,5 +1,7 @@
 import React, { useMemo, useState } from "react";
-import { bottleneckSeries, causeLabel, summariseGates, summariseTanks } from "../../lib/simulationRows";
+import {
+  bottleneckSeries, causeLabel, summariseGates, summarisePlants, summariseTanks,
+} from "../../lib/simulationRows";
 import SimulationGraphGrid from "./SimulationGraphGrid";
 import "./ResultsPanel.css";
 
@@ -27,6 +29,23 @@ export default function ResultsPanel({ plan }) {
 
   const gates = useMemo(() => summariseGates(plan.days), [plan.days]);
   const tanks = useMemo(() => summariseTanks(plan.days), [plan.days]);
+  const plants = useMemo(() => summarisePlants(plan.days), [plan.days]);
+  const network = useMemo(() => {
+    const desal = plants.filter((p) => p.kind === "desalination");
+    const purif = plants.filter((p) => p.kind === "purification");
+    const capOf = (rows) => rows.reduce((s, p) => s + (p.contracted || 0), 0);
+    return {
+      plants: plants.length,
+      capacity: capOf(plants),
+      desal: desal.length,
+      desalCapacity: capOf(desal),
+      purif: purif.length,
+      purifCapacity: capOf(purif),
+      tanks: tanks.length,
+      tankCapacity: tanks.reduce((s, t) => s + (t.capacity || 0), 0),
+      gates: gates.length,
+    };
+  }, [plants, tanks, gates]);
   const shortGates = gates.filter((g) => g.shortageM3 > 0);
   const bottleneckDays = (plan.days || []).filter((day) => day.totalShortage > 0 &&
     (day.bindingConstraints || []).some((constraint) => constraint.kind !== "plant_supply")).length;
@@ -72,7 +91,27 @@ export default function ResultsPanel({ plan }) {
         />
       </section>
 
+      <section className="status-strip" style={{ gridTemplateColumns: "repeat(6, 1fr)" }}>
+        <Kpi eyebrow="Plants" value={network.plants} sub={`${fmt(network.capacity)} m³/d contracted`} />
+        <Kpi eyebrow="Desalination" value={network.desal} sub={`${fmt(network.desalCapacity)} m³/d`} />
+        <Kpi eyebrow="Purification" value={network.purif} sub={`${fmt(network.purifCapacity)} m³/d`} />
+        <Kpi eyebrow="Tanks" value={network.tanks} sub={`${fmt(network.tankCapacity)} m³ capacity`} />
+        <Kpi eyebrow="Delivery points" value={network.gates} sub="City gates on the network" />
+        <Kpi
+          eyebrow="Avg daily demand"
+          value={k.days ? fmt(k.totalRequiredM3 / k.days) : "—"}
+          sub="m³ per day required"
+        />
+      </section>
+
       <SimulationGraphGrid plan={plan} />
+
+      <p className="rp__note">
+        Sectoral demand, per-point delivery cost, and regional supply-by-source charts from the
+        network config Results tab are not shown here: the desktop dispatch works from approved
+        MongoDB records over a daily horizon and does not produce the demand scenarios or source-
+        attribution series those charts require.
+      </p>
 
       {tanks.length > 0 && (
         <section className="sheet">

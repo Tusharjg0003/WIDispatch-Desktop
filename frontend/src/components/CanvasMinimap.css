@@ -1,0 +1,61 @@
+.nb-minimap {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  width: 200px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid #d5dce6;
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
+  overflow: hidden;
+  z-index: 6;
+  user-select: none;
+}
+
+.nb-minimap__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #64748b;
+  background: #f5f7fa;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.nb-minimap__toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.nb-minimap__toggle:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.nb-minimap__svg {
+  display: block;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.nb-minimap__bg {
+  fill: #f8fafc;
+}
+
+.nb-minimap__vp {
+  fill: rgba(37, 99, 235, 0.12);
+  stroke: #2563eb;
+  stroke-width: 1.5;
+  pointer-events: none;
+}

@@ -8,9 +8,12 @@ import {
   chartSeries,
   countOverrides,
   costTrendSeries,
+  gateDailySupply,
   groupDemandVerdicts,
   plantMixSeries,
+  plantPerformanceRows,
   summariseGates,
+  systemBalanceSeries,
   summarisePlants,
   summarisePumps,
   summariseTanks,
@@ -476,4 +479,48 @@ test("causeLabel: an absent or unknown cause renders as an em dash", () => {
   assert.equal(causeLabel(null), "—");
   assert.equal(causeLabel(undefined), "—");
   assert.equal(causeLabel("something_new"), "—");
+});
+
+test("systemBalanceSeries: reports capacity, production, delivered and demand per day", () => {
+  const days = [
+    {
+      date: "2026-08-10",
+      plants: [{ nodeId: "a", available: 600 }, { nodeId: "b", available: 400 }],
+      plantOutputs: { a: 500, b: 200 },
+      totalRequired: 900,
+      totalDelivered: 700,
+    },
+  ];
+  const [row] = systemBalanceSeries(days);
+  assert.equal(row.capacity, 1000);
+  assert.equal(row.supply, 700);
+  assert.equal(row.delivered, 700);
+  assert.equal(row.demand, 900);
+  assert.equal(row.label, "08-10");
+});
+
+test("plantPerformanceRows: carries kind, utilisation and cost, cheapest first", () => {
+  const mk = (nodeId, name, om, allocated) => ({
+    date: "2026-08-10",
+    plants: [{ nodeId, assetId: name, name, base: 1000, available: 1000, variableOm: om, variableOmSource: "economics", kind: "desalination" }],
+    plantOutputs: { [nodeId]: allocated },
+  });
+  const rows = plantPerformanceRows([
+    { ...mk("cheap", "Cheap", 1, 800), plants: [mk("cheap", "Cheap", 1, 800).plants[0], mk("exp", "Exp", 3, 100).plants[0]], plantOutputs: { cheap: 800, exp: 100 } },
+  ]);
+  assert.deepEqual(rows.map((r) => r.name), ["Cheap", "Exp"]);
+  assert.equal(rows[0].kind, "desalination");
+  assert.equal(rows[0].utilisationPct, 80);
+  assert.equal(rows[0].costSar, 800);
+});
+
+test("gateDailySupply: lists gates and returns the selected gate's daily series", () => {
+  const days = [
+    { date: "2026-08-10", gates: [{ nodeId: "g1", assetId: "CG1", name: "Gate 1", required: 1000, delivered: 900, shortage: 100, cause: "insufficient_capacity", intakeLimited: false }] },
+    { date: "2026-08-11", gates: [{ nodeId: "g1", assetId: "CG1", name: "Gate 1", required: 1000, delivered: 1000, shortage: 0, cause: null, intakeLimited: false }] },
+  ];
+  const { gates } = gateDailySupply(days);
+  assert.deepEqual(gates.map((g) => g.name), ["Gate 1"]);
+  const { series } = gateDailySupply(days, "g1");
+  assert.deepEqual(series.map((d) => [d.required, d.delivered, d.shortage]), [[1000, 900, 100], [1000, 1000, 0]]);
 });

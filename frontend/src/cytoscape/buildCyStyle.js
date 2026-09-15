@@ -347,6 +347,7 @@ export function buildCyStyle() {
     { selector: 'node[type="note"][noteSize="large"]', style: { "font-size": 13 } },
     { selector: 'node[type="note"][noteSize="xlarge"]', style: { "font-size": 15 } },
     { selector: 'node[type="note"][noteItalic="true"]', style: { "font-style": "italic" } },
+    { selector: 'node[type="note"][noteBold="true"]', style: { "font-weight": "bold" } },
     // ── Group box (Annotate → Group Box) ─────────────────────────────────
     {
       selector: 'node[type="group-box"]',

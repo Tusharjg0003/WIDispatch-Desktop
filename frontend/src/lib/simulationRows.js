@@ -63,6 +63,9 @@ export function summarisePlants(days = []) {
         nodeId,
         assetId: first.assetId,
         name: first.name,
+        kind: first.kind || "other",
+        design: first.design == null ? null : round(first.design),
+        maximum: first.maximum == null ? null : round(first.maximum),
         contracted: round(first.base),
         variableOm: first.variableOm,
         variableOmSource: first.variableOmSource,
@@ -277,6 +280,65 @@ export function chartSeries(days = []) {
     shortageCeiling: day.totalShortage > 0 ? day.totalRequired : null,
     cost: day.variableOmCost,
   }));
+}
+
+/**
+ * Per-day system balance: production capacity available, what the plants
+ * actually produced, and demand. Adapts SWIIMS' systemBalanceByYear /
+ * supplyDemandDaily to the daily dispatch horizon — the year axis becomes the
+ * run's own days, and "active capacity" is the plants' available capacity that
+ * day (already net of maintenance/outage) rather than a lifecycle sample.
+ */
+export function systemBalanceSeries(days = []) {
+  return days.map((day) => {
+    const capacity = sum(day.plants || [], (p) => p.available || 0);
+    const supply = Object.values(day.plantOutputs || {}).reduce((s, v) => s + (Number(v) || 0), 0);
+    return {
+      date: day.date,
+      label: day.date.slice(5),
+      capacity: round(capacity),
+      supply: round(supply),
+      delivered: round(day.totalDelivered || 0),
+      demand: round(day.totalRequired || 0),
+    };
+  });
+}
+
+/**
+ * Per-plant utilisation and cost, for the two plant bar charts. One row per
+ * plant, cheapest-first, carrying the numbers the SWIIMS "Plant utilisation"
+ * and "Plant cost" charts show — derived here from the same summarisePlants
+ * rows so a bar always reconciles with the Plants table.
+ */
+export function plantPerformanceRows(days = []) {
+  return summarisePlants(days).map((p) => ({
+    nodeId: p.nodeId,
+    assetId: p.assetId,
+    name: p.name,
+    kind: p.kind || "other",
+    utilisationPct: p.utilisationPct,
+    allocatedM3: p.allocatedM3,
+    costSar: p.costSar,
+    variableOm: p.variableOm,
+  }));
+}
+
+/**
+ * Per-day required vs delivered for a single city gate, for the delivery-point
+ * supply chart. Returns the gate list (for the selector) and, when a nodeId is
+ * given, that gate's daily series.
+ */
+export function gateDailySupply(days = [], nodeId = null) {
+  const gates = summariseGates(days).map((g) => ({ nodeId: g.nodeId, name: g.name, assetId: g.assetId }));
+  const selected = nodeId ? summariseGates(days).find((g) => g.nodeId === nodeId) : null;
+  const series = (selected?.days || []).map((d) => ({
+    date: d.date,
+    label: d.date.slice(5),
+    required: round(d.required),
+    delivered: round(d.delivered),
+    shortage: round(d.shortage),
+  }));
+  return { gates, series };
 }
 
 /** Per-day spend and blended delivered cost. */

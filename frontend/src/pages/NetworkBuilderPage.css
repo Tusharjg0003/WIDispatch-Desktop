@@ -2989,3 +2989,12 @@
   width: 100%;
   min-width: 0;
 }
+
+/* Geographic map view — full-bleed overlay over the schematic canvas while the
+   Map toolbar toggle is active (see NetworkCanvasMapView). */
+.nb-map-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  background: var(--surface, #fff);
+}

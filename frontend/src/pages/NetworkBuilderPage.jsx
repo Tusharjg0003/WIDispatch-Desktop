@@ -48,6 +48,8 @@ import {
   IconHelpCircle,
   IconGrid,
   IconItalic,
+  IconMap,
+  IconMapPin,
   IconMaximize,
   IconMaximize2,
   IconMinimize2,
@@ -99,6 +101,7 @@ import {
   removeNearestBendPoint,
   restoreBendClasses,
 } from "../cytoscape/bendEditing";
+import { alignPositions, distributePositions } from "../cytoscape/align";
 import { applyIsolation, clearIsolation as clearIsolationClasses, isIsolated } from "../cytoscape/isolate";
 import { normalizeBox, selectInBox } from "../cytoscape/boxSelect";
 import {
@@ -127,6 +130,11 @@ import WorkspaceRecordSidebar from "../components/WorkspaceRecordSidebar";
 import WorkspaceHeader, { WorkspaceHeaderChip } from "../components/WorkspaceHeader";
 import NetworkEntityCreateModal from "../components/NetworkEntityCreateModal";
 import PipeVariablesModal from "../components/PipeVariablesModal";
+import CanvasMinimap from "../components/CanvasMinimap";
+import NetworkCanvasMapView from "../components/networkCanvas/NetworkCanvasMapView";
+import { computeTransform, geoToPixel, pixelToGeo, transformStatus } from "../lib/canvasGeoreference";
+import { exportNetworkToKmz, parseNetworkGeoFile } from "../lib/networkKmz";
+import { classifyKmzPoint } from "../lib/kmzEntityClassifier";
 import "./NetworkBuilderPage.css";
 
 // Dispatched after a successful save/update so WorkspaceRecordSidebar (which
@@ -235,6 +243,14 @@ const IconTextIncrease = ({ size = 15, className = "", style = {}, ...props }) =
 );
 const ANNOTATION_TYPES = ["note", "group-box"];
 const NOTE_SIZES = ["small", "normal", "large", "xlarge"];
+// Toolbar "Arrange" kinds → cytoscape/align.js alignment modes.
+const ARRANGE_ALIGN_MODES = {
+  left: "left", right: "right", centerh: "centerH",
+  top: "top", bottom: "bottom", centerv: "middleV",
+};
+// Producing sources and demand sinks, for the supply-path validation rule.
+const SUPPLY_NODE_TYPES = new Set(["plant", "stp"]);
+const DELIVERY_NODE_TYPES = new Set(["handover_point", "filling_station"]);
 const ACTIVE_STATUSES = new Set(["operational", "maintenance", "under_construction", "planned"]);
 const INACTIVE_STATUSES = new Set(["inactive", "decommissioned"]);
 const TRACE_ROOT_TYPES = new Set(["handover_point", "point", "filling_station", "filling-station", "distribution_point", "distribution-point"]);
@@ -458,6 +474,11 @@ export default function NetworkBuilderPage() {
     else inspectorStore.getState().closeInspector();
   }, []);
   const [canvasFocusMode, setCanvasFocusMode] = useState(false);
+  const [showMinimap, setShowMinimap] = useState(true);
+  // Schematic (Cytoscape) vs geographic (Leaflet) view. `geoTick` forces the
+  // geo derivations to recompute after an anchor pin, a map drag, or a route.
+  const [viewMode, setViewMode] = useState("schematic");
+  const [geoTick, setGeoTick] = useState(0);
   const [isolationActive, setIsolationActive] = useState(false);
   const rightPanelTab = useInspectorStore((state) => state.activeTab);
   // Selecting a tab always opens the panel: every existing call site set both.
@@ -590,6 +611,9 @@ export default function NetworkBuilderPage() {
     h.future = [];
     if (h.past.length > 80) h.past.shift();
     setHistTick((t) => t + 1);
+    // Keep an open Map view in step with schematic edits (no-op cost when the
+    // map is closed — buildGeoData is only run while viewMode is "map").
+    setGeoTick((t) => t + 1);
   }, []);
 
   const scheduleCommit = useCallback(() => {
@@ -2406,6 +2430,64 @@ export default function NetworkBuilderPage() {
       }
     });
 
+    // Every delivery point should have a directed supply path from a producing
+    // plant. Mirrors the engine's reachableFromSupply BFS
+    // (backend/src/simulation/dispatch.js): follow active edges source→target,
+    // plus the reverse on bidirectional pipes, seeded from the active plants.
+    const nodeInactive = (n) => {
+      const d = n.data();
+      return d.active === false || d.meta?.active === false ||
+        ["inactive", "decommissioned"].includes(d.status);
+    };
+    const edgeActive = (e) => e.data("active") !== false && e.data("status") !== "inactive";
+    const edgeBidi = (e) => {
+      const d = e.data();
+      return !!(d.bidirectional ?? d.meta?.specifications?.bidirectional);
+    };
+    const adjacency = new Map();
+    const linkAdj = (from, to) => {
+      if (!adjacency.has(from)) adjacency.set(from, []);
+      adjacency.get(from).push(to);
+    };
+    edges.forEach((edge) => {
+      if (!edgeActive(edge)) return;
+      const s = edge.data("source");
+      const t = edge.data("target");
+      linkAdj(s, t);
+      if (edgeBidi(edge)) linkAdj(t, s);
+    });
+    const reachable = new Set();
+    const stack = [];
+    nodes.forEach((n) => {
+      if (SUPPLY_NODE_TYPES.has(n.data("type")) && !nodeInactive(n) && !reachable.has(n.id())) {
+        reachable.add(n.id());
+        stack.push(n.id());
+      }
+    });
+    while (stack.length) {
+      const u = stack.pop();
+      for (const v of adjacency.get(u) || []) {
+        if (!reachable.has(v)) {
+          reachable.add(v);
+          stack.push(v);
+        }
+      }
+    }
+    nodes.forEach((node) => {
+      if (!DELIVERY_NODE_TYPES.has(node.data("type"))) return;
+      if (nodeInactive(node)) return;
+      if (node.connectedEdges().length === 0) return; // already flagged as isolated
+      if (!reachable.has(node.id())) {
+        issues.push({
+          id: `no-supply-${node.id()}`,
+          severity: "error",
+          title: "No supply path",
+          detail: `${node.data("label") || node.id()} has no active pipe route back to a producing plant.`,
+          elementId: node.id(),
+        });
+      }
+    });
+
     if (issues.length === 0) {
       issues.push({
         id: "validation-ok",
@@ -2614,39 +2696,188 @@ export default function NetworkBuilderPage() {
   }, [isolationGroups, isolationQuery]);
 
   // ── Arrange (align / distribute selected nodes) ──────────────────────────────
-  const arrange = useCallback(
-    (kind) => {
-      const cy = cyRef.current;
-      if (!cy) return;
-      const nodes = cy.$("node:selected");
-      if (nodes.length < 2) {
-        setToast("Select 2+ nodes (shift-drag a box) to arrange.");
-        return;
-      }
-      const items = nodes.map((n) => ({ n, p: n.position() }));
-      const xs = items.map((i) => i.p.x);
-      const ys = items.map((i) => i.p.y);
-      const minX = Math.min(...xs), maxX = Math.max(...xs);
-      const minY = Math.min(...ys), maxY = Math.max(...ys);
-      if (kind === "left") items.forEach((i) => i.n.position("x", minX));
-      else if (kind === "right") items.forEach((i) => i.n.position("x", maxX));
-      else if (kind === "centerh") { const c = (minX + maxX) / 2; items.forEach((i) => i.n.position("x", c)); }
-      else if (kind === "top") items.forEach((i) => i.n.position("y", minY));
-      else if (kind === "bottom") items.forEach((i) => i.n.position("y", maxY));
-      else if (kind === "centerv") { const c = (minY + maxY) / 2; items.forEach((i) => i.n.position("y", c)); }
-      else if (kind === "disth") {
-        const s = [...items].sort((a, b) => a.p.x - b.p.x);
-        const step = (maxX - minX) / (s.length - 1);
-        s.forEach((i, k) => i.n.position("x", minX + step * k));
-      } else if (kind === "distv") {
-        const s = [...items].sort((a, b) => a.p.y - b.p.y);
-        const step = (maxY - minY) / (s.length - 1);
-        s.forEach((i, k) => i.n.position("y", minY + step * k));
+  // Read the selected real nodes into plain {id,x,y,w,h} descriptors, let the
+  // pure align/distribute math decide the new centres, then write them back.
+  // Edge-aware alignment (respects each node's size) and annotation exclusion
+  // live in cytoscape/align.js so the two apps share one definition and it stays
+  // unit-tested.
+  const selectedAlignNodes = useCallback((cy) =>
+    cy
+      .$("node:selected")
+      .filter((n) => !ANNOTATION_TYPES.includes(n.data("type")))
+      .map((n) => {
+        const p = n.position();
+        return { id: n.id(), x: p.x, y: p.y, w: n.outerWidth(), h: n.outerHeight() };
+      }), []);
+
+  const applyPositions = useCallback(
+    (cy, positions) => {
+      if (!positions.length) return;
+      for (const pos of positions) {
+        const node = cy.getElementById(pos.id);
+        if (node && node.nonempty()) node.position({ x: pos.x, y: pos.y });
       }
       scheduleCommit();
     },
     [scheduleCommit]
   );
+
+  const arrange = useCallback(
+    (kind) => {
+      const cy = cyRef.current;
+      if (!cy) return;
+      const nodes = selectedAlignNodes(cy);
+      const distributing = kind === "disth" || kind === "distv";
+      if (distributing) {
+        if (nodes.length < 3) {
+          setToast("Select 3+ assets to distribute.");
+          return;
+        }
+        applyPositions(cy, distributePositions(nodes, kind === "disth" ? "h" : "v"));
+        return;
+      }
+      if (nodes.length < 2) {
+        setToast("Select 2+ assets (shift-drag a box) to arrange.");
+        return;
+      }
+      const mode = ARRANGE_ALIGN_MODES[kind];
+      if (mode) applyPositions(cy, alignPositions(nodes, mode));
+    },
+    [selectedAlignNodes, applyPositions]
+  );
+
+  // ── Geographic view (anchors → affine transform → Leaflet map + KMZ) ────────
+  // Anchors are nodes pinned to a real lat/lng (meta.geoAnchor). With >= 2 the
+  // fitted transform gives every other node and pipe vertex a derived
+  // coordinate, which drives the Map view and the KMZ export.
+  const georefAnchors = useCallback((cy) => {
+    const anchors = [];
+    cy.nodes().forEach((n) => {
+      const m = n.data("meta") || {};
+      if (m.geoAnchor !== true) return;
+      const lat = Number(m.latitude);
+      const lng = Number(m.longitude);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+      const p = n.position();
+      anchors.push({ id: n.id(), px: { x: p.x, y: p.y }, geo: { lat, lng } });
+    });
+    return anchors;
+  }, []);
+
+  const buildGeoData = useCallback(
+    (cy) => {
+      const transform = computeTransform(georefAnchors(cy));
+      const status = transformStatus(georefAnchors(cy));
+      if (!transform) return { transform: null, status, nodes: [], edges: [] };
+      const nodes = cy
+        .nodes()
+        .filter((n) => !ANNOTATION_TYPES.includes(n.data("type")))
+        .map((n) => {
+          const m = n.data("meta") || {};
+          const lat = Number(m.latitude);
+          const lng = Number(m.longitude);
+          const isAnchor = m.geoAnchor === true && Number.isFinite(lat) && Number.isFinite(lng);
+          const geo = isAnchor ? { lat, lng } : pixelToGeo(n.position(), transform);
+          return {
+            id: n.id(),
+            name: n.data("label") || n.id(),
+            type: n.data("type"),
+            assetId: n.data("assetId") || "",
+            isAnchor,
+            lat: geo.lat,
+            lng: geo.lng,
+          };
+        });
+      const edges = cy.edges().map((e) => ({
+        id: e.id(),
+        name: e.data("label") || e.id(),
+        sourceId: e.data("source"),
+        targetId: e.data("target"),
+        positions: edgePolyline(e).map((pt) => {
+          const geo = pixelToGeo(pt, transform);
+          return [geo.lat, geo.lng];
+        }),
+      }));
+      return { transform, status, nodes, edges };
+    },
+    [georefAnchors]
+  );
+
+  const handlePinGeoAnchor = useCallback(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    const sel = cy.$("node:selected").filter((n) => !ANNOTATION_TYPES.includes(n.data("type")));
+    if (sel.length !== 1) {
+      setToast("Select a single asset to pin as a geo anchor.");
+      return;
+    }
+    const node = sel[0];
+    const meta = node.data("meta") || {};
+    if (meta.geoAnchor === true) {
+      node.data("meta", { ...meta, geoAnchor: false });
+      setToast("Removed geo anchor.");
+    } else {
+      let lat = Number(meta.latitude);
+      let lng = Number(meta.longitude);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        const input = window.prompt("Latitude, longitude for this anchor (e.g. 24.71, 46.67):", "");
+        if (input == null) return;
+        const [rawLat, rawLng] = input.split(",").map((s) => Number(s.trim()));
+        lat = rawLat;
+        lng = rawLng;
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+          setToast("Couldn't read those coordinates.");
+          return;
+        }
+      }
+      node.data("meta", { ...meta, geoAnchor: true, latitude: lat, longitude: lng });
+      setToast("Pinned geo anchor. Two or more enable the Map view.");
+    }
+    scheduleCommit();
+    setGeoTick((v) => v + 1);
+  }, [scheduleCommit]);
+
+  const handleMapMoveNode = useCallback(
+    (nodeId, geo) => {
+      const cy = cyRef.current;
+      const node = cy?.getElementById(nodeId);
+      if (!node || !node.length) return;
+      const transform = computeTransform(georefAnchors(cy));
+      if (!transform) return;
+      const meta = node.data("meta") || {};
+      if (meta.geoAnchor === true) {
+        node.data("meta", { ...meta, latitude: Number(geo.lat), longitude: Number(geo.lng) });
+      } else {
+        const px = geoToPixel(geo, transform);
+        node.position(snapToGrid ? snapPosition(px) : px);
+      }
+      scheduleCommit();
+      setGeoTick((v) => v + 1);
+    },
+    [georefAnchors, scheduleCommit, snapToGrid]
+  );
+
+  const handleMapCreateRoute = useCallback(({ sourceId, targetId }) => {
+    if (!sourceId || !targetId || sourceId === targetId) return;
+    // The pipe modal lives over the schematic canvas; drop back to it to capture
+    // the pipe's variables. Intermediate route points are not yet applied as
+    // bends — the pipe is created straight and can be bent in the schematic view.
+    setViewMode("schematic");
+    setPipeModal({ open: true, source: sourceId, target: targetId });
+  }, []);
+
+  const handleExportKMZ = useCallback(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    const { transform, nodes, edges } = buildGeoData(cy);
+    if (!transform || !nodes.length) {
+      setToast("Pin at least two geo anchors before exporting KMZ.");
+      return;
+    }
+    exportNetworkToKmz({ nodes, edges, name: network.name || "network" }).catch((err) =>
+      setToast(`KMZ export failed: ${err.message}`)
+    );
+  }, [buildGeoData, network]);
 
   // ── Auto-layout ──────────────────────────────────────────────────────────────
   const runLayout = useCallback(
@@ -2696,11 +2927,41 @@ export default function NetworkBuilderPage() {
   }, []);
 
   // Note formatting is disabled here; Network Builder edits are pipe-only.
+  // Format the selected sticky note(s). Font/size/italic/bold render on the
+  // Cytoscape label (see buildCyStyle); underline is stored as a flag but not
+  // drawn (Cytoscape has no label text-decoration). Values live in node data so
+  // they persist through save and the toolbar reflects the active toggle state.
   const noteFmt = useCallback(
-    () => {
-      setToast("Only pipe edits are enabled.");
+    (key, value) => {
+      const cy = cyRef.current;
+      if (!cy) return;
+      const notes = cy.$('node:selected[type="note"]');
+      if (!notes.length) {
+        setToast("Select a note to format it.");
+        return;
+      }
+      notes.forEach((note) => {
+        if (key === "noteFont") {
+          if (value === "sans") note.removeData("noteFont");
+          else note.data("noteFont", value);
+        } else if (key === "noteSize") {
+          if (value === "normal") note.removeData("noteSize");
+          else note.data("noteSize", value);
+        } else if (key === "sizeStep") {
+          const cur = note.data("noteSize") || "normal";
+          const idx = Math.max(0, Math.min(NOTE_SIZES.length - 1, NOTE_SIZES.indexOf(cur) + value));
+          const next = NOTE_SIZES[idx];
+          if (next === "normal") note.removeData("noteSize");
+          else note.data("noteSize", next);
+        } else if (key === "noteBold" || key === "noteItalic" || key === "noteUnderline") {
+          if (note.data(key) === "true") note.removeData(key);
+          else note.data(key, "true");
+        }
+      });
+      scheduleCommit();
+      syncSelection();
     },
-    []
+    [scheduleCommit, syncSelection]
   );
 
   // ── Clipboard ────────────────────────────────────────────────────────────────
@@ -2856,9 +3117,133 @@ export default function NetworkBuilderPage() {
     download(`${(network.name || "network").replace(/\s+/g, "_")}.csv`, rows.join("\n"), "text/csv");
   }, [network]);
 
+  // Build a canvas document from a parsed KMZ/KML: points become classified
+  // nodes (pinned as anchors so the Map view works immediately and a re-export
+  // round-trips), lines become straight pipes between their resolved endpoints.
+  const buildGeoImportDoc = useCallback((imported) => {
+    const coords = [
+      ...imported.points.map((p) => ({ lat: p.lat, lng: p.lng })),
+      ...imported.lines.flatMap((l) => l.coordinates),
+    ];
+    let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+    for (const c of coords) {
+      const lat = Number(c.lat);
+      const lng = Number(c.lng);
+      if (Number.isFinite(lat)) { if (lat < minLat) minLat = lat; if (lat > maxLat) maxLat = lat; }
+      if (Number.isFinite(lng)) { if (lng < minLng) minLng = lng; if (lng > maxLng) maxLng = lng; }
+    }
+    const spanLng = Math.max(maxLng - minLng, 1e-7);
+    const spanLat = Math.max(maxLat - minLat, 1e-7);
+    const scale = Math.min(900 / spanLng, 650 / spanLat);
+    const toModel = (g) => ({ x: 100 + (g.lng - minLng) * scale, y: 100 + (maxLat - g.lat) * scale });
+
+    const nodes = [];
+    const placed = []; // { id, x, y } for nearest-endpoint matching
+    const byRoundTripId = new Map();
+    imported.points.forEach((point, i) => {
+      const { type } = classifyKmzPoint(point);
+      const name = point.name || `Imported ${i + 1}`;
+      const id = rid("n");
+      const position = toModel(point);
+      nodes.push({
+        data: {
+          id, type, category: type, label: name, displayLabel: name, status: "active",
+          meta: {
+            latitude: point.lat, longitude: point.lng, geoAnchor: true, active: true,
+            asset_type: type, specifications: {},
+          },
+        },
+        position,
+      });
+      placed.push({ id, ...position });
+      if (point.widispatchId) byRoundTripId.set(String(point.widispatchId), id);
+    });
+
+    const nearestNodeId = (pos, maxDist = 26) => {
+      let best = null;
+      let bestD = Infinity;
+      for (const p of placed) {
+        const d = Math.hypot(p.x - pos.x, p.y - pos.y);
+        if (d < bestD) { bestD = d; best = p.id; }
+      }
+      return bestD <= maxDist ? best : null;
+    };
+    const junctionAt = (pos, latlng) => {
+      const id = rid("n");
+      nodes.push({
+        data: {
+          id, type: "node", category: "node", label: "Junction", displayLabel: "Junction", status: "active",
+          meta: { latitude: latlng.lat, longitude: latlng.lng, geoAnchor: true, active: true, specifications: {} },
+        },
+        position: pos,
+      });
+      placed.push({ id, ...pos });
+      return id;
+    };
+    const resolveEndpoint = (roundTripId, coord) => {
+      if (roundTripId && byRoundTripId.has(String(roundTripId))) return byRoundTripId.get(String(roundTripId));
+      const pos = toModel(coord);
+      return nearestNodeId(pos) || junctionAt(pos, coord);
+    };
+
+    const edges = [];
+    imported.lines.forEach((line) => {
+      const first = line.coordinates[0];
+      const last = line.coordinates[line.coordinates.length - 1];
+      const source = resolveEndpoint(line.sourceId, first);
+      const target = resolveEndpoint(line.targetId, last);
+      if (!source || !target || source === target) return;
+      const label = line.name || "Pipe";
+      edges.push({
+        data: {
+          id: rid("e"), source, target, kind: "pipe", label, displayLabel: label,
+          status: "active", active: true, meta: { specifications: { bidirectional: false } },
+        },
+      });
+    });
+
+    return { name: imported.name || "Imported network", description: "", nodes, edges };
+  }, []);
+
+  const importGeoFile = useCallback(
+    async (file) => {
+      try {
+        const imported = await parseNetworkGeoFile(file);
+        if (!imported.points.length && !imported.lines.length) {
+          setToast("No Point or LineString geometry was found in that file.");
+          return;
+        }
+        const cy = cyRef.current;
+        if (!cy) return;
+        const doc = buildGeoImportDoc(imported);
+        canvasController.loadDocument(doc);
+        clearTraceClasses(cy);
+        cy.fit(undefined, 48);
+        const workspaceId = activeWorkspaceId;
+        if (workspaceId) {
+          workspaceController.markSaved(workspaceId, { networkId: null, name: doc.name });
+          workspaceController.notifyDocumentMutated();
+        }
+        setSelectedEl(null);
+        setTraceInfo(null);
+        syncGraph();
+        resetHistory();
+        setGeoTick((v) => v + 1);
+        setToast(`Imported ${doc.nodes.length} asset(s) and ${doc.edges.length} pipe(s) from ${file.name}.`);
+      } catch (err) {
+        setToast(`Couldn't import that file: ${err.message}`);
+      }
+    },
+    [buildGeoImportDoc, activeWorkspaceId, syncGraph, resetHistory]
+  );
+
   const handleImportFile = useCallback(
     (file) => {
       if (!file) return;
+      if (/\.(kmz|kml)$/i.test(file.name)) {
+        void importGeoFile(file);
+        return;
+      }
       const reader = new FileReader();
       reader.onload = () => {
         try {
@@ -2888,7 +3273,7 @@ export default function NetworkBuilderPage() {
       };
       reader.readAsText(file);
     },
-    [activeWorkspaceId, syncGraph, resetHistory]
+    [activeWorkspaceId, syncGraph, resetHistory, importGeoFile]
   );
 
   // "New" now opens another workspace tab instead of discarding the current
@@ -3068,6 +3453,17 @@ export default function NetworkBuilderPage() {
         return;
       }
 
+      // Note formatting — only claim the key while a note is selected, so
+      // Ctrl/Cmd+B/I/U stay free everywhere else.
+      if (mod && !e.shiftKey && (lower === "b" || lower === "i" || lower === "u")) {
+        const cy = cyRef.current;
+        if (cy && cy.$('node:selected[type="note"]').nonempty()) {
+          e.preventDefault();
+          noteFmt(lower === "b" ? "noteBold" : lower === "i" ? "noteItalic" : "noteUnderline");
+          return;
+        }
+      }
+
       // View
       if (mod && e.shiftKey && lower === "f") { e.preventDefault(); handleToggleCanvasFocus(); return; }
       if (!mod && lower === "f") { e.preventDefault(); handleFit(); return; }
@@ -3087,7 +3483,7 @@ export default function NetworkBuilderPage() {
   }, [
     shortcutsOpen, canvasFocusMode, setModeSafe, handleUndo, handleRedo, handleSave,
     handleCopySelection, handleCutSelection, handlePaste, handleDelete, handleSelectAll,
-    nudgeSelection, handleFit, handleZoomToSelection, handleToggleCanvasFocus,
+    nudgeSelection, handleFit, handleZoomToSelection, handleToggleCanvasFocus, noteFmt,
   ]);
 
   const handleOpenDetailsPanel = useCallback(() => {
@@ -3108,6 +3504,14 @@ export default function NetworkBuilderPage() {
 
   // ── Contextual toolbar ────────────────────────────────────────────────────────
   const isPipeSel = selectedEl?._group === "edge";
+  const isNoteSel = selectedEl?._group === "node" && selectedEl?.type === "note";
+  // Geographic view data, recomputed when the map opens or an anchor / node
+  // position changes (geoTick — bumped on pin, map drag, and route).
+  const geoView = useMemo(
+    () => (viewMode === "map" && cyReady && cyRef.current ? buildGeoData(cyRef.current) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [viewMode, cyReady, geoTick, buildGeoData]
+  );
   const hasPipeSelection = selectedEdgeCount > 0;
   const hasDeletableSelection = selectedDeletableCount > 0;
   const canUndo = historyRef.current.past.length > 0;
@@ -3141,9 +3545,10 @@ export default function NetworkBuilderPage() {
             <div className="toolbar-group__buttons">
               <Btn on={handleSave} icon={IconSave} primary disabled={saveStatus === "saving"} title="Save current canvas">{saveLabel}</Btn>
               <Btn on={handleSaveAs} icon={IconCopy} title="Save a copy under a new name">Save As</Btn>
-              <Btn on={() => fileInputRef.current?.click()} icon={IconUpload} title="Import canvas from JSON file">Import</Btn>
+              <Btn on={() => fileInputRef.current?.click()} icon={IconUpload} title="Import canvas from JSON, KMZ, or KML">Import</Btn>
               <Btn on={handleExportJSON} icon={IconDownload} title="Export canvas as JSON">JSON</Btn>
               <Btn on={handleExportCSV} icon={IconDownload} title="Export nodes & edges as CSV">CSV</Btn>
+              <Btn on={handleExportKMZ} icon={IconDownload} title="Export as KMZ (needs 2+ geo anchors)">KMZ</Btn>
             </div>
             <span className="toolbar-group__label">File</span>
           </div>
@@ -3292,6 +3697,22 @@ export default function NetworkBuilderPage() {
             <span className="toolbar-group__label">Arrange</span>
           </div>
 
+          {/* Map */}
+          <div className="toolbar-group toolbar-group--cols-1">
+            <div className="toolbar-group__buttons">
+              <Btn
+                on={() => setViewMode((v) => (v === "map" ? "schematic" : "map"))}
+                icon={IconMap}
+                active={viewMode === "map"}
+                title="Toggle the geographic map view (needs 2+ geo anchors)"
+              >
+                {viewMode === "map" ? "Schematic" : "Map"}
+              </Btn>
+              <Btn on={handlePinGeoAnchor} icon={IconMapPin} title="Pin the selected asset as a geo anchor">Pin Anchor</Btn>
+            </div>
+            <span className="toolbar-group__label">Map</span>
+          </div>
+
           {/* Layout */}
           <div className="toolbar-group toolbar-group--cols-2">
             <div className="toolbar-group__buttons">
@@ -3317,7 +3738,7 @@ export default function NetworkBuilderPage() {
             <div className="toolbar-group__buttons toolbar-group__buttons--note">
               <select
                 className="toolbar-select"
-                disabled
+                disabled={!isNoteSel}
                 value={selectedEl?.noteFont || "sans"}
                 onChange={(e) => noteFmt("noteFont", e.target.value)}
                 title="Font"
@@ -3328,7 +3749,7 @@ export default function NetworkBuilderPage() {
               </select>
               <select
                 className="toolbar-select"
-                disabled
+                disabled={!isNoteSel}
                 value={selectedEl?.noteSize || "normal"}
                 onChange={(e) => noteFmt("noteSize", e.target.value)}
                 title="Size"
@@ -3337,11 +3758,11 @@ export default function NetworkBuilderPage() {
                   <option key={s} value={s}>{s[0].toUpperCase() + s.slice(1)}</option>
                 ))}
               </select>
-              <Btn iconOnly dataId="note-size-down" icon={IconTextDecrease} disabled on={() => noteFmt("sizeStep", -1)} title="Decrease Size" />
-              <Btn iconOnly dataId="note-size-up" icon={IconTextIncrease} disabled on={() => noteFmt("sizeStep", 1)} title="Increase Size" />
-              <Btn iconOnly dataId="note-bold" icon={IconBold} disabled active={selectedEl?.noteBold === "true"} on={() => noteFmt("noteBold")} title="Bold" />
-              <Btn iconOnly icon={IconItalic} disabled active={selectedEl?.noteItalic === "true"} on={() => noteFmt("noteItalic")} title="Italic" />
-              <Btn iconOnly icon={IconUnderline} disabled active={selectedEl?.noteUnderline === "true"} on={() => noteFmt("noteUnderline")} title="Underline" />
+              <Btn iconOnly dataId="note-size-down" icon={IconTextDecrease} disabled={!isNoteSel} on={() => noteFmt("sizeStep", -1)} title="Decrease Size" />
+              <Btn iconOnly dataId="note-size-up" icon={IconTextIncrease} disabled={!isNoteSel} on={() => noteFmt("sizeStep", 1)} title="Increase Size" />
+              <Btn iconOnly dataId="note-bold" icon={IconBold} disabled={!isNoteSel} active={selectedEl?.noteBold === "true"} on={() => noteFmt("noteBold")} title="Bold" />
+              <Btn iconOnly icon={IconItalic} disabled={!isNoteSel} active={selectedEl?.noteItalic === "true"} on={() => noteFmt("noteItalic")} title="Italic" />
+              <Btn iconOnly icon={IconUnderline} disabled={!isNoteSel} active={selectedEl?.noteUnderline === "true"} on={() => noteFmt("noteUnderline")} title="Underline" />
             </div>
             <span className="toolbar-group__label">Note Format</span>
           </div>
@@ -3389,8 +3810,8 @@ export default function NetworkBuilderPage() {
     mode, pendingEntity, network.name, counts.nodes, counts.edges, realNodeCount, saveStatus,
     selectedEl, hasSelection, isPipeSel, hasPipeSelection, hasDeletableSelection, canUndo, canRedo,
     showLabels, showGrid, snapToGrid, showInspector, showLibrary, canvasFocusMode, findOpen, isolationActive, rightPanelTab,
-    shortcutsOpen,
-    handleRemoveAllBends,
+    shortcutsOpen, isNoteSel, viewMode, showMinimap,
+    handleRemoveAllBends, handlePinGeoAnchor, handleExportKMZ,
     setToolbar, setModeSafe, notImplemented, handleInsertEntity, handleFit, handleResetView,
     handleToggleLibraryPanel, handleOpenDetailsPanel, handleToggleDetailsPanel,
     handleZoomToSelection, handleSelectAll, handleSelectActive, handleSelectInactive,
@@ -3447,7 +3868,7 @@ export default function NetworkBuilderPage() {
         ref={fileInputRef}
         type="file"
         aria-label="Import network JSON"
-        accept="application/json,.json"
+        accept="application/json,.json,.kmz,.kml"
         style={{ display: "none" }}
         onChange={(e) => {
           handleImportFile(e.target.files?.[0]);
@@ -3561,7 +3982,34 @@ export default function NetworkBuilderPage() {
             >
               {canvasFocusMode ? <IconMinimize2 size={13} /> : <IconMaximize2 size={13} />}
             </button>
+
+            <button
+              type="button"
+              className={`nb-canvas-ctl${showMinimap ? " is-active" : ""}`}
+              onClick={() => setShowMinimap((v) => !v)}
+              aria-label={showMinimap ? "Hide minimap" : "Show minimap"}
+              aria-pressed={showMinimap}
+              title={showMinimap ? "Hide minimap" : "Show minimap"}
+            >
+              <IconMap size={13} />
+            </button>
           </div>
+
+          {cyReady && (
+            <CanvasMinimap cyRef={cyRef} visible={showMinimap} onToggle={() => setShowMinimap(false)} />
+          )}
+
+          {viewMode === "map" && (
+            <div className="nb-map-overlay">
+              <NetworkCanvasMapView
+                nodes={geoView?.nodes || []}
+                edges={geoView?.edges || []}
+                status={geoView?.status || transformStatus([])}
+                onMoveNode={handleMapMoveNode}
+                onCreateRoute={handleMapCreateRoute}
+              />
+            </div>
+          )}
 
           {/* Collapsible reference, pinned to the canvas: it stays open while
               you keep working, so the shortcut you just read is usable. */}
