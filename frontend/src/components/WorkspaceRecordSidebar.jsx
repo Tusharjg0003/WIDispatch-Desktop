@@ -180,7 +180,7 @@ export default function WorkspaceRecordSidebar({
                     deleteMode ? toggleSelection(record.id) : onSelect(record.id);
                   }}
                   title={record.description || record.name}
-                  style={{ backgroundColor: isSelected ? "#fef2f2" : undefined }}
+                  style={{ backgroundColor: isSelected ? "#fbeaea" : undefined }}
                 >
                   {deleteMode ? (
                     <input

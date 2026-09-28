@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
+import { ArrowLeft } from "lucide-react";
 import { fetchPlantBundle } from "../api/production";
+import { StatusBadge } from "../components/ui/WorkspacePrimitives";
 import PlantOverview from "../components/production/PlantOverview";
 import ProductionInputTable from "../components/production/ProductionInputTable";
 import QualityRecordList from "../components/production/QualityRecordList";
@@ -19,6 +21,7 @@ export default function ProductionPlantDetail({
   subTab = "overview",
   onSubTabChange,
   onPlantLoaded,
+  onBack,
 }) {
   const [bundle, setBundle] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -46,11 +49,16 @@ export default function ProductionPlantDetail({
 
   return (
     <div className="ppd">
-      <header className="ppd__head">
-        <div>
-          <h1 className="ppd__name">{plant?.name || plantId}</h1>
-          <p className="ppd__meta">{[plant?.asset_type, plant?.region].filter(Boolean).join(" · ")}</p>
-        </div>
+      <header className="ppd__identity">
+        {onBack && (
+          <button type="button" className="ppd__back" onClick={onBack} title="Back to Plants" aria-label="Back to Plants">
+            <ArrowLeft size={16} />
+          </button>
+        )}
+        <h1 className="ppd__name">{plant?.name || plantId}</h1>
+        {plant?.status && <StatusBadge status={plant.status} />}
+        {plant?.external_id && <span className="ppd__extid mono">{plant.external_id}</span>}
+        <span className="ppd__meta">{[plant?.asset_type, plant?.entity, [plant?.region, plant?.city].filter(Boolean).join(" / ")].filter(Boolean).join(" · ")}</span>
       </header>
 
       {loading && <div className="ppd__state">Loading plant…</div>}

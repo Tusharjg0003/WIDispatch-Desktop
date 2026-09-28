@@ -9,7 +9,7 @@
 export const ENTITY_TYPE_COLORS = {
   plant: "#3b82f6",
   pump: "#ec4899",
-  tank: "#10b981",
+  tank: "#6fa300",
   handover_point: "#f59e0b",
   node: "#6b7280",
   stp: "#a855f7",
@@ -40,7 +40,7 @@ const INACTIVE_STATUSES = new Set(["decommissioned", "inactive"]);
 
 export const isInactiveStatus = (status) => INACTIVE_STATUSES.has(status);
 
-const ACCENT = "#1a4a8a";
+const ACCENT = "#1d4f91";
 
 export function buildCyStyle() {
   return [
@@ -147,7 +147,7 @@ export function buildCyStyle() {
         "curve-style": "bezier",
         label: "data(displayLabel)",
         "font-size": 9,
-        color: "#475569",
+        color: "#8aa5b8",
         "font-family": '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
         "text-rotation": "autorotate",
         "text-background-color": "#ffffff",
@@ -227,7 +227,7 @@ export function buildCyStyle() {
     {
       selector: "edge.sim-edge--bottleneck",
       style: {
-        "line-color": "#dc2626", "target-arrow-color": "#dc2626",
+        "line-color": "#c11b1b", "target-arrow-color": "#c11b1b",
         "line-style": "dashed", "line-dash-pattern": [10, 6], "z-index": 950,
       },
     },
@@ -238,8 +238,8 @@ export function buildCyStyle() {
     {
       selector: "node.sim-plant--binding",
       style: {
-        "border-color": "#dc2626", "border-width": 4,
-        "overlay-color": "#dc2626", "overlay-padding": 5, "overlay-opacity": 0.12,
+        "border-color": "#c11b1b", "border-width": 4,
+        "overlay-color": "#c11b1b", "overlay-padding": 5, "overlay-opacity": 0.12,
       },
     },
     {
@@ -253,8 +253,8 @@ export function buildCyStyle() {
     {
       selector: "node.sim-gate--shortfall",
       style: {
-        "border-color": "#dc2626", "border-width": 4,
-        "overlay-color": "#dc2626", "overlay-padding": 5, "overlay-opacity": 0.12,
+        "border-color": "#c11b1b", "border-width": 4,
+        "overlay-color": "#c11b1b", "overlay-padding": 5, "overlay-opacity": 0.12,
       },
     },
     // Pump stations.
@@ -264,12 +264,12 @@ export function buildCyStyle() {
     {
       selector: "node.sim-pump--binding",
       style: {
-        "border-color": "#dc2626", "border-width": 4,
-        "overlay-color": "#dc2626", "overlay-padding": 5, "overlay-opacity": 0.12,
+        "border-color": "#c11b1b", "border-width": 4,
+        "overlay-color": "#c11b1b", "overlay-padding": 5, "overlay-opacity": 0.12,
       },
     },
     // Storage tanks: end-of-day inventory relative to reserve and maximum.
-    { selector: "node.sim-tank--empty", style: { "border-color": "#dc2626", "border-width": 4 } },
+    { selector: "node.sim-tank--empty", style: { "border-color": "#c11b1b", "border-width": 4 } },
     { selector: "node.sim-tank--reserve", style: { "border-color": "#f59e0b", "border-width": 4 } },
     { selector: "node.sim-tank--available", style: { "border-color": "#22c55e", "border-width": 3 } },
     { selector: "node.sim-tank--full", style: { "border-color": "#0ea5e9", "border-width": 4 } },
@@ -278,7 +278,7 @@ export function buildCyStyle() {
     { selector: "edge.sim-stale", style: { opacity: 0.25, "line-style": "dotted", width: 1.5 } },
     { selector: "node.sim-stale", style: { opacity: 0.25, "border-style": "dotted" } },
     // A per-run override is operator input, not portal data — always visible.
-    { selector: "node.sim-overridden", style: { "background-color": "#fffbeb" } },
+    { selector: "node.sim-overridden", style: { "background-color": "#fdeee7" } },
     // Selection highlight.
     {
       selector: "node:selected",
@@ -322,7 +322,7 @@ export function buildCyStyle() {
         "background-image": "none",
         "border-width": 1,
         "border-style": "dashed",
-        "border-color": "#d97706",
+        "border-color": "#c4380f",
         label: "data(displayLabel)",
         "text-valign": "top",
         "text-halign": "center",
@@ -411,7 +411,7 @@ export function buildCyStyle() {
     {
       selector: "node.trace-up",
       style: {
-        "border-color": "#2563eb",
+        "border-color": "#1d4f91",
         "border-width": 4,
         "z-index": 900,
       },
@@ -419,7 +419,7 @@ export function buildCyStyle() {
     {
       selector: "node.trace-down",
       style: {
-        "border-color": "#16a34a",
+        "border-color": "#6fa300",
         "border-width": 4,
         "z-index": 900,
       },
@@ -427,9 +427,9 @@ export function buildCyStyle() {
     {
       selector: "edge.trace-up-edge",
       style: {
-        "line-color": "#2563eb",
-        "target-arrow-color": "#2563eb",
-        "source-arrow-color": "#2563eb",
+        "line-color": "#1d4f91",
+        "target-arrow-color": "#1d4f91",
+        "source-arrow-color": "#1d4f91",
         width: 5,
         opacity: 1,
         "z-index": 900,
@@ -438,9 +438,9 @@ export function buildCyStyle() {
     {
       selector: "edge.trace-down-edge",
       style: {
-        "line-color": "#16a34a",
-        "target-arrow-color": "#16a34a",
-        "source-arrow-color": "#16a34a",
+        "line-color": "#6fa300",
+        "target-arrow-color": "#6fa300",
+        "source-arrow-color": "#6fa300",
         width: 5,
         opacity: 1,
         "z-index": 900,

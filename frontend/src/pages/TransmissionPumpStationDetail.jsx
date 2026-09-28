@@ -1,9 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import { fetchTransmissionPumpStationBundle } from "../api/metrics";
+import { StatusBadge } from "../components/ui/WorkspacePrimitives";
 import MaintenanceRecordList from "../components/production/MaintenanceRecordList";
 import OutageRecordList from "../components/production/OutageRecordList";
 import SinglePlantMap from "../components/production/SinglePlantMap";
+import { UpcomingMaintenanceCard } from "../components/production/PlantOverview";
 import PumpStationCapacityChart from "../components/transmission/PumpStationCapacityChart";
 import {
   activeFunctionalPumps,
@@ -46,27 +49,34 @@ function PumpStationOverview({ station, bundle }) {
   const backups = useMemo(() => backupPumps(station?.specifications), [station?.specifications]);
   const designCapacity = totalDesignCapacity(station?.specifications);
 
+  const s = station?.specifications || {};
+  const pick = (...vals) => vals.find((v) => v != null && v !== "" && v !== "NULL");
+  const coord = () => {
+    const a = Number(station?.latitude), b = Number(station?.longitude);
+    return Number.isFinite(a) && Number.isFinite(b) ? `${a.toFixed(4)}, ${b.toFixed(4)}` : "N/A";
+  };
   const fields = [
     ["Asset ID", <span className="mono">{station?.external_id || "—"}</span>],
-    ["Pump Station Name", station?.name || "—"],
-    ["Asset Type", station?.asset_type || "Pump Station"],
+    ["Station Type", station?.asset_type || "Pump Station"],
     ["Entity", station?.entity || "—"],
+    ["Entity Type", pick(station?.entity_type, station?.entityType, s.entity_type) || "N/A"],
     ["Region", station?.region || "—"],
+    ["Governorate", pick(station?.governorate, s.governorate) || "N/A"],
     ["City", station?.city || "—"],
-    ["Functional Pumps", functional.length],
-    ["Backup Pumps", backups.length],
-    ["Design Capacity", `${designCapacity.toLocaleString()} m³/day`],
-    ["Commissioning Date", fmtDate(station?.commissioning_date)],
-    ["Decommissioning Date", fmtDate(station?.decommissioning_date)],
-    ["Status", station?.status || "N/A"],
+    ["Coordinates", <span className="mono">{coord()}</span>],
+    ["Active Pumps", functional.length],
+    ["Standby Pumps", backups.length],
+    ["Total Design Capacity", `${designCapacity.toLocaleString()} m³/day`],
+    ["Commissioned", fmtDate(station?.commissioning_date)],
+    ["Decommissioned", fmtDate(station?.decommissioning_date)],
   ];
 
   return (
     <div className="tpsd">
-      <div className="tpsd__row">
+      <div className="pov__top">
         <section className="tpsd__card">
           <div className="tpsd__card-head">
-            <h2>Basic Information</h2>
+            <h2>Station Facts</h2>
             <p>Core pump-station details and pump configuration</p>
           </div>
           <div className="tpsd__grid">
@@ -74,13 +84,15 @@ function PumpStationOverview({ station, bundle }) {
           </div>
         </section>
 
+        <UpcomingMaintenanceCard bundle={bundle} />
+
         <section className="tpsd__card">
           <div className="tpsd__card-head">
             <h2>Location</h2>
             <p>Satellite view</p>
           </div>
           <div className="tpsd__card-body">
-            <SinglePlantMap latitude={station?.latitude} longitude={station?.longitude} name={station?.name} height={260} />
+            <SinglePlantMap latitude={station?.latitude} longitude={station?.longitude} name={station?.name} height={300} />
           </div>
         </section>
       </div>
@@ -137,6 +149,7 @@ export default function TransmissionPumpStationDetail({
   subTab,
   onSubTabChange,
   onPumpStationLoaded,
+  onBack,
 }) {
   const { pumpStationId: rawId } = useParams();
   const routeId = rawId ? decodeURIComponent(rawId) : null;
@@ -190,11 +203,16 @@ export default function TransmissionPumpStationDetail({
 
   return (
     <div className="ppd transmission-detail">
-      <header className="ppd__head">
-        <div>
-          <h1 className="ppd__name">{station?.name || pumpStationId}</h1>
-          <p className="ppd__meta">{[station?.asset_type || "Pump Station", station?.region, "View only"].filter(Boolean).join(" · ")}</p>
-        </div>
+      <header className="ppd__identity">
+        {onBack && (
+          <button type="button" className="ppd__back" onClick={onBack} title="Back to Pump Stations" aria-label="Back to Pump Stations">
+            <ArrowLeft size={16} />
+          </button>
+        )}
+        <h1 className="ppd__name">{station?.name || pumpStationId}</h1>
+        {station?.status && <StatusBadge status={station.status} />}
+        {station?.external_id && <span className="ppd__extid mono">{station.external_id}</span>}
+        <span className="ppd__meta">{[station?.asset_type || "Pump Station", station?.entity, [station?.region, station?.city].filter(Boolean).join(" / ")].filter(Boolean).join(" · ")}</span>
       </header>
 
       {loading && <div className="ppd__state">Loading pump station…</div>}

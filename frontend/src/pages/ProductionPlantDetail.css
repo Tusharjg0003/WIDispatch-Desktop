@@ -1,21 +1,24 @@
-.ppd { padding: 12px; background: #f8fafc; min-height: 100%; }
-.ppd__head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; padding: 8px 12px; border: 1px solid #d0d7de; border-radius: 2px; background: #fff; box-shadow: 0 1px 1px rgba(0,0,0,.04); }
-.ppd__back { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: 1px solid #d0d7de; border-radius: 2px; color: #111827; text-decoration: none; }
-.ppd__back:hover { background: #eef4ff; }
-.ppd__name { font-size: 1.15rem; font-weight: 700; color: #111827; }
-.ppd__meta { font-size: 0.72rem; color: #6b7280; margin-top: 2px; }
-.ppd__state { padding: 24px; color: #4b5563; }
-.ppd__state--err { color: #b91c1c; }
+.ppd { padding: 8px 10px; background: var(--bg); min-height: 100%; }
+/* Web identity bar: back · name · status chip · asset ID · meta line. */
+.ppd__identity { position: sticky; top: 0; z-index: 4; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); box-shadow: 0 5px 16px rgba(0, 48, 87, 0.08); }
+.ppd__back { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border: 1px solid var(--line2); border-radius: 6px; background: var(--panel2); color: var(--tx1); cursor: pointer; }
+.ppd__back:hover { background: var(--brand-soft); color: var(--brand); }
+.ppd__name { font-size: 15px; font-weight: 700; color: var(--tx1); }
+.ppd__extid { font-family: var(--mono); font-size: 11px; color: var(--mut); }
+.ppd__meta { font-size: 10.5px; color: var(--mut); }
+.ppd__state { padding: 24px; color: var(--mut); }
+.ppd__state--err { color: var(--critical); }
 
 .ppd__sections { display: flex; flex-direction: column; gap: 12px; }
-.ppd__card { border: 1px solid #d0d7de; border-radius: 2px; background: #fff; }
-.ppd__card-head { padding: 10px 12px; border-bottom: 1px solid #d0d7de; }
+.ppd__card { border: 1px solid #d2e0ea; border-radius: 2px; background: #fff; }
+.ppd__card-head { padding: 10px 12px; border-bottom: 1px solid #d2e0ea; }
 .ppd__card-head h2 { font-size: 0.95rem; font-weight: 700; color: #111827; }
 .ppd__card-head p { font-size: 0.72rem; color: #6b7280; margin-top: 2px; }
 .ppd__card-body { padding: 12px; }
 
-.ppd__tabs { display: flex; gap: 2px; border-bottom: 1px solid #d0d7de; margin-bottom: 12px; }
-.ppd__tab { padding: 8px 16px; border: 1px solid transparent; border-bottom: none; background: transparent; color: #4b5563; font-size: 0.82rem; font-weight: 600; cursor: pointer; border-radius: 2px 2px 0 0; }
-.ppd__tab:hover { color: #111827; background: #eef4ff; }
-.ppd__tab--active { color: #003eb1; background: #fff; border-color: #d0d7de; margin-bottom: -1px; }
+.ppd__tabs { display: flex; gap: 2px; margin-bottom: 8px; }
+.ppd__tab { display: inline-flex; align-items: center; height: 26px; padding: 0 12px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--mut); font-size: 11px; font-weight: 600; cursor: pointer; }
+.ppd__tab:hover { color: var(--tx1); background: var(--panel2); }
+.ppd__tab--active { color: #fff; background: var(--acc-grad); border-color: rgba(0,163,224,.5); }
+.ppd__tab--active:hover { color: #fff; }
 .ppd__tabpanel { min-height: 200px; }

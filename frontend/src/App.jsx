@@ -2,6 +2,7 @@ import React, { Suspense, lazy } from "react";
 import { Route, Routes } from "react-router-dom";
 import { useLayout } from "./contexts/LayoutContext";
 import TopNavigationBar from "./components/TopNavigationBar";
+import StatusBar from "./components/StatusBar";
 import OutageNotificationToast from "./components/production/OutageNotificationToast";
 import ErrorBoundary from "./components/ErrorBoundary";
 import RouteLoading from "./components/RouteLoading";
@@ -64,6 +65,8 @@ export default function App() {
             </Suspense>
           </div>
         </div>
+
+        <StatusBar />
       </div>
     </ErrorBoundary>
   );

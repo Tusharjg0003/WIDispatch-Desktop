@@ -179,7 +179,7 @@
 
 .sidebar-content__stat-label {
   font-size: 0.6875rem;
-  color: #57606a;
+  color: #5d7f96;
 }
 
 .sidebar-content__stat-value {
@@ -227,9 +227,9 @@
   justify-content: center !important;
   gap: 0 !important;
   border-radius: 2px !important;
-  border: 1px solid #e2e8f0 !important;
+  border: 1px solid #d2e0ea !important;
   background: #ffffff !important;
-  color: #64748b !important;
+  color: #5d7f96 !important;
   font-size: 0 !important;
   letter-spacing: 0 !important;
   overflow: hidden !important;
@@ -248,8 +248,8 @@
 }
 
 .details-sidebar .sidebar-content__action-btn:first-of-type:hover {
-  background: #334155 !important;
-  border-color: #334155 !important;
+  background: #26516e !important;
+  border-color: #26516e !important;
   color: #ffffff !important;
 }
 
@@ -283,7 +283,7 @@
   padding-top: 2px !important;
   padding-bottom: 2px !important;
   font-size: 10px !important;
-  border: 1px solid #e2e8f0 !important;
+  border: 1px solid #d2e0ea !important;
   border-radius: 0 !important;
   color: #0f172a !important;
   background: #ffffff !important;
@@ -370,7 +370,7 @@
 }
 
 .sidebar-content__list-item:hover {
-  background: #f8fafc;
+  background: #f3f8fb;
 }
 
 .sidebar-content__list-item.active {
@@ -455,15 +455,15 @@
 }
 
 .sidebar-content__list-row--locked {
-  color: #dc2626;
+  color: #c11b1b;
 }
 
 .sidebar-content__list-row--locked:hover {
-  background-color: #fee2e2;
+  background-color: #fbeaea;
 }
 
 .sidebar-content__list-row--shared {
-  color: #2563eb;
+  color: #1d4f91;
 }
 
 .sidebar-content__list-row--shared:hover {
@@ -486,7 +486,7 @@
   display: block;
   font-size: 0.6875rem;
   font-weight: 700;
-  color: #64748b;
+  color: #5d7f96;
   margin-bottom: 3px;
   text-transform: uppercase;
   letter-spacing: 0;
@@ -537,7 +537,7 @@
   border: 1px solid transparent !important;
   border-radius: 2px !important;
   background: transparent !important;
-  color: #64748b !important;
+  color: #5d7f96 !important;
 }
 
 .sidebar-content__item-action-btn svg {
@@ -569,14 +569,14 @@
 .sidebar-content__list-item-meta {
   margin-top: 2px;
   font-size: 0.65rem;
-  color: #57606a;
+  color: #5d7f96;
   font-weight: 400;
 }
 
 .sidebar-content__empty-msg {
   padding: 6px 7px;
   font-size: 0.6875rem;
-  color: #57606a;
+  color: #5d7f96;
 }
 
 /* SidebarActionToolbar base (non-details-sidebar) styling — the source
@@ -612,7 +612,7 @@
   border: 1px solid #d8dee6;
   border-radius: 2px;
   background: #ffffff;
-  color: #57606a;
+  color: #5d7f96;
   cursor: pointer;
   transition: all 0.15s ease;
   flex-shrink: 0;
@@ -674,14 +674,14 @@
 .ar-rail .sidebar-action-toolbar__select-icon:hover,
 .nb-rail .sidebar-action-toolbar__button:hover,
 .nb-rail .sidebar-action-toolbar__select-icon:hover {
-  background: #f8fafc !important;
+  background: #f3f8fb !important;
   border-color: #94a3b8 !important;
   color: #1f2937 !important;
 }
 
 .ar-rail .sidebar-action-toolbar__button.active,
 .nb-rail .sidebar-action-toolbar__button.active {
-  background: #f8fafc !important;
+  background: #f3f8fb !important;
   border-color: #94a3b8 !important;
   color: #111827 !important;
 }
@@ -708,7 +708,7 @@
   border: 1px solid #d8dee6;
   border-radius: 2px;
   background: #ffffff;
-  color: #57606a;
+  color: #5d7f96;
   flex-shrink: 0;
 }
 
@@ -866,18 +866,18 @@
 
 .sidebar-action-toolbar__delete-btn {
   flex: 1;
-  background: #dc2626 !important;
-  border-color: #dc2626 !important;
+  background: #c11b1b !important;
+  border-color: #c11b1b !important;
 }
 
 .sidebar-action-toolbar__delete-btn:hover:not(:disabled) {
-  background: #b91c1c !important;
-  border-color: #b91c1c !important;
+  background: #a31616 !important;
+  border-color: #a31616 !important;
 }
 
 .sidebar-action-toolbar__delete-btn:disabled {
   background: #f1f5f9 !important;
-  border-color: #e2e8f0 !important;
+  border-color: #d2e0ea !important;
   color: #94a3b8 !important;
   cursor: not-allowed;
 }

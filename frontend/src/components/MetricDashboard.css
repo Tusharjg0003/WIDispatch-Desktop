@@ -1,15 +1,15 @@
 .metric {
-  --line: #e2e8f0;
+  --line: #d2e0ea;
   --line-soft: #eef2f6;
-  --ink: #1e293b;
-  --ink-dim: #64748b;
-  --accent: #1a4a8a;
-  --accent-soft: rgba(26, 74, 138, 0.08);
-  --good: #059669;
-  --warn: #d97706;
-  --bad: #dc2626;
+  --ink: #003057;
+  --ink-dim: #5d7f96;
+  --accent: #1d4f91;
+  --accent-soft: rgba(29, 79, 145, 0.08);
+  --good: #567f00;
+  --warn: #c4380f;
+  --bad: #c11b1b;
   --surface: #ffffff;
-  --surface-subtle: #f8fafc;
+  --surface-subtle: #f3f8fb;
 
   width: 100%;
   min-height: 100%;
@@ -88,7 +88,7 @@
 .metric__clear:focus-visible {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(26, 74, 138, 0.15);
+  box-shadow: 0 0 0 3px rgba(29, 79, 145, 0.15);
 }
 
 .metric__clear {
@@ -126,7 +126,7 @@
   gap: 16px;
   border-style: solid;
   border-color: rgba(220, 38, 38, 0.3);
-  background: #fef2f2;
+  background: #fbeaea;
   color: var(--bad);
 }
 
@@ -178,18 +178,18 @@
 .kpi--warn::before { background: var(--warn); }
 
 .kpi__eyebrow {
-  font-size: 0.64rem;
-  font-weight: 600;
+  font-size: 8.5px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.09em;
+  letter-spacing: 1px;
   color: var(--ink-dim);
 }
 
 .kpi__value {
   font-variant-numeric: tabular-nums;
-  font-size: 1.35rem;
-  font-weight: 600;
-  line-height: 1;
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.1;
   color: var(--ink);
   letter-spacing: -0.01em;
 }
@@ -217,10 +217,10 @@
 
 .sheet {
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 8px;
   overflow: hidden;
   background: var(--surface);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 5px 16px rgba(0, 48, 87, 0.08);
 }
 
 .sheet__head {
@@ -382,12 +382,16 @@
 }
 
 .ledger thead th {
-  font-size: 0.64rem;
-  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  font-size: 0.6rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--ink-dim);
-  background: var(--surface-subtle);
+  letter-spacing: 0.09em;
+  color: var(--mut2);
+  background: var(--head-bg);
+  border-bottom: 1px solid var(--surface-border);
 }
 
 .ledger .num {
@@ -395,7 +399,20 @@
 }
 
 .ledger tbody tr:hover {
-  background: var(--surface-subtle);
+  background: var(--row-hover);
+}
+
+/* SWIIMS selected-row motif: a tinted fill plus a left accent rail on the
+   first cell (box-shadow inset so it never shifts the layout). */
+.ledger tbody tr.is-selected,
+.ledger tbody tr.row-selected,
+.ledger tbody tr[aria-selected="true"] {
+  background: #e9f1f9;
+}
+.ledger tbody tr.is-selected td:first-child,
+.ledger tbody tr.row-selected td:first-child,
+.ledger tbody tr[aria-selected="true"] td:first-child {
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .ledger tbody tr:last-child td {
@@ -463,4 +480,43 @@
   .status-strip {
     grid-template-columns: repeat(2, 1fr) !important;
   }
+}
+
+/* ── SWIIMS shared motifs ─────────────────────────────────────────────────────
+   Pill chips and the numbered-section badge, so pages stop hand-rolling their
+   own. Colours follow the SWIIMS .sc-chip semantics. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  background: #eef2f7;
+  color: #8aa5b8;
+  white-space: nowrap;
+}
+.chip--ok { background: #eef6df; color: #567f00; }
+.chip--info { background: #e9f1f9; color: #1d4f91; }
+.chip--warn { background: #fdeee7; color: #a32e0b; }
+.chip--danger { background: #fbeaea; color: #a31616; }
+.chip--muted { background: #f3f8fb; color: #5d7f96; }
+
+/* 19px blue circle + white numeral, for numbered section headers. */
+.section-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 19px;
+  height: 19px;
+  border-radius: 999px;
+  background: #1d4f91;
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  flex: none;
 }

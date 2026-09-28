@@ -13,7 +13,7 @@ const SAUDI_CENTER = [24.7136, 46.6753];
 
 const markerIcon = (type, isAnchor) => L.divIcon({
   className: "",
-  html: `<span class="ncm-marker${isAnchor ? " ncm-marker--anchor" : ""}" style="--ncm-color:${ENTITY_TYPE_COLORS[type] || "#475569"}"></span>`,
+  html: `<span class="ncm-marker${isAnchor ? " ncm-marker--anchor" : ""}" style="--ncm-color:${ENTITY_TYPE_COLORS[type] || "#8aa5b8"}"></span>`,
   iconSize: [18, 18],
   iconAnchor: [9, 9],
 });
@@ -103,7 +103,7 @@ export default function NetworkCanvasMapView({
           <FitGeography nodes={nodes} />
           <MapRouteClick active={drawing && Boolean(draft.sourceId)} onVertex={(step) => setDraft((value) => ({ ...value, steps: [...value.steps, step] }))} />
           {edges.map((edge) => edge.positions.length >= 2 && (
-            <Polyline key={edge.id} positions={edge.positions} pathOptions={{ color: "#2563eb", weight: 4, opacity: 0.78 }}>
+            <Polyline key={edge.id} positions={edge.positions} pathOptions={{ color: "#1d4f91", weight: 4, opacity: 0.78 }}>
               <Tooltip sticky>{edge.name || edge.id}</Tooltip>
             </Polyline>
           ))}

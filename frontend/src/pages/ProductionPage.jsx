@@ -83,6 +83,7 @@ export default function ProductionPage() {
           plantId={activeTab.key}
           subTab={activeTab.state.subTab}
           onSubTabChange={changeSubTab}
+          onBack={() => activeTabId && productionTabController.closeTab(activeTabId)}
           onPlantLoaded={adoptTitle}
         />
       ) : (

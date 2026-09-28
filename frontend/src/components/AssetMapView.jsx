@@ -4,7 +4,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 const STATUS_COLOR = {
-  operational: "#10b981",
+  operational: "#6fa300",
   maintenance: "#f59e0b",
   under_construction: "#3b82f6",
   planned: "#3b82f6",

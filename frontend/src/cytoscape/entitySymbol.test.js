@@ -44,8 +44,8 @@ test("makeEntitySymbol falls back to a neutral glyph for an unknown type", () =>
 });
 
 test("statusBorderColor reports lifecycle, with a neutral fallback", () => {
-  assert.equal(statusBorderColor("operational"), "#10b981");
-  assert.equal(statusBorderColor("in-operation"), "#10b981");
+  assert.equal(statusBorderColor("operational"), "#6fa300");
+  assert.equal(statusBorderColor("in-operation"), "#6fa300");
   assert.equal(statusBorderColor("planned"), "#3b82f6");
   assert.equal(statusBorderColor("under_construction"), "#f59e0b");
   assert.equal(statusBorderColor("decommissioned"), "#ef4444");
@@ -73,7 +73,7 @@ test("applyEntitySymbol fills in the symbol and the status border", () => {
   applyEntitySymbol(node);
 
   assert.match(node.data("cardIcon"), /^data:image\/svg\+xml/);
-  assert.equal(node.data("cardStatusColor"), "#10b981");
+  assert.equal(node.data("cardStatusColor"), "#6fa300");
 });
 
 test("applyEntitySymbol gives non-symbol nodes a valid empty background", () => {

@@ -22,7 +22,8 @@
   width: 260px;
   flex-shrink: 0;
   padding: 16px;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid var(--line);
+  background: var(--panel);
   overflow-y: auto;
 }
 
@@ -31,7 +32,7 @@
   font-size: 0.75rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(232, 234, 240, 0.6);
+  color: var(--mut);
 }
 
 .app-content {
@@ -85,3 +86,27 @@
 @media (prefers-reduced-motion: reduce) {
   .route-loading__spinner { animation: none; }
 }
+
+/* Bottom status bar — Production "Control Room" shell (24px). */
+.app-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
+  height: 24px;
+  padding: 0 12px;
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--mut);
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.app-status-bar__left,
+.app-status-bar__right { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.app-status-bar__brand { color: var(--tx1); font-weight: 700; }
+.app-status-bar__section { color: var(--acc); font-weight: 700; }
+.app-status-bar__sep { color: var(--line2); }
+.app-status-bar__status { display: inline-flex; align-items: center; gap: 5px; }
+.app-status-bar__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); }

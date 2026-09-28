@@ -128,10 +128,10 @@
 .app-shell .status-strip { margin-bottom: 6px; border-radius: var(--density-radius); }
 .app-shell .kpi { gap: 3px; min-height: 62px; padding: 6px 8px; }
 .app-shell .kpi::before { top: 6px; bottom: 6px; }
-.app-shell .kpi__value { font-size: 1.2rem; }
+.app-shell .kpi__value { font-size: 17px; }
 .app-shell .kpi__sub { font-size: 10px; }
 .app-shell .sheets { gap: 6px; }
-.app-shell .sheet { border-radius: var(--density-radius); }
+.app-shell .sheet { border-radius: var(--density-radius-card); }
 .app-shell .sheet__head { gap: 8px; min-height: var(--density-panel-header); padding: 5px 8px; }
 .app-shell .sheet__name { margin: 1px 0; font-size: var(--density-section-font); }
 .app-shell .sheet__name--sm { gap: 4px; font-size: var(--density-section-font); }
@@ -142,7 +142,7 @@
 .app-shell table { font-size: 11px; }
 .app-shell table th,
 .app-shell table td { height: var(--density-row); padding: 4px 6px; line-height: 1.2; }
-.app-shell table thead th { height: var(--density-row); font-size: 10px; }
+.app-shell table thead th { height: var(--density-row); font-size: 9px; }
 .app-shell :is(.ledger, .ppl__table, .economics-table, .prod-table, .tpsd__table) th,
 .app-shell :is(.ledger, .ppl__table, .economics-table, .prod-table, .tpsd__table) td { height: var(--density-row); padding: 4px 6px; }
 .app-shell .economics-table td { height: var(--density-row); }

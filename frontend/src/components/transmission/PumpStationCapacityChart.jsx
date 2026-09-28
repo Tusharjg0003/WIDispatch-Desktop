@@ -155,14 +155,14 @@ export default function PumpStationCapacityChart({ station, bundle }) {
     <div className="cap-chart">
       <ResponsiveContainer width="100%" height={360}>
         <ComposedChart data={chartData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-          <XAxis dataKey="date" tick={{ fill: "#4b5563", fontSize: 11 }} interval={6} />
+          <CartesianGrid strokeDasharray="3 3" stroke="#d9e4ec" vertical={false} />
+          <XAxis dataKey="date" tick={{ fill: "#607d91", fontSize: 11 }} interval={6} />
           <YAxis
             domain={[0, yMax]}
-            tick={{ fill: "#4b5563", fontSize: 11 }}
+            tick={{ fill: "#607d91", fontSize: 11 }}
             tickFormatter={(value) => value.toLocaleString()}
             width={80}
-            label={{ value: "Capacity (m³/day)", angle: -90, position: "insideLeft", fill: "#4b5563", fontSize: 11 }}
+            label={{ value: "Capacity (m³/day)", angle: -90, position: "insideLeft", fill: "#607d91", fontSize: 11 }}
           />
           <Tooltip content={({ active, label }) => {
             if (!active) return null;
@@ -172,10 +172,10 @@ export default function PumpStationCapacityChart({ station, bundle }) {
               <div className="cap-tip">
                 <p className="cap-tip__title">{label}</p>
                 <p style={{ color: "#7c3aed" }}>Design: {row.designCapacity.toLocaleString()} m³/day</p>
-                <p style={{ color: "#b45309", fontWeight: 600 }}>Effective: {row.effectiveCapacity.toLocaleString()} m³/day</p>
-                {row.outaged && <p style={{ color: "#dc2626" }}>Complete outage: all pumps out of service</p>}
-                {!row.outaged && row.outageLoss > 0 && <p style={{ color: "#dc2626" }}>Outage Reduction: {row.outageLoss.toLocaleString()} m³/day</p>}
-                {!row.outaged && row.maintenanceLoss > 0 && <p style={{ color: "#d97706" }}>Maintenance Reduction: {row.maintenanceLoss.toLocaleString()} m³/day</p>}
+                <p style={{ color: "#a32e0b", fontWeight: 600 }}>Effective: {row.effectiveCapacity.toLocaleString()} m³/day</p>
+                {row.outaged && <p style={{ color: "#c11b1b" }}>Complete outage: all pumps out of service</p>}
+                {!row.outaged && row.outageLoss > 0 && <p style={{ color: "#c11b1b" }}>Outage Reduction: {row.outageLoss.toLocaleString()} m³/day</p>}
+                {!row.outaged && row.maintenanceLoss > 0 && <p style={{ color: "#c4380f" }}>Maintenance Reduction: {row.maintenanceLoss.toLocaleString()} m³/day</p>}
               </div>
             );
           }} />

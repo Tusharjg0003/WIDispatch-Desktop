@@ -13,7 +13,7 @@ const DOCUMENT_ICON = `${ICON_ROOT}/12 File & Document Management/Document/SVG/D
 const HELP_ICON = `${ICON_ROOT}/01 Core Navigation-System/Help - Support/SVG/Help - Support_20px.svg`;
 
 const STATUS_DOT = {
-  operational: "#10b981",
+  operational: "#6fa300",
   maintenance: "#f59e0b",
   under_construction: "#3b82f6",
   planned: "#3b82f6",

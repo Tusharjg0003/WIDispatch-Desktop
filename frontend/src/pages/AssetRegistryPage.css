@@ -1,5 +1,5 @@
 /* Builds on MetricDashboard.css tokens/classes (already light-themed: white
-   surfaces, #f8fafc page bg, var(--ink)/var(--line) etc.). This file layers
+   surfaces, #f3f8fb page bg, var(--ink)/var(--line) etc.). This file layers
    a denser, "professional data tool" treatment on top — sharper corners,
    tighter row padding, solid-fill primary actions, saturated status pills —
    inspired by a reference asset-tagging/create-asset screen from a sibling
@@ -70,7 +70,7 @@
 }
 .ar-page .view-kpis .card {
   background: #ffffff;
-  border: 1px solid var(--border, #d8e0ea);
+  border: 1px solid var(--border, #d2e0ea);
   border-radius: var(--radius-lg, 9px);
   padding: 9px 11px;
   min-height: 112px;
@@ -88,7 +88,7 @@
   margin: 0;
   font-size: 0.7rem;
   font-weight: 700;
-  color: var(--text-strong, #142033);
+  color: var(--text-strong, #003057);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -97,7 +97,7 @@
   margin: 0;
   font-size: 1.3rem;
   font-weight: 700;
-  color: var(--text-strong, #142033);
+  color: var(--text-strong, #003057);
   line-height: 1;
   justify-self: end;
 }
@@ -114,7 +114,7 @@
   gap: 4px 10px;
   margin-top: 6px;
   padding-top: 6px;
-  border-top: 1px solid var(--border, #d8e0ea);
+  border-top: 1px solid var(--border, #d2e0ea);
 }
 .ar-page .view-kpis .status-item {
   display: flex;
@@ -122,7 +122,7 @@
   gap: 5px;
   min-width: 0;
   font-size: 0.68rem;
-  color: var(--text, #334155);
+  color: var(--text, #26516e);
   white-space: nowrap;
 }
 .ar-page .view-kpis .status-item span:last-child {
@@ -135,7 +135,7 @@
   border-radius: 0;
   flex-shrink: 0;
 }
-.ar-page .view-kpis .status-indicator.operational { background: #10b981; }
+.ar-page .view-kpis .status-indicator.operational { background: #6fa300; }
 .ar-page .view-kpis .status-indicator.planned { background: #3b82f6; }
 .ar-page .view-kpis .status-indicator.under-construction { background: #f59e0b; }
 .ar-page .view-kpis .status-indicator.maintenance { background: #f59e0b; }
@@ -155,16 +155,16 @@
   /* .ar-rail sits outside .metric now, so it can't inherit that class's
      --surface/--line/etc. — redeclare the same token block here (same
      pattern NetworkBuilderPage's .nb-page uses for its own rail). */
-  --line: #e2e8f0;
+  --line: #d2e0ea;
   --line-soft: #eef2f6;
-  --ink: #1e293b;
-  --ink-dim: #64748b;
-  --accent: #1a4a8a;
-  --good: #059669;
-  --warn: #d97706;
-  --bad: #dc2626;
+  --ink: #003057;
+  --ink-dim: #5d7f96;
+  --accent: #1d4f91;
+  --good: #567f00;
+  --warn: #c4380f;
+  --bad: #c11b1b;
   --surface: #ffffff;
-  --surface-subtle: #f8fafc;
+  --surface-subtle: #f3f8fb;
 }
 .ar-rail {
   --sidebar-border-color: #0f172a;
@@ -310,17 +310,17 @@
 .ar-page .status-badge.maintenance {
   color: #92400e;
   border-color: rgba(217, 119, 6, 0.3);
-  background: #fef3c7;
+  background: #fdeee7;
 }
 .ar-page .status-badge.decommissioned {
   color: #991b1b;
   border-color: rgba(220, 38, 38, 0.3);
-  background: #fee2e2;
+  background: #fbeaea;
 }
 .ar-page .status-badge.under_construction,
 .ar-page .status-badge.planned {
-  color: #1d4ed8;
-  border-color: rgba(37, 99, 235, 0.3);
+  color: #16407a;
+  border-color: rgba(29, 79, 145, 0.3);
   background: #dbeafe;
 }
 
@@ -349,10 +349,10 @@
 }
 .ar-page .asset-table-action-btn--view:hover {
   color: var(--accent);
-  border-color: rgba(26, 74, 138, 0.4);
+  border-color: rgba(29, 79, 145, 0.4);
 }
 .ar-page .asset-table-action-btn--edit:hover {
-  color: #b45309;
+  color: #a32e0b;
   border-color: rgba(217, 119, 6, 0.4);
 }
 
@@ -472,19 +472,19 @@
 .st--maintenance {
   color: #92400e;
   border-color: rgba(217, 119, 6, 0.3);
-  background: #fef3c7;
+  background: #fdeee7;
 }
 
 .st--decommissioned {
   color: #991b1b;
   border-color: rgba(220, 38, 38, 0.3);
-  background: #fee2e2;
+  background: #fbeaea;
 }
 
 .st--under_construction,
 .st--planned {
-  color: #1d4ed8;
-  border-color: rgba(37, 99, 235, 0.3);
+  color: #16407a;
+  border-color: rgba(29, 79, 145, 0.3);
   background: #dbeafe;
 }
 
@@ -649,7 +649,7 @@
 .af__field select:focus-visible {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(26, 74, 138, 0.15);
+  box-shadow: 0 0 0 3px rgba(29, 79, 145, 0.15);
 }
 
 .af__error {
@@ -657,7 +657,7 @@
   padding: 10px 14px;
   border-radius: 6px;
   border: 1px solid rgba(220, 38, 38, 0.35);
-  background: #fef2f2;
+  background: #fbeaea;
   color: var(--bad);
   font-size: 0.85rem;
 }
@@ -717,7 +717,7 @@
   width: 34px;
   height: 20px;
   border-radius: 999px;
-  background: #e2e8f0;
+  background: #d2e0ea;
   border: 1px solid var(--line);
   position: relative;
   transition: background 0.15s ease, border-color 0.15s ease;
@@ -735,8 +735,8 @@
   transition: transform 0.15s ease;
 }
 .af__toggle[data-on="true"] .af__toggle-track {
-  background: #059669;
-  border-color: #059669;
+  background: #567f00;
+  border-color: #567f00;
 }
 .af__toggle[data-on="true"] .af__toggle-thumb {
   transform: translateX(14px);
@@ -815,7 +815,7 @@
   background: #d1fae5;
 }
 .af__pump-role--backup {
-  color: #1d4ed8;
+  color: #16407a;
   background: #dbeafe;
 }
 .af__pump-remove {
@@ -830,7 +830,7 @@
   line-height: 1;
 }
 .af__pump-remove:hover {
-  background: #fef2f2;
+  background: #fbeaea;
   color: var(--bad);
   border-color: rgba(220, 38, 38, 0.35);
 }

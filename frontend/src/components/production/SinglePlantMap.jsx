@@ -20,7 +20,7 @@ export default function SinglePlantMap({ latitude, longitude, name, height = 220
           attribution="Tiles &copy; Esri"
           url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
         />
-        <CircleMarker center={[lat, lng]} radius={8} pathOptions={{ color: "#003eb1", fillColor: "#003eb1", fillOpacity: 0.7 }}>
+        <CircleMarker center={[lat, lng]} radius={8} pathOptions={{ color: "#1d4f91", fillColor: "#1d4f91", fillOpacity: 0.7 }}>
           {name && <Tooltip>{name}</Tooltip>}
         </CircleMarker>
       </MapContainer>

@@ -21,9 +21,9 @@
   font-weight: 600;
   letter-spacing: 0.02em;
   text-transform: uppercase;
-  color: #64748b;
+  color: #5d7f96;
   background: #f5f7fa;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid #d2e0ea;
 }
 
 .nb-minimap__toggle {
@@ -33,14 +33,14 @@
   padding: 2px;
   border: none;
   background: transparent;
-  color: #64748b;
+  color: #5d7f96;
   cursor: pointer;
   border-radius: 4px;
 }
 
 .nb-minimap__toggle:hover {
-  background: #e2e8f0;
-  color: #1e293b;
+  background: #d2e0ea;
+  color: #003057;
 }
 
 .nb-minimap__svg {
@@ -50,12 +50,12 @@
 }
 
 .nb-minimap__bg {
-  fill: #f8fafc;
+  fill: #f3f8fb;
 }
 
 .nb-minimap__vp {
-  fill: rgba(37, 99, 235, 0.12);
-  stroke: #2563eb;
+  fill: rgba(29, 79, 145, 0.12);
+  stroke: #1d4f91;
   stroke-width: 1.5;
   pointer-events: none;
 }

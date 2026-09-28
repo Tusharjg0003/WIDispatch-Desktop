@@ -168,6 +168,33 @@ const RIGHT_DRAG_THRESHOLD = 4;
 const BEND_EDIT_DEFER_MS = 24;
 
 const rid = (p) => `${p}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+const cloneData = (value) => {
+  if (!value || typeof value !== "object") return value;
+  return JSON.parse(JSON.stringify(value));
+};
+const SHORTCUT_GROUPS = [
+  { title: "Edit", rows: [
+    { keys: "Ctrl/Cmd + Z", desc: "Undo" },
+    { keys: "Ctrl/Cmd + Shift + Z", desc: "Redo" },
+    { keys: "Ctrl/Cmd + S", desc: "Save network" },
+    { keys: "Ctrl/Cmd + C / X / V", desc: "Copy / cut / paste selection" },
+    { keys: "Delete / Backspace", desc: "Delete selection" },
+  ] },
+  { title: "Select and view", rows: [
+    { keys: "Ctrl/Cmd + A", desc: "Select all" },
+    { keys: "Arrow keys", desc: "Move selection one grid step" },
+    { keys: "Shift + Arrow keys", desc: "Move selection ten grid steps" },
+    { keys: "F / Z", desc: "Fit network / zoom to selection" },
+    { keys: "Ctrl/Cmd + Shift + F", desc: "Toggle canvas focus" },
+    { keys: "Esc", desc: "Close guide or leave the active tool" },
+  ] },
+  { title: "Network tabs", rows: [
+    { keys: "Ctrl/Cmd + Alt + N", desc: "New network" },
+    { keys: "Ctrl/Cmd + Alt + Left / Right", desc: "Previous / next network" },
+    { keys: "Ctrl/Cmd + W", desc: "Close current network" },
+    { keys: "Ctrl/Cmd + Shift + T", desc: "Reopen last closed network" },
+  ] },
+];
 const INSERT_TOOL_LABELS = {
   plant: "Plant",
   handover_point: "Handover Point / City Gate",
@@ -1161,7 +1188,7 @@ export default function NetworkBuilderPage() {
             type,
             position: { x: evt.position.x, y: evt.position.y },
             mode: "create",
-            form: emptyEntityForm(type),
+            form: null,
             editId: null,
           });
           backToSelect();
@@ -1275,8 +1302,8 @@ export default function NetworkBuilderPage() {
       enableFixedAnchorSize: true,
       zIndex: 999,
       bendRemovalSensitivity: 8,
-      anchorColor: "#1a4a8a",
-      endPointColor: "#1a4a8a",
+      anchorColor: "#1d4f91",
+      endPointColor: "#1d4f91",
       enableCreateAnchorOnDrag: false,
     });
 
@@ -1806,7 +1833,7 @@ export default function NetworkBuilderPage() {
       setEntityModal({
         open: true,
         mode: "insert-on-edge",
-        form: emptyEntityForm(entityType),
+        form: null,
         editId: null,
         type: entityType,
         position,

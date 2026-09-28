@@ -2,12 +2,12 @@
 
 .demand-page--boxy {
   padding: 12px;
-  background: #f8fafc;
-  --line: #d0d7de;
+  background: #f3f8fb;
+  --line: #d2e0ea;
   --line-soft: #e5e7eb;
-  --ink: #111827;
+  --ink: #003057;
   --ink-dim: #4b5563;
-  --accent: #003eb1;
+  --accent: #1d4f91;
   --accent-soft: #eef4ff;
 }
 
@@ -16,7 +16,7 @@
   margin-bottom: 12px;
   padding: 0 12px;
   min-height: 42px;
-  border: 1px solid #d0d7de;
+  border: 1px solid #d2e0ea;
   border-radius: 2px;
   background: #ffffff;
   box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
@@ -53,7 +53,7 @@
 .demand-page--boxy .metric__filters select,
 .demand-page--boxy .metric__clear {
   height: 30px;
-  border-color: #d0d7de;
+  border-color: #d2e0ea;
   border-radius: 2px;
   background: #ffffff;
   color: #111827;
@@ -126,7 +126,7 @@
 }
 
 .demand-page--boxy .kpi--warn .kpi__value {
-  color: #b45309;
+  color: #a32e0b;
 }
 
 .demand-page--boxy .sheets {
@@ -134,7 +134,7 @@
 }
 
 .demand-page--boxy .sheet {
-  border: 1px solid #d0d7de;
+  border: 1px solid #d2e0ea;
   border-radius: 2px;
   background: #ffffff;
   box-shadow: none;
@@ -143,12 +143,12 @@
 .demand-page--boxy .sheet__head {
   gap: 12px;
   padding: 10px 12px;
-  border-bottom: 1px solid #d0d7de;
+  border-bottom: 1px solid #d2e0ea;
   background: #ffffff;
 }
 
 .demand-page--boxy .sheet__eyebrow {
-  color: #003eb1;
+  color: #1d4f91;
   font-size: 0.62rem;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -168,9 +168,9 @@
 .demand-page--boxy .rollup {
   min-width: 86px;
   padding: 7px 9px;
-  border: 1px solid #d0d7de;
+  border: 1px solid #d2e0ea;
   border-radius: 2px;
-  background: #f8fafc;
+  background: #f3f8fb;
 }
 
 .demand-page--boxy .rollup dt {
@@ -195,7 +195,7 @@
 
 .demand-page--boxy .ledger thead th {
   color: #111827;
-  background: #f8fafc;
+  background: #f3f8fb;
   font-size: 0.64rem;
   font-weight: 700;
   letter-spacing: 0.06em;

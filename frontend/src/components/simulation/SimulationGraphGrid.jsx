@@ -13,8 +13,9 @@ const nf = new Intl.NumberFormat("en-US");
 const money = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
 const rate = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
 
-const PLANT_COLORS = ["#1a4a8a", "#10b981", "#d97706", "#7c3aed", "#0891b2", "#64748b"];
-const TANK_COLORS = ["#0284c7", "#7c3aed", "#059669", "#d97706", "#dc2626", "#4f46e5", "#0f766e", "#9333ea"];
+// WIDispatch-Production light chart palette (globals.css .light --chart-*).
+const PLANT_COLORS = ["#1d4f91", "#0369a1", "#0f766e", "#4338ca", "#0e7490", "#607d91"];
+const TANK_COLORS = ["#0369a1", "#4338ca", "#0f766e", "#b45309", "#be123c", "#1d4f91", "#0e7490", "#4d7c0f"];
 
 function ChartShell({ title, children }) {
   return (
@@ -42,18 +43,18 @@ function DispatchCostChart({ plan }) {
       ) : (
         <ResponsiveContainer width="100%" height={220}>
           <ComposedChart data={series}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-            <XAxis dataKey="label" tick={{ fill: "#4b5563", fontSize: 11 }} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#d9e4ec" vertical={false} />
+            <XAxis dataKey="label" tick={{ fill: "#607d91", fontSize: 11 }} />
             <YAxis
               yAxisId="cost"
-              tick={{ fill: "#4b5563", fontSize: 11 }}
+              tick={{ fill: "#607d91", fontSize: 11 }}
               tickFormatter={(v) => money.format(v)}
               width={74}
             />
             <YAxis
               yAxisId="rate"
               orientation="right"
-              tick={{ fill: "#4b5563", fontSize: 11 }}
+              tick={{ fill: "#607d91", fontSize: 11 }}
               tickFormatter={(v) => rate.format(v)}
               width={52}
             />
@@ -69,7 +70,7 @@ function DispatchCostChart({ plan }) {
               type="monotone"
               dataKey="cost"
               name="Production Cost"
-              stroke="#1a4a8a"
+              stroke="#1d4f91"
               strokeWidth={2}
               dot={{ r: 2 }}
               isAnimationActive={false}
@@ -79,7 +80,7 @@ function DispatchCostChart({ plan }) {
               type="monotone"
               dataKey="avgCost"
               name="Variable O&M"
-              stroke="#d97706"
+              stroke="#c4380f"
               strokeWidth={2}
               dot={{ r: 2 }}
               connectNulls={false}
@@ -102,9 +103,9 @@ function PlantDispatchMixChart({ plan }) {
       ) : (
         <ResponsiveContainer width="100%" height={220}>
           <ComposedChart data={mix.series}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-            <XAxis dataKey="label" tick={{ fill: "#4b5563", fontSize: 11 }} />
-            <YAxis tick={{ fill: "#4b5563", fontSize: 11 }} tickFormatter={(v) => nf.format(v)} width={74} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#d9e4ec" vertical={false} />
+            <XAxis dataKey="label" tick={{ fill: "#607d91", fontSize: 11 }} />
+            <YAxis tick={{ fill: "#607d91", fontSize: 11 }} tickFormatter={(v) => nf.format(v)} width={74} />
             <Tooltip formatter={(value, name) => [`${nf.format(Math.round(value))} m3`, name]} />
             <Legend />
             {mix.plants.map((plant, index) => (
@@ -166,13 +167,13 @@ function TankBehaviorChart({ plan }) {
       ) : (
         <ResponsiveContainer width="100%" height={220}>
           <ComposedChart data={series}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-            <XAxis dataKey="label" tick={{ fill: "#4b5563", fontSize: 11 }} />
-            <YAxis tick={{ fill: "#4b5563", fontSize: 11 }} tickFormatter={(v) => nf.format(v)} width={74} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#d9e4ec" vertical={false} />
+            <XAxis dataKey="label" tick={{ fill: "#607d91", fontSize: 11 }} />
+            <YAxis tick={{ fill: "#607d91", fontSize: 11 }} tickFormatter={(v) => nf.format(v)} width={74} />
             <Tooltip content={<TankBehaviorTooltip tanks={tanks} />} />
             <Legend />
-            <Bar dataKey="totalInflow" name="Total Inflow" fill="#86efac" stroke="#16a34a" isAnimationActive={false} />
-            <Bar dataKey="totalOutflow" name="Total Outflow" fill="#fecaca" stroke="#dc2626" isAnimationActive={false} />
+            <Bar dataKey="totalInflow" name="Total Inflow" fill="#86efac" stroke="#6fa300" isAnimationActive={false} />
+            <Bar dataKey="totalOutflow" name="Total Outflow" fill="#fecaca" stroke="#c11b1b" isAnimationActive={false} />
             {tanks.map((tank, index) => (
               <Line
                 key={tank.nodeId}
@@ -205,14 +206,14 @@ function SystemBalanceChart({ plan }) {
       ) : (
         <ResponsiveContainer width="100%" height={220}>
           <ComposedChart data={series}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-            <XAxis dataKey="label" tick={{ fill: "#4b5563", fontSize: 11 }} />
-            <YAxis tick={{ fill: "#4b5563", fontSize: 11 }} tickFormatter={(v) => nf.format(v)} width={74} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#d9e4ec" vertical={false} />
+            <XAxis dataKey="label" tick={{ fill: "#607d91", fontSize: 11 }} />
+            <YAxis tick={{ fill: "#607d91", fontSize: 11 }} tickFormatter={(v) => nf.format(v)} width={74} />
             <Tooltip formatter={(value, name) => [`${nf.format(Math.round(value))} m3`, name]} />
             <Legend />
             <Line type="monotone" dataKey="capacity" name="Active capacity" stroke="#94a3b8" strokeDasharray="4 3" strokeWidth={2} dot={false} isAnimationActive={false} />
-            <Line type="monotone" dataKey="demand" name="Demand" stroke="#dc2626" strokeWidth={2} dot={{ r: 2 }} isAnimationActive={false} />
-            <Line type="monotone" dataKey="supply" name="Production" stroke="#1a4a8a" strokeWidth={2} dot={{ r: 2 }} isAnimationActive={false} />
+            <Line type="monotone" dataKey="demand" name="Demand" stroke="#c11b1b" strokeWidth={2} dot={{ r: 2 }} isAnimationActive={false} />
+            <Line type="monotone" dataKey="supply" name="Production" stroke="#1d4f91" strokeWidth={2} dot={{ r: 2 }} isAnimationActive={false} />
           </ComposedChart>
         </ResponsiveContainer>
       )}
@@ -232,11 +233,11 @@ function PlantUtilisationChart({ plan }) {
       ) : (
         <ResponsiveContainer width="100%" height={Math.max(200, rows.length * 30)}>
           <ComposedChart data={rows} layout="vertical" margin={{ left: 16, right: 16 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
-            <XAxis type="number" domain={[0, "dataMax"]} tick={{ fill: "#4b5563", fontSize: 11 }} tickFormatter={(v) => `${v}%`} />
-            <YAxis type="category" dataKey="name" width={130} tick={{ fill: "#4b5563", fontSize: 11 }} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#d9e4ec" horizontal={false} />
+            <XAxis type="number" domain={[0, "dataMax"]} tick={{ fill: "#607d91", fontSize: 11 }} tickFormatter={(v) => `${v}%`} />
+            <YAxis type="category" dataKey="name" width={130} tick={{ fill: "#607d91", fontSize: 11 }} />
             <Tooltip formatter={(value) => [`${rate.format(value)}%`, "Utilisation"]} />
-            <Bar dataKey="utilisationPct" name="Utilisation" fill="#1a4a8a" isAnimationActive={false} />
+            <Bar dataKey="utilisationPct" name="Utilisation" fill="#1d4f91" isAnimationActive={false} />
           </ComposedChart>
         </ResponsiveContainer>
       )}
@@ -256,9 +257,9 @@ function PlantCostChart({ plan }) {
       ) : (
         <ResponsiveContainer width="100%" height={Math.max(200, rows.length * 30)}>
           <ComposedChart data={rows} layout="vertical" margin={{ left: 16, right: 16 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
-            <XAxis type="number" tick={{ fill: "#4b5563", fontSize: 11 }} tickFormatter={(v) => money.format(v)} />
-            <YAxis type="category" dataKey="name" width={130} tick={{ fill: "#4b5563", fontSize: 11 }} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#d9e4ec" horizontal={false} />
+            <XAxis type="number" tick={{ fill: "#607d91", fontSize: 11 }} tickFormatter={(v) => money.format(v)} />
+            <YAxis type="category" dataKey="name" width={130} tick={{ fill: "#607d91", fontSize: 11 }} />
             <Tooltip formatter={(value) => [`${money.format(Math.round(value))} SAR`, "Variable O&M cost"]} />
             <Bar dataKey="costSar" name="Variable O&M cost" fill="#0891b2" isAnimationActive={false} />
           </ComposedChart>
@@ -291,13 +292,13 @@ function DeliveryPointSupplyChart({ plan }) {
           </div>
           <ResponsiveContainer width="100%" height={200}>
             <ComposedChart data={series}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-              <XAxis dataKey="label" tick={{ fill: "#4b5563", fontSize: 11 }} />
-              <YAxis tick={{ fill: "#4b5563", fontSize: 11 }} tickFormatter={(v) => nf.format(v)} width={74} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#d9e4ec" vertical={false} />
+              <XAxis dataKey="label" tick={{ fill: "#607d91", fontSize: 11 }} />
+              <YAxis tick={{ fill: "#607d91", fontSize: 11 }} tickFormatter={(v) => nf.format(v)} width={74} />
               <Tooltip formatter={(value, name) => [`${nf.format(Math.round(value))} m3`, name]} />
               <Legend />
-              <Bar dataKey="delivered" name="Delivered" fill="#93c5fd" stroke="#2563eb" isAnimationActive={false} />
-              <Line type="monotone" dataKey="required" name="Required" stroke="#dc2626" strokeWidth={2} dot={{ r: 2 }} isAnimationActive={false} />
+              <Bar dataKey="delivered" name="Delivered" fill="#93c5fd" stroke="#1d4f91" isAnimationActive={false} />
+              <Line type="monotone" dataKey="required" name="Required" stroke="#c11b1b" strokeWidth={2} dot={{ r: 2 }} isAnimationActive={false} />
             </ComposedChart>
           </ResponsiveContainer>
         </>

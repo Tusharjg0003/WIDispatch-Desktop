@@ -69,6 +69,7 @@ export default function DemandPage() {
           gateId={activeTab.key}
           subTab={activeTab.state.subTab}
           onSubTabChange={changeSubTab}
+          onBack={() => activeTabId && demandTabController.closeTab(activeTabId)}
           onGateLoaded={adoptTitle}
         />
       ) : (

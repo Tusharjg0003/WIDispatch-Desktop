@@ -8,7 +8,7 @@ import "./ProductionCapacityChart.css";
 
 const getStatusColor = (status) => {
   switch (status) {
-    case "approved": return "#10b981";
+    case "approved": return "#6fa300";
     case "submitted":
     case "revised": return "#3b82f6";
     case "under_revision": return "#f59e0b";
@@ -53,7 +53,7 @@ export default function ProductionCapacityChart({ plant, plantId, bundle }) {
 
   const showCapacityLine = !!plantId && !!contractedCapacity;
   const legendItems = [
-    { label: "Delivered", color: "#10b981", kind: "line" },
+    { label: "Delivered", color: "#6fa300", kind: "line" },
     { label: "Requested", color: "#6366f1", kind: "dashed" },
     ...(showCapacityLine ? [{ label: "Available Capacity", color: "#f59e0b", kind: "line" }] : []),
     ...(showCapacityLine ? [{ label: "Capacity Lost", color: "#f59e0b", kind: "area" }] : []),
@@ -81,10 +81,10 @@ export default function ProductionCapacityChart({ plant, plantId, bundle }) {
     <div className="cap-chart">
       <ResponsiveContainer width="100%" height={400}>
         <ComposedChart data={chartData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-          <XAxis dataKey="date" tick={{ fill: "#4b5563", fontSize: 11 }} interval={6} />
-          <YAxis ticks={yTicks} tick={{ fill: "#4b5563", fontSize: 11 }} tickFormatter={(v) => v.toLocaleString()} width={80}
-            label={{ value: "Production (m³)", angle: -90, position: "insideLeft", fill: "#4b5563", fontSize: 11 }} />
+          <CartesianGrid strokeDasharray="3 3" stroke="#d9e4ec" vertical={false} />
+          <XAxis dataKey="date" tick={{ fill: "#607d91", fontSize: 11 }} interval={6} />
+          <YAxis ticks={yTicks} tick={{ fill: "#607d91", fontSize: 11 }} tickFormatter={(v) => v.toLocaleString()} width={80}
+            label={{ value: "Production (m³)", angle: -90, position: "insideLeft", fill: "#607d91", fontSize: 11 }} />
           <Tooltip content={({ active, label }) => {
             if (!active) return null;
             const d = chartData.find((p) => p.date === label);
@@ -92,14 +92,14 @@ export default function ProductionCapacityChart({ plant, plantId, bundle }) {
             return (
               <div className="cap-tip">
                 <p className="cap-tip__title">{label}</p>
-                {d.effectiveCapacity !== undefined && <p style={{ color: "#b45309", fontWeight: 600 }}>Available Capacity: {d.effectiveCapacity.toLocaleString()} m³</p>}
+                {d.effectiveCapacity !== undefined && <p style={{ color: "#a32e0b", fontWeight: 600 }}>Available Capacity: {d.effectiveCapacity.toLocaleString()} m³</p>}
                 {d.required !== null && <p style={{ color: getStatusColor(d.requiredStatus) }}>Requested: {d.required.toLocaleString()} m³ ({d.requiredStatus || "pending"})</p>}
                 {d.actual !== null && <p style={{ color: getStatusColor(d.actualStatus) }}>Delivered: {d.actual.toLocaleString()} m³ ({d.actualStatus || "pending"})</p>}
-                {contractedCapacity && <p style={{ color: "#b45309", opacity: 0.85 }}>Contracted: {contractedCapacity.toLocaleString()} m³</p>}
+                {contractedCapacity && <p style={{ color: "#a32e0b", opacity: 0.85 }}>Contracted: {contractedCapacity.toLocaleString()} m³</p>}
                 {designCapacity && <p style={{ color: "#7c3aed" }}>Design: {designCapacity.toLocaleString()} m³</p>}
                 {maximumCapacity && <p style={{ color: "#0891b2" }}>Maximum: {maximumCapacity.toLocaleString()} m³</p>}
-                {d.maintenanceLoss > 0 && <p style={{ color: "#d97706" }}>Maintenance Loss: {d.maintenanceLoss.toLocaleString()} m³</p>}
-                {d.outageLoss > 0 && <p style={{ color: "#dc2626" }}>Outage Loss ({d.outageIsActual ? "actual" : "estimated"}): {d.outageLoss.toLocaleString()} m³</p>}
+                {d.maintenanceLoss > 0 && <p style={{ color: "#c4380f" }}>Maintenance Loss: {d.maintenanceLoss.toLocaleString()} m³</p>}
+                {d.outageLoss > 0 && <p style={{ color: "#c11b1b" }}>Outage Loss ({d.outageIsActual ? "actual" : "estimated"}): {d.outageLoss.toLocaleString()} m³</p>}
                 {d.qualityMarker !== null && <p className="cap-tip__flag">⚠ Out-of-spec quality recorded</p>}
               </div>
             );
@@ -115,7 +115,7 @@ export default function ProductionCapacityChart({ plant, plantId, bundle }) {
           <ReferenceLine x={format(new Date(), "MMM dd")} stroke="#111827" strokeWidth={2} strokeDasharray="2 4"
             label={{ value: "Today", fill: "#111827", fontSize: 11, fontWeight: 700, position: "insideTopRight" }} />
 
-          {showCapacityLine && <ReferenceLine y={contractedCapacity} stroke="#f59e0b" strokeWidth={2} strokeDasharray="6 3" label={{ value: "Contracted", fill: "#b45309", fontSize: 11, position: "insideTopRight" }} />}
+          {showCapacityLine && <ReferenceLine y={contractedCapacity} stroke="#f59e0b" strokeWidth={2} strokeDasharray="6 3" label={{ value: "Contracted", fill: "#a32e0b", fontSize: 11, position: "insideTopRight" }} />}
           {!!plantId && !!designCapacity && <ReferenceLine y={designCapacity} stroke="#8b5cf6" strokeWidth={2} strokeDasharray="3 3" label={{ value: "Design", fill: "#7c3aed", fontSize: 11, position: "insideTopRight" }} />}
           {!!plantId && !!maximumCapacity && <ReferenceLine y={maximumCapacity} stroke="#06b6d4" strokeWidth={2} strokeDasharray="3 3" label={{ value: "Maximum", fill: "#0891b2", fontSize: 11, position: "insideTopRight" }} />}
 
@@ -124,7 +124,7 @@ export default function ProductionCapacityChart({ plant, plantId, bundle }) {
           {showCapacityLine && <Line type="monotone" dataKey="effectiveCapacity" stroke="#f59e0b" strokeWidth={3} dot={{ fill: "#f59e0b", r: 3 }} activeDot={{ r: 5 }} name="Available Capacity" isAnimationActive={false} />}
 
           <Line type="monotone" dataKey="required" stroke="#6366f1" strokeWidth={2} strokeDasharray="5 3" dot={renderStatusDot("#6366f1")} activeDot={{ r: 5 }} name="Requested" connectNulls={false} />
-          <Line type="monotone" dataKey="actual" stroke="#10b981" strokeWidth={2} dot={renderStatusDot("#10b981")} activeDot={{ r: 5 }} name="Delivered" connectNulls={false} />
+          <Line type="monotone" dataKey="actual" stroke="#6fa300" strokeWidth={2} dot={renderStatusDot("#6fa300")} activeDot={{ r: 5 }} name="Delivered" connectNulls={false} />
           <Scatter dataKey="qualityMarker" fill="#ef4444" shape="diamond" name="Out-of-Spec Quality" isAnimationActive={false} />
         </ComposedChart>
       </ResponsiveContainer>

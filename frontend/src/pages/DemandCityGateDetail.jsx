@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
+import { ArrowLeft } from "lucide-react";
 import { fetchCityGateBundle } from "../api/demand";
+import { StatusBadge } from "../components/ui/WorkspacePrimitives";
 import DemandOverview from "../components/demand/DemandOverview";
 import DemandInputTable from "../components/demand/DemandInputTable";
 import QualityRecordList from "../components/production/QualityRecordList";
@@ -20,6 +22,7 @@ export default function DemandCityGateDetail({
   subTab = "overview",
   onSubTabChange,
   onGateLoaded,
+  onBack,
 }) {
   const [bundle, setBundle] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -50,11 +53,16 @@ export default function DemandCityGateDetail({
 
   return (
     <div className="ppd demand-detail">
-      <header className="ppd__head">
-        <div>
-          <h1 className="ppd__name">{cityGate?.name || gateId}</h1>
-          <p className="ppd__meta">{[cityGate?.asset_type, cityGate?.region, "View only"].filter(Boolean).join(" · ")}</p>
-        </div>
+      <header className="ppd__identity">
+        {onBack && (
+          <button type="button" className="ppd__back" onClick={onBack} title="Back to City Gates" aria-label="Back to City Gates">
+            <ArrowLeft size={16} />
+          </button>
+        )}
+        <h1 className="ppd__name">{cityGate?.name || gateId}</h1>
+        {cityGate?.status && <StatusBadge status={cityGate.status} />}
+        {cityGate?.external_id && <span className="ppd__extid mono">{cityGate.external_id}</span>}
+        <span className="ppd__meta">{[cityGate?.asset_type, cityGate?.entity, [cityGate?.region, cityGate?.city].filter(Boolean).join(" / ")].filter(Boolean).join(" · ")}</span>
       </header>
 
       {loading && <div className="ppd__state">Loading city gate…</div>}

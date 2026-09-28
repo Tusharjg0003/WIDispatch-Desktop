@@ -27,8 +27,8 @@ const STATUS_BORDER = {
   under_construction: "#f59e0b",
   "under-construction": "#f59e0b",
   maintenance: "#f59e0b",
-  operational: "#10b981",
-  "in-operation": "#10b981",
+  operational: "#6fa300",
+  "in-operation": "#6fa300",
   decommissioned: "#ef4444",
   inactive: "#d1d5db",
 };

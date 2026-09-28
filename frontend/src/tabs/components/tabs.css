@@ -5,8 +5,8 @@
   align-items: flex-end;
   gap: 2px;
   padding: 4px 8px 0;
-  background: var(--light-bg-subtle, #f8fafc);
-  border-bottom: 1px solid var(--light-border, #e2e8f0);
+  background: var(--light-bg-subtle, #f3f8fb);
+  border-bottom: 1px solid var(--light-border, #d2e0ea);
   min-height: 32px;
   width: 100%;
   box-sizing: border-box;
@@ -32,7 +32,7 @@
   border-bottom: none;
   border-radius: 6px 6px 0 0;
   background: transparent;
-  color: #57606a;
+  color: #5d7f96;
   font-size: 0.6875rem;
   font-weight: 600;
   white-space: nowrap;
@@ -42,13 +42,13 @@
 .tab:hover {
   background: #ffffff;
   border-color: #dbe3ee;
-  color: #24292f;
+  color: #003057;
 }
 
 .tab--active {
   background: #ffffff;
   border-color: #93c5fd;
-  color: #1d4ed8;
+  color: #16407a;
   box-shadow: 0 -1px 3px rgba(15, 23, 42, 0.06);
 }
 
@@ -101,7 +101,7 @@
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #64748b;
+  background: #5d7f96;
   flex: none;
 }
 
@@ -114,7 +114,7 @@
 }
 
 .tab__warn {
-  color: #dc2626;
+  color: #c11b1b;
   font-weight: 800;
   flex: none;
 }
@@ -143,8 +143,8 @@
 }
 
 .tab__close:hover {
-  background: #fee2e2;
-  color: #b91c1c;
+  background: #fbeaea;
+  color: #a31616;
   opacity: 1;
 }
 
@@ -155,7 +155,7 @@
   border: 1px solid #93c5fd;
   border-radius: 4px;
   background: #ffffff;
-  color: #1e293b;
+  color: #003057;
   font: inherit;
 }
 
@@ -169,7 +169,7 @@
   border: 1px solid transparent;
   border-radius: 5px;
   background: none;
-  color: #57606a;
+  color: #5d7f96;
   font-size: 1rem;
   line-height: 1;
   cursor: pointer;
@@ -179,12 +179,12 @@
 .tab-strip__new:hover {
   background: #ffffff;
   border-color: #dbe3ee;
-  color: #1d4ed8;
+  color: #16407a;
 }
 
 .tab-strip--failed {
   padding: 6px 10px;
-  color: #b91c1c;
+  color: #a31616;
   font-size: 0.6875rem;
 }
 
@@ -207,15 +207,15 @@
   border: none;
   border-radius: 5px;
   background: none;
-  color: #24292f;
+  color: #003057;
   font-size: 0.75rem;
   text-align: left;
   cursor: pointer;
 }
 
 .tab-menu__item:hover:not(:disabled) {
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: #e9f1f9;
+  color: #16407a;
 }
 
 .tab-menu__item:disabled {
@@ -224,12 +224,12 @@
 }
 
 .tab-menu__item--danger:hover:not(:disabled) {
-  background: #fee2e2;
-  color: #b91c1c;
+  background: #fbeaea;
+  color: #a31616;
 }
 
 .tab-menu__separator {
   height: 1px;
   margin: 4px 2px;
-  background: #e2e8f0;
+  background: #d2e0ea;
 }

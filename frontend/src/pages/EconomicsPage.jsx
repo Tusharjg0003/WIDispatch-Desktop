@@ -69,6 +69,7 @@ export default function EconomicsPage() {
           plantId={activeTab.key}
           subTab={activeTab.state.subTab}
           onSubTabChange={changeSubTab}
+          onBack={() => activeTabId && economicsTabController.closeTab(activeTabId)}
           onPlantLoaded={adoptTitle}
         />
       ) : (

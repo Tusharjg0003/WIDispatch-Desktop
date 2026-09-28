@@ -19,6 +19,8 @@ import { transmissionTabController } from "../transmission/tabs/transmissionTabC
 import { useTabShortcuts } from "../tabs/hooks/useTabShortcuts";
 import TransmissionPumpStationDetail from "./TransmissionPumpStationDetail";
 import { StatusBadge } from "../components/ui/WorkspacePrimitives";
+import AssetMapView from "../components/AssetMapView";
+import { List as ListIcon, Map as MapIcon, Search as SearchIcon } from "lucide-react";
 import "./ProductionPlantList.css";
 import "./TransmissionPage.css";
 
@@ -248,9 +250,9 @@ export default function TransmissionPage({ mode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [query, setQuery] = useState("");
-  const [status, setStatus] = useState("");
   const [entity, setEntity] = useState("");
   const [region, setRegion] = useState("");
+  const [view, setView] = useState("list");
   const [systems, setSystems] = useState([]);
   const [systemsLoading, setSystemsLoading] = useState(true);
   const [systemsError, setSystemsError] = useState(null);
@@ -334,16 +336,18 @@ export default function TransmissionPage({ mode }) {
     return () => { alive = false; };
   }, []);
 
+  const operationalStations = useMemo(
+    () => stations.filter((station) => String(station.status || "").toLowerCase() === "operational"),
+    [stations]
+  );
   const filterOptions = useMemo(() => ({
-    statuses: uniqSorted(stations.map((station) => station.status)),
-    entities: uniqSorted(stations.map((station) => station.entity)),
-    regions: uniqSorted(stations.map((station) => station.region)),
-  }), [stations]);
+    entities: uniqSorted(operationalStations.map((station) => station.entity)),
+    regions: uniqSorted(operationalStations.map((station) => station.region)),
+  }), [operationalStations]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return stations.filter((station) => {
-      if (status && station.status !== status) return false;
+    return operationalStations.filter((station) => {
       if (entity && station.entity !== entity) return false;
       if (region && station.region !== region) return false;
       if (!q) return true;
@@ -351,7 +355,7 @@ export default function TransmissionPage({ mode }) {
         .filter(Boolean)
         .some((field) => field.toLowerCase().includes(q));
     });
-  }, [stations, query, status, entity, region]);
+  }, [operationalStations, query, entity, region]);
 
   const filteredSystems = useMemo(() => {
     const q = systemsQuery.trim().toLowerCase();
@@ -821,48 +825,50 @@ export default function TransmissionPage({ mode }) {
               pumpStationId={activeTab.key}
               subTab={activeTab.state.subTab}
               onSubTabChange={changeSubTab}
+              onBack={() => activeTabId && transmissionTabController.closeTab(activeTabId)}
               onPumpStationLoaded={adoptTitle}
             />
           ) : (
-            <>
-              <header className="ppl__head">
-                <input
-                  className="ppl__search"
-                  placeholder="Search pump stations by name, ID, city, region, entity…"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                />
-                <select className="ppl__filter" aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value)}>
-                  <option value="">All Statuses</option>
-                  {filterOptions.statuses.map((item) => <option key={item} value={item}>{item}</option>)}
-                </select>
-                <select className="ppl__filter" aria-label="Entity" value={entity} onChange={(e) => setEntity(e.target.value)}>
-                  <option value="">All Entities</option>
-                  {filterOptions.entities.map((item) => <option key={item} value={item}>{item}</option>)}
-                </select>
-                <select className="ppl__filter" aria-label="Region" value={region} onChange={(e) => setRegion(e.target.value)}>
-                  <option value="">All Regions</option>
-                  {filterOptions.regions.map((item) => <option key={item} value={item}>{item}</option>)}
-                </select>
+            <div className="ppl__panel">
+              <header className="ppl__toolbar-row">
+                <label className="ppl__search-wrap">
+                  <SearchIcon size={14} />
+                  <input
+                    className="ppl__search"
+                    aria-label="Search pump stations"
+                    placeholder="Search location, asset ID, name, entity…"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                  />
+                </label>
+                <span className="ppl__result-count">{filtered.length} of {operationalStations.length} operational stations</span>
+                <div className="ppl__viewtoggle" role="group" aria-label="View mode">
+                  <button type="button" className={view === "list" ? "is-active" : ""} onClick={() => setView("list")}><ListIcon size={13} /> List</button>
+                  <button type="button" className={view === "map" ? "is-active" : ""} onClick={() => setView("map")}><MapIcon size={13} /> Map</button>
+                </div>
               </header>
 
               {loading && <div className="ppl__state">Loading pump stations…</div>}
               {error && <div className="ppl__state ppl__state--err">Failed to load pump stations: {error}</div>}
 
-              {!loading && !error && (
+              {!loading && !error && view === "map" && (
+                <div className="ppl__map"><AssetMapView assets={filtered} onView={openPumpStation} onEdit={openPumpStation} /></div>
+              )}
+
+              {!loading && !error && view === "list" && (
                 <div className="ppl__table-wrap">
                   <table className="ppl__table">
                     <thead>
                       <tr>
                         <th>Asset ID</th>
                         <th>Pump Station Name</th>
-                        <th>Entity</th>
-                        <th>Region</th>
+                        <th><select className="ppl__head-select" aria-label="Entity" value={entity} onChange={(e) => setEntity(e.target.value)}><option value="">Entity: All</option>{filterOptions.entities.map((item) => <option key={item} value={item}>{item}</option>)}</select></th>
+                        <th><select className="ppl__head-select" aria-label="Region" value={region} onChange={(e) => setRegion(e.target.value)}><option value="">Region: All</option>{filterOptions.regions.map((item) => <option key={item} value={item}>{item}</option>)}</select></th>
                         <th>Status</th>
-                        <th>Commissioning Date</th>
-                        <th>Decommissioning Date</th>
-                        <th className="ta-r">Functional Pumps</th>
-                        <th className="ta-r">Backup Pumps</th>
+                        <th>Commissioning</th>
+                        <th>Decommissioning</th>
+                        <th className="ta-r">Active Pumps</th>
+                        <th className="ta-r">Standby Pumps</th>
                         <th className="ta-r">Design Capacity (m³/day)</th>
                       </tr>
                     </thead>
@@ -886,14 +892,14 @@ export default function TransmissionPage({ mode }) {
                       ))}
                       {filtered.length === 0 && (
                         <tr>
-                          <td colSpan={10} className="ppl__empty">No pump stations match your filters.</td>
+                          <td colSpan={10} className="ppl__empty">No pump stations found matching your criteria.</td>
                         </tr>
                       )}
                     </tbody>
                   </table>
                 </div>
               )}
-            </>
+            </div>
           )}
         </>
       )}

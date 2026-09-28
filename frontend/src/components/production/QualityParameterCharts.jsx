@@ -26,9 +26,9 @@ export default function QualityParameterCharts({ plantId, bundle }) {
             </div>
             <ResponsiveContainer width="100%" height={180}>
               <LineChart data={series} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#4b5563" }} interval="preserveStartEnd" minTickGap={24} />
-                <YAxis tick={{ fontSize: 10, fill: "#4b5563" }} width={40} />
+                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#d9e4ec" />
+                <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#607d91" }} interval="preserveStartEnd" minTickGap={24} />
+                <YAxis tick={{ fontSize: 10, fill: "#607d91" }} width={40} />
                 {lim.min != null && lim.max != null && <ReferenceArea y1={lim.min} y2={lim.max} fill="#34d399" fillOpacity={0.12} stroke="none" />}
                 {lim.min != null && <ReferenceLine y={lim.min} stroke="#f87171" strokeDasharray="4 3" strokeWidth={1} />}
                 {lim.max != null && <ReferenceLine y={lim.max} stroke="#f87171" strokeDasharray="4 3" strokeWidth={1} />}
@@ -39,7 +39,7 @@ export default function QualityParameterCharts({ plantId, bundle }) {
                   return (
                     <div className="qp-tip">
                       <div className="qp-tip__title">{String(lbl)}</div>
-                      <div style={{ color: bad ? "#dc2626" : color }}>{label}: {v != null ? `${v} ${unit}` : "—"} {bad ? "· OUT OF SPEC" : ""}</div>
+                      <div style={{ color: bad ? "#c11b1b" : color }}>{label}: {v != null ? `${v} ${unit}` : "—"} {bad ? "· OUT OF SPEC" : ""}</div>
                     </div>
                   );
                 }} />
@@ -48,7 +48,7 @@ export default function QualityParameterCharts({ plantId, bundle }) {
                     const { cx, cy, value, index } = props;
                     if (cx == null || cy == null) return <circle key={index} r={0} fill="none" />;
                     const bad = outOfRange(value, lim);
-                    return <circle key={index} cx={cx} cy={cy} r={bad ? 4 : 2.5} fill={bad ? "#dc2626" : color} stroke={bad ? "#fff" : "none"} strokeWidth={bad ? 1 : 0} />;
+                    return <circle key={index} cx={cx} cy={cy} r={bad ? 4 : 2.5} fill={bad ? "#c11b1b" : color} stroke={bad ? "#fff" : "none"} strokeWidth={bad ? 1 : 0} />;
                   }}
                   activeDot={{ r: 5 }} />
               </LineChart>

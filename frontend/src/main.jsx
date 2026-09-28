@@ -5,6 +5,7 @@ import App from "./App.jsx";
 import { LayoutProvider } from "./contexts/LayoutContext.jsx";
 import "./index.css";
 import "./compact.css";
+import "./styles/control-room.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

@@ -90,7 +90,7 @@
 
 .rp__chip--plant_supply {
   color: var(--accent);
-  border-color: rgba(26, 74, 138, 0.28);
+  border-color: rgba(29, 79, 145, 0.28);
   background: var(--accent-soft);
 }
 
@@ -106,8 +106,8 @@
   margin: 4px 2px 0;
   padding: 8px 12px;
   border-left: 3px solid #cbd5e1;
-  background: #f8fafc;
-  color: #64748b;
+  background: #f3f8fb;
+  color: #5d7f96;
   font-size: 11px;
   line-height: 1.5;
   border-radius: 0 6px 6px 0;
