@@ -15,26 +15,26 @@
 }
 
 .tpsd__card {
-  border: 1px solid #d2e0ea;
+  border: 1px solid var(--line);
   border-radius: 2px;
-  background: #ffffff;
+  background: var(--panel);
 }
 
 .tpsd__card-head {
   padding: 10px 12px;
-  border-bottom: 1px solid #d2e0ea;
+  border-bottom: 1px solid var(--line);
 }
 
 .tpsd__card-head h2 {
   margin: 0;
-  color: #111827;
+  color: var(--tx1);
   font-size: 0.95rem;
   font-weight: 700;
 }
 
 .tpsd__card-head p {
   margin: 2px 0 0;
-  color: #6b7280;
+  color: var(--mut);
   font-size: 0.72rem;
 }
 
@@ -50,7 +50,7 @@
 }
 
 .tpsd__label {
-  color: #6b7280;
+  color: var(--mut);
   font-size: 0.6rem;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -59,7 +59,7 @@
 
 .tpsd__value {
   margin-top: 2px;
-  color: #111827;
+  color: var(--tx1);
   font-size: 0.82rem;
 }
 
@@ -76,15 +76,15 @@
 .tpsd__table th,
 .tpsd__table td {
   padding: 8px 12px;
-  border-bottom: 1px solid #e5e7eb;
-  color: #111827;
+  border-bottom: 1px solid var(--line);
+  color: var(--tx1);
   text-align: left;
   vertical-align: middle;
 }
 
 .tpsd__table thead th {
-  color: #111827;
-  background: #f3f8fb;
+  color: var(--tx1);
+  background: var(--panel2);
   font-size: 0.64rem;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -97,7 +97,7 @@
 
 .tpsd__empty {
   padding: 16px;
-  color: #6b7280;
+  color: var(--mut);
   text-align: center;
 }
 

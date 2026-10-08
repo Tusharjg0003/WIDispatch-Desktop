@@ -6,7 +6,7 @@
 // data that is in practice always empty, so only the Canvas tab exercises it
 // with real numbers.
 
-export const TRACE_CLASSES = "trace-root trace-up trace-down trace-up-edge trace-down-edge trace-dim";
+export const TRACE_CLASSES = "trace-root trace-up trace-down trace-shared trace-up-edge trace-down-edge trace-shared-edge trace-dim";
 
 export const edgeSpec = (edge) => edge.data("meta")?.specifications || {};
 

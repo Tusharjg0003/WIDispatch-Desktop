@@ -10,7 +10,7 @@ import cytoscape from "cytoscape";
 
 import { addGraph } from "../../cytoscape/graph.js";
 import { restoreBendClasses } from "../../cytoscape/bendEditing.js";
-import { buildCyStyle } from "../../cytoscape/buildCyStyle.js";
+import { bindCyTheme, buildCyStyle } from "../../cytoscape/buildCyStyle.js";
 import { snapshotElements } from "./canvasSnapshotSerializer.ts";
 import { SNAPSHOT_VERSION } from "../persistence/canvasSnapshot.types.ts";
 import type { CanvasSnapshot } from "../persistence/canvasSnapshot.types.ts";
@@ -40,6 +40,7 @@ export interface CanvasControllerApi {
 export class CanvasController implements CanvasControllerApi {
   #cy: cytoscape.Core | null = null;
   #restoring = false;
+  #unbindTheme: () => void = () => {};
 
   initialize(container: HTMLElement): cytoscape.Core {
     if (this.#cy) this.destroy();
@@ -56,10 +57,14 @@ export class CanvasController implements CanvasControllerApi {
       boxSelectionEnabled: true, // shift-drag box-selects; plain drag pans
       wheelSensitivity: 0.2,
     });
+    // Re-skin the canvas when the light/dark theme switches.
+    this.#unbindTheme = bindCyTheme(this.#cy);
     return this.#cy;
   }
 
   destroy(): void {
+    this.#unbindTheme();
+    this.#unbindTheme = () => {};
     this.#cy?.destroy();
     this.#cy = null;
     this.#restoring = false;

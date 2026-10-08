@@ -1,0 +1,12 @@
+{
+  "slide_count": 84,
+  "original_slides_preserved": 78,
+  "new_introductions": 6,
+  "source_sha256": "b4f7a574f63a3837310235574f0e2aa0e887d25aa683e0b7cec5942142e1f1c2",
+  "final_sha256": "4d2424e0fb295b4b44b68d1f4e47d52960ba3aaded87390a1828872ae704b187",
+  "checks": [
+    "original slide text, notes and image hashes preserved",
+    "six introduction headings and transition notes present",
+    "all page numbers sequential"
+  ]
+}

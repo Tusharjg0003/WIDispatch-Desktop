@@ -7,7 +7,7 @@ export const QUALITY_PARAMS = [
   { key: "temperature", label: "Temperature", unit: "°C", color: "#ea580c" },
   { key: "residual_chlorine", label: "Chlorine", unit: "mg/L", color: "#0891b2" },
   { key: "conductivity", label: "Conductivity", unit: "µS/cm", color: "#6fa300" },
-  { key: "tds", label: "TDS", unit: "mg/L", color: "#1d4f91" },
+  { key: "tds", label: "TDS", unit: "mg/L", color: "var(--chart-output)" },
 ];
 
 export function buildQualitySeries(qualityRecords, plantId) {

@@ -17,6 +17,9 @@ export function LayoutProvider({ children }) {
   const [toolbar, setToolbar] = useState(null);
   const [sidebar, setSidebarState] = useState({ content: null, title: null });
   const [sidebarVisible, setSidebarVisible] = useState(true);
+  // Status-bar metrics published by the active page (Production StatusBar
+  // style): { left: [{ label, value, tone }], right: [{ label, value }] }.
+  const [statusItems, setStatusItems] = useState(null);
 
   // Mirrors the reference API: setSidebar(content, title).
   const setSidebar = useCallback((content, title = null) => {
@@ -35,8 +38,10 @@ export function LayoutProvider({ children }) {
       setSidebar,
       sidebarVisible,
       toggleSidebar,
+      statusItems,
+      setStatusItems,
     }),
-    [toolbar, sidebar, setSidebar, sidebarVisible, toggleSidebar]
+    [toolbar, sidebar, setSidebar, sidebarVisible, toggleSidebar, statusItems]
   );
 
   return (

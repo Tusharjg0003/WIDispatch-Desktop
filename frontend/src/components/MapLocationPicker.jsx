@@ -74,7 +74,7 @@ export default function MapLocationPicker({
           <CircleMarker
             center={[lat, lng]}
             radius={7}
-            pathOptions={{ color: "#567cff", fillColor: "#567cff", fillOpacity: 0.9, weight: 2 }}
+            pathOptions={{ color: "var(--acc)", fillColor: "var(--acc)", fillOpacity: 0.9, weight: 2 }}
           />
         )}
       </MapContainer>

@@ -3,6 +3,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { MapContainer, Marker, Polyline, TileLayer, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import { ENTITY_TYPE_COLORS } from "../../cytoscape/buildCyStyle";
+import { useThemeColors } from "../../lib/useCssVar";
 import "./NetworkCanvasMapView.css";
 
 // Geographic view of the Network Builder canvas. Ported from the reference
@@ -45,6 +46,7 @@ function MapRouteClick({ active, onVertex }) {
 export default function NetworkCanvasMapView({
   nodes = [], edges = [], status, readOnly = false, onMoveNode, onCreateRoute,
 }) {
+  const themeColors = useThemeColors();
   const [drawing, setDrawing] = useState(false);
   const [draft, setDraft] = useState({ sourceId: null, steps: [] });
   const byId = useMemo(() => new Map(nodes.map((node) => [node.id, node])), [nodes]);
@@ -103,11 +105,11 @@ export default function NetworkCanvasMapView({
           <FitGeography nodes={nodes} />
           <MapRouteClick active={drawing && Boolean(draft.sourceId)} onVertex={(step) => setDraft((value) => ({ ...value, steps: [...value.steps, step] }))} />
           {edges.map((edge) => edge.positions.length >= 2 && (
-            <Polyline key={edge.id} positions={edge.positions} pathOptions={{ color: "#1d4f91", weight: 4, opacity: 0.78 }}>
+            <Polyline key={edge.id} positions={edge.positions} pathOptions={{ color: themeColors.acc, weight: 4, opacity: 0.78 }}>
               <Tooltip sticky>{edge.name || edge.id}</Tooltip>
             </Polyline>
           ))}
-          {draftPositions.length > 1 && <Polyline positions={draftPositions} pathOptions={{ color: "#f97316", weight: 3, dashArray: "8 6" }} />}
+          {draftPositions.length > 1 && <Polyline positions={draftPositions} pathOptions={{ color: themeColors.warn, weight: 3, dashArray: "8 6" }} />}
           {nodes.map((node) => (
             <Marker
               key={node.id}

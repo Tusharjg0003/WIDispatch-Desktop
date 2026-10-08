@@ -1,0 +1,154 @@
+{
+  "schemaVersion": "presentation-finalization.v1",
+  "finalSha256": "4d2424e0fb295b4b44b68d1f4e47d52960ba3aaded87390a1828872ae704b187",
+  "byteCount": 7055702,
+  "packageIntegrity": {
+    "chart_count": 0,
+    "claim_boundary": "Structural package checks only; no slide text, notes, formulas, chart values, or native PowerPoint execution were inspected.",
+    "finding_count": 0,
+    "findings": [],
+    "notes_parts_skipped": 84,
+    "relationship_part_count": 173,
+    "slide_count": 84,
+    "status": "pass",
+    "exitCode": 0,
+    "findingCount": 0,
+    "warnings": []
+  },
+  "presentationLayout": {
+    "finding_count": 0,
+    "findings": [],
+    "font_policy": {
+      "checked_text_script_count": 820,
+      "native_font_rendering_verified": false,
+      "observed_font_families": [
+        "Arial"
+      ],
+      "observed_font_use_counts": {
+        "Arial": 820
+      },
+      "passed": true,
+      "performed": true
+    },
+    "slide_count": 84,
+    "slide_size_in": [
+      16.6667,
+      9.375
+    ],
+    "warning_count": 0,
+    "warnings": [],
+    "exitCode": 0,
+    "findingCount": 0,
+    "fontPolicy": {
+      "checked_text_script_count": 820,
+      "native_font_rendering_verified": false,
+      "observed_font_families": [
+        "Arial"
+      ],
+      "observed_font_use_counts": {
+        "Arial": 820
+      },
+      "passed": true,
+      "performed": true
+    }
+  },
+  "fontSelection": {
+    "basis": "reference",
+    "approvedFamilies": [
+      "Arial"
+    ],
+    "scriptFonts": {},
+    "referenceSha256": "b4f7a574f63a3837310235574f0e2aa0e887d25aa683e0b7cec5942142e1f1c2",
+    "referenceFontsVerifiedInEncodedText": true,
+    "checked_text_script_count": 820,
+    "native_font_rendering_verified": false,
+    "observed_font_families": [
+      "Arial"
+    ],
+    "observed_font_use_counts": {
+      "Arial": 820
+    },
+    "passed": true,
+    "performed": true
+  },
+  "firstPartyImport": {
+    "performed": true,
+    "passed": true,
+    "slideCount": 84,
+    "sha256": "4d2424e0fb295b4b44b68d1f4e47d52960ba3aaded87390a1828872ae704b187",
+    "runtimeNodeModules": "C:/Users/mabdu/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules",
+    "nodeExecutable": "C:\\Users\\mabdu\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe"
+  },
+  "nativeTableArithmetic": {
+    "performed": true,
+    "checked_column_count": 0,
+    "checks": [],
+    "claim_boundary": "Displayed-value arithmetic with rounding tolerance; not source-data verification.",
+    "eligible_table_count": 0,
+    "finding_count": 0,
+    "findings": [],
+    "native_table_count": 3,
+    "passed": true,
+    "schema_version": "presentation-native-table-arithmetic.v1",
+    "skipped_tables": [
+      {
+        "reason": "no_numeric_amounts",
+        "slide": 74,
+        "table": 1
+      },
+      {
+        "reason": "no_numeric_amounts",
+        "slide": 82,
+        "table": 1
+      },
+      {
+        "reason": "no_numeric_amounts",
+        "slide": 83,
+        "table": 1
+      }
+    ],
+    "slide_count": 84,
+    "warning_count": 0,
+    "warnings": []
+  },
+  "nativeChartTitles": {
+    "performed": true,
+    "checks": [],
+    "finding_count": 0,
+    "findings": [],
+    "native_chart_count": 0,
+    "native_powerpoint_verified": false,
+    "passed": true,
+    "presentation_sha256": "4d2424e0fb295b4b44b68d1f4e47d52960ba3aaded87390a1828872ae704b187",
+    "schema_version": "presentation-native-chart-titles.v1",
+    "slide_count": 84,
+    "source_text_emitted": false,
+    "unresolved_linked_title_count": 0
+  },
+  "sourceDerivedPolicyFlags": [
+    "--expected-slide-size-emu",
+    "15240000,8572500",
+    "--validate-bullet-geometry",
+    "--validate-heading-fit",
+    "--require-native-table-slide",
+    "74",
+    "--require-native-table-slide",
+    "82",
+    "--require-native-table-slide",
+    "83",
+    "--cover-role",
+    "none",
+    "--expected-slide-count",
+    "84",
+    "--approved-font-family",
+    "Arial"
+  ],
+  "nativeChartValidation": {
+    "detectedOwnerSlides": [],
+    "detectedChartCount": 0,
+    "targetApplication": null,
+    "sourceChartOwnersExplicitlyDeclared": false,
+    "validatorRan": false,
+    "passed": true
+  }
+}

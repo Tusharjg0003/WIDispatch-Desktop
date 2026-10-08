@@ -7,19 +7,19 @@
   gap: 4px;
   height: 26px;
   padding: 0 8px;
-  border: 1px solid #d2e0ea;
+  border: 1px solid var(--line);
   border-radius: 2px;
-  background: #fff;
-  color: #111827;
+  background: var(--panel);
+  color: var(--tx1);
   font-size: 0.72rem;
   font-weight: 700;
   cursor: pointer;
 }
-.mrl__approval-btn--accept { border-color: #86efac; color: #166534; }
-.mrl__approval-btn--reject { border-color: #fca5a5; color: #991b1b; }
+.mrl__approval-btn--accept { border-color: var(--ok-border); color: var(--okTx); }
+.mrl__approval-btn--reject { border-color: var(--err-border); color: var(--errTx); }
 .mrl__approval-btn:disabled { opacity: 0.45; cursor: not-allowed; }
-.mrl__error { color: #991b1b; font-size: 0.74rem; font-weight: 700; }
-.mrl .prod-table .empty { text-align: center; color: #6b7280; padding: 16px; }
+.mrl__error { color: var(--errTx); font-size: 0.74rem; font-weight: 700; }
+.mrl .prod-table .empty { text-align: center; color: var(--mut); padding: 16px; }
 /* prod-badge--draft/under_revision aren't defined in ProductionInputTable.css; add neutral fallback */
-.prod-badge--draft, .prod-badge--revised { background: #f3f4f6; border-color: #d1d5db; color: #374151; }
-.prod-badge--pending { background: #f3f4f6; border-color: #d1d5db; color: #374151; }
+.prod-badge--draft, .prod-badge--revised { background: var(--panel2); border-color: var(--line2); color: var(--tx2); }
+.prod-badge--pending { background: var(--panel2); border-color: var(--line2); color: var(--tx2); }

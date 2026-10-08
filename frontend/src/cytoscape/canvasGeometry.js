@@ -108,3 +108,84 @@ export const pointToBendPair = (srcPos, tgtPos, point) => {
 
   return { weight, distance };
 };
+
+// ── Preferences & zoom ladder (ported from SWIIMS utils/canvasGeometry.js) ──
+
+/** localStorage key for the canvas snap-to-grid preference. */
+export const SNAP_TO_GRID_STORAGE_KEY = "widispatch_canvas_snap_to_grid";
+
+/** Discrete zoom ladder for the status-bar zoom buttons, within the canvas
+    minZoom (0.05) and maxZoom (4). */
+export const ZOOM_STOPS = [0.05, 0.1, 0.25, 0.33, 0.5, 0.67, 0.75, 1, 1.25, 1.5, 2, 3, 4];
+
+export const nextZoomStop = (level) => {
+  for (let i = 0; i < ZOOM_STOPS.length; i += 1) {
+    if (ZOOM_STOPS[i] > level + 1e-4) return ZOOM_STOPS[i];
+  }
+  return ZOOM_STOPS[ZOOM_STOPS.length - 1];
+};
+
+export const prevZoomStop = (level) => {
+  for (let i = ZOOM_STOPS.length - 1; i >= 0; i -= 1) {
+    if (ZOOM_STOPS[i] < level - 1e-4) return ZOOM_STOPS[i];
+  }
+  return ZOOM_STOPS[0];
+};
+
+// ── Polyline projection (insert-on-pipe at the clicked point) ──────────────
+
+/** Closest point to `pt` on the segment a→b, plus the parameter t in [0, 1]. */
+const projectOntoSegment = (a, b, pt) => {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len2 = dx * dx + dy * dy;
+  if (!len2) return { point: { x: a.x, y: a.y }, t: 0, distance: Math.hypot(pt.x - a.x, pt.y - a.y) };
+  let t = ((pt.x - a.x) * dx + (pt.y - a.y) * dy) / len2;
+  t = Math.max(0, Math.min(1, t));
+  const point = { x: a.x + t * dx, y: a.y + t * dy };
+  return { point, t, distance: Math.hypot(pt.x - point.x, pt.y - point.y) };
+};
+
+/**
+ * Project a point onto a polyline (a pipe with its bends). `ratio` is the
+ * fraction of total ARC LENGTH before the projected point — what makes a
+ * proportional pipeline-length split correct on a bent pipe.
+ *
+ * @returns {{ point, segmentIndex, t, ratio, totalLength, distance } | null}
+ */
+export const projectPointOntoPolyline = (points, pt) => {
+  if (!Array.isArray(points) || points.length < 2 || !pt) return null;
+  const cumulative = [0];
+  for (let i = 1; i < points.length; i += 1) {
+    cumulative.push(cumulative[i - 1] + Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y));
+  }
+  const totalLength = cumulative[cumulative.length - 1];
+  let best = null;
+  for (let i = 0; i < points.length - 1; i += 1) {
+    const hit = projectOntoSegment(points[i], points[i + 1], pt);
+    if (!best || hit.distance < best.distance) {
+      best = { ...hit, segmentIndex: i, along: cumulative[i] + hit.t * (cumulative[i + 1] - cumulative[i]) };
+    }
+  }
+  if (!best) return null;
+  return {
+    point: best.point,
+    segmentIndex: best.segmentIndex,
+    t: best.t,
+    distance: best.distance,
+    ratio: totalLength > 0 ? best.along / totalLength : 0.5,
+    totalLength,
+  };
+};
+
+/**
+ * Split a pipe's numeric length by `ratio` (0..1) into the two new legs.
+ * Non-numeric or missing lengths are left untouched (null).
+ */
+export const splitLengthByRatio = (length, ratio) => {
+  const value = Number(length);
+  if (length === "" || length == null || !Number.isFinite(value)) return [null, null];
+  const r = Math.max(0, Math.min(1, Number(ratio)));
+  const first = Math.round(value * r * 1000) / 1000;
+  return [first, Math.round((value - first) * 1000) / 1000];
+};

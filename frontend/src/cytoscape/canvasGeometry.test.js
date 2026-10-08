@@ -91,3 +91,30 @@ test("bendPairsToPoints ignores unpaired or non-finite entries", () => {
   assert.equal(bendPairsToPoints(src, tgt, [0.5, 0.7], [10]).length, 1);
   assert.equal(bendPairsToPoints(src, tgt, [Number.NaN], [10]).length, 0);
 });
+
+import { ZOOM_STOPS, nextZoomStop, prevZoomStop, projectPointOntoPolyline, splitLengthByRatio } from "./canvasGeometry.js";
+
+test("zoom ladder: next/prev walk the stops and clamp at the ends", () => {
+  assert.equal(nextZoomStop(1), 1.25);
+  assert.equal(prevZoomStop(1), 0.75);
+  assert.equal(nextZoomStop(0.9), 1);
+  assert.equal(nextZoomStop(ZOOM_STOPS.at(-1)), ZOOM_STOPS.at(-1));
+  assert.equal(prevZoomStop(ZOOM_STOPS[0]), ZOOM_STOPS[0]);
+});
+
+test("projectPointOntoPolyline: ratio is arc length, not chord", () => {
+  // An L-shaped pipe: 100 right then 100 down. A point near the corner's
+  // downstream leg at y=50 sits 150/200 along the arc.
+  const hit = projectPointOntoPolyline([{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }], { x: 103, y: 50 });
+  assert.equal(hit.segmentIndex, 1);
+  assert.equal(hit.ratio, 0.75);
+  assert.deepEqual(hit.point, { x: 100, y: 50 });
+  assert.equal(projectPointOntoPolyline([{ x: 0, y: 0 }], { x: 1, y: 1 }), null);
+});
+
+test("splitLengthByRatio: proportional, keeps the total, ignores blanks", () => {
+  assert.deepEqual(splitLengthByRatio(10, 0.25), [2.5, 7.5]);
+  assert.deepEqual(splitLengthByRatio("12", 1 / 3), [4, 8]);
+  assert.deepEqual(splitLengthByRatio("", 0.5), [null, null]);
+  assert.deepEqual(splitLengthByRatio(undefined, 0.5), [null, null]);
+});

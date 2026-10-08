@@ -5,8 +5,8 @@
   align-items: flex-end;
   gap: 2px;
   padding: 4px 8px 0;
-  background: var(--light-bg-subtle, #f3f8fb);
-  border-bottom: 1px solid var(--light-border, #d2e0ea);
+  background: var(--light-bg-subtle, var(--panel2));
+  border-bottom: 1px solid var(--light-border, var(--line));
   min-height: 32px;
   width: 100%;
   box-sizing: border-box;
@@ -18,6 +18,9 @@
   gap: 2px;
   min-width: 0;
   overflow-x: auto;
+  /* overflow-x: auto turns overflow-y to auto too; the active tab sits 1px
+     proud of the strip, which otherwise shows a vertical scroll spinner. */
+  overflow-y: hidden;
   scrollbar-width: thin;
 }
 
@@ -32,7 +35,7 @@
   border-bottom: none;
   border-radius: 6px 6px 0 0;
   background: transparent;
-  color: #5d7f96;
+  color: var(--mut);
   font-size: 0.6875rem;
   font-weight: 600;
   white-space: nowrap;
@@ -40,15 +43,15 @@
 }
 
 .tab:hover {
-  background: #ffffff;
-  border-color: #dbe3ee;
-  color: #003057;
+  background: var(--panel);
+  border-color: var(--line);
+  color: var(--tx1);
 }
 
 .tab--active {
-  background: #ffffff;
-  border-color: #93c5fd;
-  color: #16407a;
+  background: var(--panel);
+  border-color: var(--acc-border);
+  color: var(--accTx);
   box-shadow: 0 -1px 3px rgba(15, 23, 42, 0.06);
 }
 
@@ -60,7 +63,7 @@
   right: 0;
   bottom: -1px;
   height: 1px;
-  background: #ffffff;
+  background: var(--panel);
 }
 
 .tab--dragging {
@@ -101,7 +104,7 @@
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #5d7f96;
+  background: var(--mut);
   flex: none;
 }
 
@@ -109,12 +112,12 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #f59e0b;
+  background: var(--amber);
   flex: none;
 }
 
 .tab__warn {
-  color: #c11b1b;
+  color: var(--errTx);
   font-weight: 800;
   flex: none;
 }
@@ -143,8 +146,8 @@
 }
 
 .tab__close:hover {
-  background: #fbeaea;
-  color: #a31616;
+  background: var(--err-soft);
+  color: var(--errTx);
   opacity: 1;
 }
 
@@ -152,10 +155,10 @@
   width: 130px;
   height: 19px;
   padding: 0 4px;
-  border: 1px solid #93c5fd;
+  border: 1px solid var(--acc-border);
   border-radius: 4px;
-  background: #ffffff;
-  color: #003057;
+  background: var(--panel);
+  color: var(--tx1);
   font: inherit;
 }
 
@@ -169,7 +172,7 @@
   border: 1px solid transparent;
   border-radius: 5px;
   background: none;
-  color: #5d7f96;
+  color: var(--mut);
   font-size: 1rem;
   line-height: 1;
   cursor: pointer;
@@ -177,14 +180,14 @@
 }
 
 .tab-strip__new:hover {
-  background: #ffffff;
-  border-color: #dbe3ee;
-  color: #16407a;
+  background: var(--panel);
+  border-color: var(--line);
+  color: var(--accTx);
 }
 
 .tab-strip--failed {
   padding: 6px 10px;
-  color: #a31616;
+  color: var(--errTx);
   font-size: 0.6875rem;
 }
 
@@ -194,9 +197,9 @@
   z-index: 4000;
   min-width: 190px;
   padding: 4px;
-  border: 1px solid #dbe3ee;
+  border: 1px solid var(--line);
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--panel);
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14);
 }
 
@@ -207,29 +210,29 @@
   border: none;
   border-radius: 5px;
   background: none;
-  color: #003057;
+  color: var(--tx1);
   font-size: 0.75rem;
   text-align: left;
   cursor: pointer;
 }
 
 .tab-menu__item:hover:not(:disabled) {
-  background: #e9f1f9;
-  color: #16407a;
+  background: var(--acc-soft);
+  color: var(--accTx);
 }
 
 .tab-menu__item:disabled {
-  color: #b7c0cd;
+  color: var(--mut2);
   cursor: default;
 }
 
 .tab-menu__item--danger:hover:not(:disabled) {
-  background: #fbeaea;
-  color: #a31616;
+  background: var(--err-soft);
+  color: var(--errTx);
 }
 
 .tab-menu__separator {
   height: 1px;
   margin: 4px 2px;
-  background: #d2e0ea;
+  background: var(--line);
 }

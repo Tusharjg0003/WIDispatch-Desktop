@@ -164,13 +164,18 @@ export class WorkspaceController {
     this.#interaction.cancelUnsafeInteraction();
     this.#interaction.reset();
     selectionStore.getState().clearSelection();
-    this.#history.reset();
 
     workspaceStore.getState().setActive(nextId);
 
     if (snapshot) this.#canvas.restoreSnapshot(snapshot);
     else if (doc) this.#canvas.loadDocument(doc);
     else this.#canvas.clear();
+
+    // Only after the incoming graph is on the canvas: the reset captures the
+    // current elements as the undo baseline. Resetting earlier would capture
+    // the OUTGOING graph (empty on first open, or the previous tab's network),
+    // so the first undo would wipe the load together with the user's edit.
+    this.#history.reset();
 
     this.#displayedWorkspaceId = nextId;
     workspaceStore.getState().setLoadError(nextId, loadError);

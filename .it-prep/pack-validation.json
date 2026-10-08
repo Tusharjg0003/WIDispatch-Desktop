@@ -1,0 +1,31 @@
+{
+  "date": "2026-09-29",
+  "sheets": 8,
+  "registerRows": 32,
+  "categoryCounts": {
+    "current": 7,
+    "configuration": 10,
+    "development": 15
+  },
+  "formulaErrorScan": "0 matches before export",
+  "savedFormulaResults": [
+    "Current capability",
+    7,
+    "Configuration required",
+    10,
+    "Development required",
+    15
+  ],
+  "files": [
+    {
+      "name": "WIDispatch_IT_Briefing.pptx",
+      "bytes": 74141,
+      "sha256": "a32b388333d03e71c62a0e5c5f7b70807b86abae7f779c0c1fd286f153d706dd"
+    },
+    {
+      "name": "WIDispatch_IT_Reference_and_Readiness.xlsx",
+      "bytes": 35378,
+      "sha256": "f6eeaa60a43cc992d3f68933134f813e7d039f8c4e35d2052602796badf4684c"
+    }
+  ]
+}

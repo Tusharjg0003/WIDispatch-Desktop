@@ -8,7 +8,7 @@ import {
   deleteTransmissionLine,
 } from "../api/metrics";
 import { fetchNetwork, fetchNetworks } from "../api/networks";
-import { buildCyStyle } from "../cytoscape/buildCyStyle";
+import { bindCyTheme, buildCyStyle } from "../cytoscape/buildCyStyle";
 import { applyEntitySymbol } from "../cytoscape/entitySymbol";
 import { activeFunctionalPumps, backupPumps, totalDesignCapacity } from "../lib/pumpStation";
 import { lineDisplayName, lineSystemId } from "../lib/transmissionLines";
@@ -135,6 +135,7 @@ function TransmissionSystemSnapshot({ system }) {
       userZoomingEnabled: false,
     });
     cyRef.current = cy;
+    const unbindTheme = bindCyTheme(cy);
 
     cy.batch(() => {
       graph.nodes.forEach((node) => {
@@ -176,6 +177,7 @@ function TransmissionSystemSnapshot({ system }) {
     requestAnimationFrame(fit);
 
     return () => {
+      unbindTheme();
       cy.destroy();
       if (cyRef.current === cy) cyRef.current = null;
     };

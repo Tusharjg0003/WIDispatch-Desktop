@@ -18,93 +18,262 @@
   font-display: swap;
 }
 
-:root {
-  font-family: "Wtt", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+/* ============================================================
+   WIDispatch "Control Room" theme (Revamp A)
+   Source of truth: WIDispatch-Production/app/globals.css.
+   Dark values live on :root / [data-theme="dark"] (Production default);
+   light values on [data-theme="light"]. ThemeContext sets the attribute.
+
+   Layers:
+   1. Raw design tokens   (--bg, --panel, --acc, …; both camelCase as in
+                           Production and the kebab-case aliases Desktop uses)
+   2. Theme-specific soft/derived colours (status soft fills, shadows, chart)
+   3. Theme-agnostic semantic + legacy aliases, resolved via var() so they
+      follow whichever raw set is active.
+   ============================================================ */
+
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* ---- Raw design tokens (dark) ---- */
+  --bg: #061420;
+  --bgGrad: linear-gradient(180deg, #08192a 0%, #061420 55%);
+  --panel: #0b2137;
+  --panel2: #0e2a44;
+  --panel3: #12324f;
+  --line: #17395a;
+  --line2: #21496f;
+  --line-soft: #12304b;
+  --tx1: #eef6fb;
+  --tx2: #bcd3e2;
+  --mut: #7d9cb3;
+  --mut2: #5c7d95;
+  --acc: #00a3e0;
+  --accTx: #6fd0f5;
+  --accStrong: #0088bd;
+  --ok: #97d700;
+  --okTx: #b4e34d;
+  --warn: #fa4616;
+  --warnTx: #ff9463;
+  --amber: #f5b301;
+  --amberTx: #ffd166;
+  --err: #e5484d;
+  --errTx: #f5908f;
+  --purpTx: #bfc3c3;
+  --rowHover: rgba(0, 163, 224, 0.09);
+  --rowSelected: rgba(0, 163, 224, 0.16);
+  --headBg: rgba(255, 255, 255, 0.025);
+  --chip: rgba(255, 255, 255, 0.035);
+
+  /* ---- Status soft fills / borders (Production badge colours) ---- */
+  --acc-soft: rgba(0, 163, 224, 0.14);
+  --acc-border: rgba(0, 163, 224, 0.32);
+  --ok-soft: rgba(151, 215, 0, 0.12);
+  --ok-border: rgba(151, 215, 0, 0.28);
+  --warn-soft: rgba(250, 70, 22, 0.14);
+  --warn-border: rgba(250, 70, 22, 0.32);
+  --amber-soft: rgba(245, 179, 1, 0.14);
+  --amber-border: rgba(245, 179, 1, 0.32);
+  --err-soft: rgba(229, 72, 77, 0.12);
+  --err-border: rgba(229, 72, 77, 0.3);
+  --purp-soft: rgba(137, 141, 141, 0.14);
+  --purp-border: rgba(137, 141, 141, 0.3);
+
+  /* ---- Elevation / overlays ---- */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-card: 0 5px 16px rgba(0, 0, 0, 0.28);
+  --shadow-md: 0 14px 38px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.6);
+  --overlay: rgba(2, 10, 18, 0.62);
+  --tooltip-bg: #020c16;
+  --focus-ring: 0 0 0 3px rgba(0, 163, 224, 0.4);
+  --selection-bg: rgba(0, 163, 224, 0.35);
+  --scrollbar: #21496f;
+  --skeleton: rgba(255, 255, 255, 0.06);
+
+  /* ---- Charts (Production palette) ---- */
+  --chart-1: #00a3e0;
+  --chart-2: #6fd0f5;
+  --chart-3: #97d700;
+  --chart-4: #fa4616;
+  --chart-5: #1d4f91;
+  --chart-output: #38bdf8;
+  --chart-reference: #94a3b8;
+  --chart-contracted: #2dd4bf;
+  --chart-design: #60a5fa;
+  --chart-maximum: #a5b4fc;
+  --chart-success: #a3e635;
+  --chart-warning: #fbbf24;
+  --chart-danger: #fb7185;
+  --chart-neutral: #64748b;
+  --chart-cyan: #22d3ee;
+  --chart-purple: #c084fc;
+  --chart-indigo: #818cf8;
+  --chart-grid: #1e3a52;
+  --chart-axis: #7894a9;
+
+  /* ---- Maps / logos ---- */
+  --wtco-filter: brightness(0) invert(1);
+  --map-filter: saturate(0.72) brightness(0.72) contrast(1.08);
+}
+
+[data-theme="light"] {
   color-scheme: light;
 
-  /* Production uses one font for both sans and mono. */
-  --mono: "Wtt", "JetBrains Mono", "SF Mono", Consolas, ui-monospace, monospace;
-
-  /* Light-theme tokens (used by pages migrating off the dark default,
-     e.g. HomePage). The dark rules above remain the app-wide default. */
-  --light-navy: #1d4f91;
-  --light-navy-dark: #16407a;
-  --light-bg: #ffffff;
-  --light-bg-subtle: #f3f8fb;
-  --light-border: #d2e0ea;
-  --light-ink: #003057;
-  --light-ink-dim: #5d7f96;
-
-  /* ── WIDispatch-Production "Control Room" raw tokens (LIGHT variant) ──────
-     Source of truth: WIDispatch-Production/app/globals.css `.light`. The app
-     is now fully light (nav bar white, light body) rather than dark-shell. */
+  /* ---- Raw design tokens (light) ---- */
   --bg: #eaf1f6;
-  --bg-grad: linear-gradient(180deg, #f1f6fa 0%, #eaf1f6 55%);
+  --bgGrad: linear-gradient(180deg, #f1f6fa 0%, #eaf1f6 55%);
   --panel: #ffffff;
   --panel2: #f3f8fb;
+  --panel3: #eef4fa;
+  --line: #d2e0ea;
   --line2: #b9cddc;
+  --line-soft: #e4edf3;
   --tx1: #003057;
   --tx2: #26516e;
   --mut: #5d7f96;
   --mut2: #8aa5b8;
   --acc: #1d4f91;
-  --acc-tx: #1d4f91;
-  --acc-grad: linear-gradient(135deg, #00a3e0, #1d4f91);
+  --accTx: #1d4f91;
+  --accStrong: #16407a;
   --ok: #6fa300;
-  --ok-tx: #567f00;
-  --warn-tx: #a32e0b;
+  --okTx: #567f00;
+  --warn: #c4380f;
+  --warnTx: #a32e0b;
+  --amber: #b45309;
+  --amberTx: #92400e;
   --err: #c11b1b;
-  --err-tx: #a31616;
-  --row-hover: rgba(0, 163, 224, 0.09);
-  --head-bg: rgba(0, 48, 87, 0.035);
+  --errTx: #a31616;
+  --purpTx: #5f6363;
+  --rowHover: rgba(0, 163, 224, 0.09);
+  --rowSelected: rgba(29, 79, 145, 0.1);
+  --headBg: rgba(0, 48, 87, 0.035);
   --chip: rgba(0, 48, 87, 0.045);
 
-  /* Operator workspace design system — mapped onto the Production light palette. */
-  --shell: #ffffff;
-  --shell-raised: #f3f8fb;
-  --shell-border: var(--line);
-  --workspace: #eaf1f6;
-  --surface: #ffffff;
-  --surface-raised: #f3f8fb;
-  --surface-hover: #eef4fa;
-  --border: #d2e0ea;
-  --border-strong: #b9cddc;
-  /* Production hairline used on panels/tables. */
-  --surface-border: #d2e0ea;
-  --text-strong: #003057;
-  --text: #26516e;
-  --text-muted: #5d7f96;
-  --brand: #1d4f91;
-  --brand-strong: #16407a;
-  --brand-soft: #e9f1f9;
-  --success: #567f00;
-  --success-accent: #6fa300;
-  --success-soft: #eef6df;
-  --success-border: #c7e08a;
-  --warning: #a32e0b;
-  --warning-accent: #c4380f;
-  --warning-soft: #fdeee7;
-  --warning-border: #f4c9b6;
-  --critical: #a31616;
-  --critical-accent: #c11b1b;
-  --critical-soft: #fbeaea;
-  --critical-border: #f2c4c4;
-  --info: #1d4f91;
-  --info-accent: #1d4f91;
-  --info-soft: #e9f1f9;
-  --info-border: #b9cddc;
+  --acc-soft: #e9f1f9;
+  --acc-border: #b9cddc;
+  --ok-soft: #eef6df;
+  --ok-border: #c7e08a;
+  --warn-soft: #fdeee7;
+  --warn-border: #f4c9b6;
+  --amber-soft: #fdf3e1;
+  --amber-border: #f2d39b;
+  --err-soft: #fbeaea;
+  --err-border: #f2c4c4;
+  --purp-soft: rgba(95, 99, 99, 0.1);
+  --purp-border: rgba(95, 99, 99, 0.28);
 
-  /* Shared "MetricDashboard" palette (System B) → Production light. */
-  --line: #d2e0ea;
-  --line-soft: #e4edf3;
-  --ink: #003057;
-  --ink-dim: #5d7f96;
-  --accent: #1d4f91;
-  --accent-soft: rgba(29, 79, 145, 0.08);
-  --good: #567f00;
-  --warn: #c4380f;
-  --bad: #c11b1b;
-  --surface-subtle: #f3f8fb;
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-card: 0 5px 16px rgba(0, 48, 87, 0.08);
+  --shadow-md: 0 14px 38px rgba(15, 23, 42, 0.16);
+  --shadow-lg: 0 24px 60px rgba(15, 23, 42, 0.22);
+  --overlay: rgba(0, 48, 87, 0.32);
+  --tooltip-bg: #0f172a;
+  --focus-ring: 0 0 0 3px rgba(29, 79, 145, 0.35);
+  --selection-bg: #cfe0f2;
+  --scrollbar: #b9cddc;
+  --skeleton: rgba(0, 48, 87, 0.06);
+
+  --chart-1: #00a3e0;
+  --chart-2: #1d4f91;
+  --chart-3: #6fa300;
+  --chart-4: #c4380f;
+  --chart-5: #003057;
+  --chart-output: #0369a1;
+  --chart-reference: #64748b;
+  --chart-contracted: #0f766e;
+  --chart-design: #2563eb;
+  --chart-maximum: #4338ca;
+  --chart-success: #4d7c0f;
+  --chart-warning: #b45309;
+  --chart-danger: #be123c;
+  --chart-neutral: #64748b;
+  --chart-cyan: #0e7490;
+  --chart-purple: #7e22ce;
+  --chart-indigo: #6366f1;
+  --chart-grid: #d9e4ec;
+  --chart-axis: #607d91;
+
+  --wtco-filter: none;
+  --map-filter: none;
+}
+
+:root {
+  font-family: "Wtt", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  /* Production uses one font for both sans and mono. */
+  --mono: "Wtt", "JetBrains Mono", "SF Mono", Consolas, ui-monospace, monospace;
+  --font-wtt: "Wtt";
+
+  /* ---- Theme-agnostic constants ---- */
+  --on-accent: #ffffff;
+  --accGrad: linear-gradient(135deg, #00a3e0, #1d4f91);
+  --brand-cyan: #00a3e0;
+  --brand-navy: #1d4f91;
+
+  /* ---- kebab-case aliases of the raw tokens (pre-existing Desktop names) ---- */
+  --bg-grad: var(--bgGrad);
+  --acc-tx: var(--accTx);
+  --acc-grad: var(--accGrad);
+  --ok-tx: var(--okTx);
+  --warn-tx: var(--warnTx);
+  --err-tx: var(--errTx);
+  --row-hover: var(--rowHover);
+  --head-bg: var(--headBg);
+
+  /* ---- Operator workspace semantic layer ---- */
+  --shell: var(--panel);
+  --shell-raised: var(--panel2);
+  --shell-border: var(--line);
+  --workspace: var(--bg);
+  --surface: var(--panel);
+  --surface-raised: var(--panel2);
+  --surface-hover: var(--panel3);
+  --surface-subtle: var(--panel2);
+  --surface-border: var(--line);
+  --border: var(--line);
+  --border-strong: var(--line2);
+  --text-strong: var(--tx1);
+  --text: var(--tx2);
+  --text-muted: var(--mut);
+  --text-faint: var(--mut2);
+  --brand: var(--acc);
+  --brand-strong: var(--accStrong);
+  --brand-soft: var(--acc-soft);
+  --success: var(--okTx);
+  --success-accent: var(--ok);
+  --success-soft: var(--ok-soft);
+  --success-border: var(--ok-border);
+  --warning: var(--warnTx);
+  --warning-accent: var(--warn);
+  --warning-soft: var(--warn-soft);
+  --warning-border: var(--warn-border);
+  --critical: var(--errTx);
+  --critical-accent: var(--err);
+  --critical-soft: var(--err-soft);
+  --critical-border: var(--err-border);
+  --info: var(--accTx);
+  --info-accent: var(--acc);
+  --info-soft: var(--acc-soft);
+  --info-border: var(--acc-border);
+
+  /* ---- Legacy "MetricDashboard" palette (System B) ---- */
+  --ink: var(--tx1);
+  --ink-dim: var(--mut);
+  --accent: var(--acc);
+  --accent-soft: var(--acc-soft);
+  --good: var(--okTx);
+  --bad: var(--err);
+
+  /* ---- Legacy light-page tokens (HomePage etc.) — now theme-aware ---- */
+  --light-navy: var(--acc);
+  --light-navy-dark: var(--accStrong);
+  --light-bg: var(--panel);
+  --light-bg-subtle: var(--panel2);
+  --light-border: var(--line);
+  --light-ink: var(--tx1);
+  --light-ink-dim: var(--mut);
 
   --space-1: 4px;
   --space-2: 8px;
@@ -116,9 +285,6 @@
   --radius-md: 6px;
   --radius-lg: 9px;
   --radius-full: 999px;
-  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.05);
-  --shadow-md: 0 14px 38px rgba(15, 23, 42, 0.16);
-  --focus-ring: 0 0 0 3px rgba(29, 79, 145, 0.35);
   --text-2xs: 0.66rem;
   --text-xs: 0.72rem;
   --text-sm: 0.8rem;
@@ -165,7 +331,7 @@ body,
 
 body {
   background: var(--bg);
-  background-image: var(--bg-grad);
+  background-image: var(--bgGrad);
   background-attachment: fixed;
   color: var(--text);
   font-size: var(--density-body-font);
@@ -183,4 +349,31 @@ a { -webkit-tap-highlight-color: transparent; }
 
 :focus-visible { outline: none; box-shadow: var(--focus-ring); }
 
-::selection { background: #cfe0f2; color: #003057; }
+::selection { background: var(--selection-bg); color: var(--tx1); }
+
+* { scrollbar-color: var(--scrollbar) transparent; }
+
+/* Native form controls pick up the theme surfaces. */
+input,
+select,
+textarea { color: var(--tx2); }
+option { background: var(--panel); color: var(--tx1); }
+
+/* Leaflet: Production's dark-map treatment (globals.css .prod-shell .leaflet-container). */
+.leaflet-container { background: var(--panel); font-family: var(--font-wtt), Arial, sans-serif; }
+.leaflet-container .leaflet-tile-pane { filter: var(--map-filter); }
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip { background: var(--panel); color: var(--tx2); border: 1px solid var(--line2); box-shadow: var(--shadow-md); }
+.leaflet-control-zoom a,
+.leaflet-bar a { background: var(--panel); color: var(--tx1); border-color: var(--line); }
+.leaflet-control-zoom a:hover,
+.leaflet-bar a:hover { background: var(--panel2); }
+.leaflet-control-attribution { background: var(--headBg) !important; color: var(--mut) !important; }
+.leaflet-control-attribution a { color: var(--accTx) !important; }
+
+a { color: var(--accTx); }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--mut2); }

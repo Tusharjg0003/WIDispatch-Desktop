@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import FloatingPanel from "./FloatingPanel";
 import { createAsset } from "../api/metrics";
 import { Field, Toggle } from "./AssetFormControls";
 import PlantQuickFields from "./PlantQuickFields";
@@ -138,105 +139,104 @@ export default function NetworkEntityCreateModal({ type, initialForm = null, onC
   };
 
   return (
-    <div className="af__overlay" onMouseDown={onCancel}>
-      <div className="af__modal nb-entity-modal" onMouseDown={(e) => e.stopPropagation()}>
-        <header className="af__head">
-          <h2 className="af__title">{TITLES[type] || "Add asset"}</h2>
-          <button className="af__close" onClick={onCancel} aria-label="Close">×</button>
-        </header>
-        <form className="af__body" onSubmit={submit}>
-          <div className="af__grid">
-            <Field label="Name *">
-              <input type="text" value={form.name} onChange={set("name")} required autoFocus />
+    <FloatingPanel
+      title={TITLES[type] || "Add asset"}
+      onClose={onCancel}
+      storageKey="canvas-form"
+      className="nb-entity-modal"
+    >
+      <form className="af__body" onSubmit={submit}>
+        <div className="af__grid">
+          <Field label="Name *">
+            <input type="text" value={form.name} onChange={set("name")} required autoFocus />
+          </Field>
+          <Field label="Asset Type *">
+            <select value={form.asset_type} onChange={set("asset_type")} required>
+              <option value="" disabled>Select asset type</option>
+              {assetTypeOptions.map((assetType) => (
+                <option key={assetType} value={assetType}>{assetType}</option>
+              ))}
+            </select>
+          </Field>
+          {isPlant && (
+            <>
+              <Field label="Activity"><input value={form.activity} onChange={set("activity")} /></Field>
+            </>
+          )}
+          {isHandover && (
+            <Field label="Region">
+              <input value={form.region} onChange={set("region")} />
             </Field>
-            <Field label="Asset Type *">
-              <select value={form.asset_type} onChange={set("asset_type")} required>
-                <option value="" disabled>Select asset type</option>
-                {assetTypeOptions.map((assetType) => (
-                  <option key={assetType} value={assetType}>{assetType}</option>
-                ))}
-              </select>
+          )}
+          {isTank && (
+            <Field label="Region">
+              <input value={form.region} onChange={set("region")} />
             </Field>
-            {isPlant && (
-              <>
-                <Field label="Activity"><input value={form.activity} onChange={set("activity")} /></Field>
-              </>
-            )}
-            {isHandover && (
-              <Field label="Region">
-                <input value={form.region} onChange={set("region")} />
+          )}
+          <Field label="Status">
+            <select value={form.status} onChange={set("status")}>
+              {(isHandover ? HANDOVER_STATUSES : STATUSES).map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}
+            </select>
+          </Field>
+          {isPlant && (
+            <>
+              <Field label="Capacity (m³/day)">
+                <input type="number" step="any" value={form.design_capacity} onChange={set("design_capacity")} />
               </Field>
-            )}
-            {isTank && (
-              <Field label="Region">
-                <input value={form.region} onChange={set("region")} />
+              <Field label="Capacity Limitation">
+                <select value={form.capacity_limit_mode} onChange={set("capacity_limit_mode")}>
+                  <option value="none">None</option>
+                  <option value="percentage">Percentage (%)</option>
+                  <option value="absolute">Absolute (m³/day)</option>
+                </select>
               </Field>
-            )}
-            <Field label="Status">
-              <select value={form.status} onChange={set("status")}>
-                {(isHandover ? HANDOVER_STATUSES : STATUSES).map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}
-              </select>
-            </Field>
-            {isPlant && (
-              <>
-                <Field label="Capacity (m³/day)">
-                  <input type="number" step="any" value={form.design_capacity} onChange={set("design_capacity")} />
+              {form.capacity_limit_mode === "percentage" && (
+                <Field label="Percentage (%)">
+                  <input type="number" step="any" min="0" max="100" value={form.capacity_limit_percentage} onChange={set("capacity_limit_percentage")} />
                 </Field>
-                <Field label="Capacity Limitation">
-                  <select value={form.capacity_limit_mode} onChange={set("capacity_limit_mode")}>
-                    <option value="none">None</option>
-                    <option value="percentage">Percentage (%)</option>
-                    <option value="absolute">Absolute (m³/day)</option>
-                  </select>
+              )}
+              {form.capacity_limit_mode === "absolute" && (
+                <Field label="Absolute (m³/day)">
+                  <input type="number" step="any" value={form.capacity_limit_absolute} onChange={set("capacity_limit_absolute")} />
                 </Field>
-                {form.capacity_limit_mode === "percentage" && (
-                  <Field label="Percentage (%)">
-                    <input type="number" step="any" min="0" max="100" value={form.capacity_limit_percentage} onChange={set("capacity_limit_percentage")} />
-                  </Field>
-                )}
-                {form.capacity_limit_mode === "absolute" && (
-                  <Field label="Absolute (m³/day)">
-                    <input type="number" step="any" value={form.capacity_limit_absolute} onChange={set("capacity_limit_absolute")} />
-                  </Field>
-                )}
-                <Field label="Region"><input value={form.region} onChange={set("region")} /></Field>
-                <Field label="Entity Category">
-                  <select value={form.entity_category} onChange={set("entity_category")}>
-                    <option value="">—</option>
-                    <option value="private">Private</option>
-                    <option value="public">Public</option>
-                  </select>
-                </Field>
-              </>
-            )}
-            <Field label="Commissioning Date">
-              <input type="date" value={form.commissioning_date} onChange={set("commissioning_date")} />
-            </Field>
-            <Field label="Decommissioning Date">
-              <input type="date" value={form.decommissioning_date} onChange={set("decommissioning_date")} />
-            </Field>
-            <Toggle
-              label="Active"
-              checked={form.active}
-              onChange={(v) => setForm((f) => ({ ...f, active: v }))}
-            />
-          </div>
+              )}
+              <Field label="Region"><input value={form.region} onChange={set("region")} /></Field>
+              <Field label="Entity Category">
+                <select value={form.entity_category} onChange={set("entity_category")}>
+                  <option value="">—</option>
+                  <option value="private">Private</option>
+                  <option value="public">Public</option>
+                </select>
+              </Field>
+            </>
+          )}
+          <Field label="Commissioning Date">
+            <input type="date" value={form.commissioning_date} onChange={set("commissioning_date")} />
+          </Field>
+          <Field label="Decommissioning Date">
+            <input type="date" value={form.decommissioning_date} onChange={set("decommissioning_date")} />
+          </Field>
+          <Toggle
+            label="Active"
+            checked={form.active}
+            onChange={(v) => setForm((f) => ({ ...f, active: v }))}
+          />
+        </div>
 
-          {isPlant && <PlantQuickFields spec={spec} set={setSpecField} />}
-          {isPump && <PumpStationFields pumps={pumps} setPumps={setPumps} spec={spec} setSpec={setSpecField} />}
-          {isTank && <TankFields spec={spec} set={setSpecField} setSpec={setSpec} />}
-          {isHandover && <HandoverPointFields spec={spec} set={setSpecField} />}
+        {isPlant && <PlantQuickFields spec={spec} set={setSpecField} />}
+        {isPump && <PumpStationFields pumps={pumps} setPumps={setPumps} spec={spec} setSpec={setSpecField} />}
+        {isTank && <TankFields spec={spec} set={setSpecField} setSpec={setSpec} />}
+        {isHandover && <HandoverPointFields spec={spec} set={setSpecField} />}
 
-          {error && <div className="af__error">{error}</div>}
+        {error && <div className="af__error">{error}</div>}
 
-          <div className="af__footer">
-            <button type="button" className="af__btn af__btn--ghost" onClick={onCancel}>Cancel</button>
-            <button type="submit" className="af__btn af__btn--primary" disabled={saving}>
-              {saving ? "Saving…" : `Add ${isPlant ? "plant" : isTank ? "tank" : isHandover ? "handover point" : "pump station"}`}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div className="af__footer">
+          <button type="button" className="af__btn af__btn--ghost" onClick={onCancel}>Cancel</button>
+          <button type="submit" className="af__btn af__btn--primary" disabled={saving}>
+            {saving ? "Saving…" : `Add ${isPlant ? "plant" : isTank ? "tank" : isHandover ? "handover point" : "pump station"}`}
+          </button>
+        </div>
+      </form>
+    </FloatingPanel>
   );
 }

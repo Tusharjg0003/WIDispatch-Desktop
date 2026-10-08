@@ -14,6 +14,8 @@ import AssetForm from "../components/AssetForm";
 import WorkspaceHeader, { WorkspaceHeaderButton } from "../components/WorkspaceHeader";
 import "../components/MetricDashboard.css";
 import "./AssetRegistryPage.css";
+// After the page stylesheet, so the form rules keep their old cascade position.
+import "../components/assetFormFields.css";
 
 export default function AssetRegistryPage({ mode = "list" }) {
   const { id } = useParams();

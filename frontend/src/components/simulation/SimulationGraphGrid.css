@@ -117,13 +117,13 @@
   align-items: center;
   gap: 6px;
   font-size: 11px;
-  color: #5d7f96;
+  color: var(--mut);
 }
 .simgraph__control select {
   font-size: 12px;
   padding: 3px 6px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--line2);
   border-radius: 5px;
-  background: #fff;
-  color: #0f172a;
+  background: var(--panel);
+  color: var(--tx1);
 }

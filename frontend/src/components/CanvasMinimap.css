@@ -3,8 +3,8 @@
   right: 12px;
   bottom: 12px;
   width: 200px;
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid #d5dce6;
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 8px;
   box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
   overflow: hidden;
@@ -21,9 +21,9 @@
   font-weight: 600;
   letter-spacing: 0.02em;
   text-transform: uppercase;
-  color: #5d7f96;
-  background: #f5f7fa;
-  border-bottom: 1px solid #d2e0ea;
+  color: var(--mut);
+  background: var(--panel2);
+  border-bottom: 1px solid var(--line);
 }
 
 .nb-minimap__toggle {
@@ -33,14 +33,14 @@
   padding: 2px;
   border: none;
   background: transparent;
-  color: #5d7f96;
+  color: var(--mut);
   cursor: pointer;
   border-radius: 4px;
 }
 
 .nb-minimap__toggle:hover {
-  background: #d2e0ea;
-  color: #003057;
+  background: var(--line);
+  color: var(--tx1);
 }
 
 .nb-minimap__svg {
@@ -50,12 +50,14 @@
 }
 
 .nb-minimap__bg {
-  fill: #f3f8fb;
+  fill: var(--panel2);
 }
 
 .nb-minimap__vp {
-  fill: rgba(29, 79, 145, 0.12);
-  stroke: #1d4f91;
+  /* Translucent: --acc-soft is opaque in the light theme and would hide the
+     asset dots under the viewport box. */
+  fill: color-mix(in srgb, var(--acc) 12%, transparent);
+  stroke: var(--acc);
   stroke-width: 1.5;
   pointer-events: none;
 }

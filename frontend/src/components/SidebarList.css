@@ -1,0 +1,425 @@
+/* Shared list styling for the Network Builder's left rail (Networks and
+   Library tabs): search + filters on top, uppercase group headings, compact
+   rows with a coloured type icon, name, one detail line and a status dot.
+   Matches the right panel's details card and the floating forms. Global
+   theme tokens only. */
+
+/* Whole-panel wrapper (Networks tab): tools on top, list scrolls. */
+.sl-panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--panel);
+}
+
+/* ── Top tools ────────────────────────────────────────────────────────────── */
+.sl-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 8px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+.sl-tools__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sl-tools__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.sl-search {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+.sl-search svg {
+  position: absolute;
+  top: 50%;
+  left: 8px;
+  color: var(--mut);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+.sl-search input,
+.sl-select {
+  width: 100%;
+  height: 30px;
+  box-sizing: border-box;
+  border: 1px solid var(--line2);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--tx1);
+  font: inherit;
+  font-size: 12px;
+}
+.sl-search input {
+  padding: 0 8px 0 27px;
+}
+.sl-search input::placeholder {
+  color: var(--mut);
+}
+.sl-select {
+  min-width: 0;
+  padding: 0 24px 0 8px;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-position: right 8px center;
+  background-repeat: no-repeat;
+  cursor: pointer;
+  text-overflow: ellipsis;
+  color-scheme: light dark;
+}
+.sl-select:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.sl-search input:focus-visible,
+.sl-select:focus-visible {
+  outline: none;
+  border-color: var(--acc);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--acc) 22%, transparent);
+}
+
+/* Category chips */
+.sl-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.sl-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--line2);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--tx2);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 550;
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+.sl-chip__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+.sl-chip:hover {
+  border-color: color-mix(in srgb, var(--acc) 40%, var(--line2));
+  color: var(--tx1);
+}
+.sl-chip.is-active {
+  border-color: var(--acc);
+  background: color-mix(in srgb, var(--acc) 14%, transparent);
+  color: var(--accTx, var(--acc));
+}
+.sl-chip:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 1px;
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+.sl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  flex-shrink: 0;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--line2);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--tx1);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 550;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+.sl-btn svg {
+  color: var(--acc);
+}
+.sl-btn:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--acc) 40%, var(--line2));
+  background: color-mix(in srgb, var(--acc) 10%, transparent);
+}
+.sl-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.sl-btn:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 1px;
+}
+.sl-btn--primary {
+  border-color: var(--acc);
+  background: var(--acc);
+  color: var(--on-accent, #fff);
+}
+.sl-btn--primary svg {
+  color: currentColor;
+}
+.sl-btn--primary:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--acc) 86%, #000);
+  background: color-mix(in srgb, var(--acc) 86%, #000);
+}
+.sl-btn--danger {
+  border-color: var(--err);
+  background: var(--err);
+  color: #fff;
+}
+.sl-btn--danger svg {
+  color: currentColor;
+}
+.sl-btn--danger:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--err) 86%, #000);
+  background: color-mix(in srgb, var(--err) 86%, #000);
+}
+.sl-btn--icon {
+  width: 30px;
+  padding: 0;
+}
+.sl-btn--sm {
+  height: 24px;
+  padding: 0 8px;
+  font-size: 11px;
+}
+.sl-btn.is-active {
+  border-color: var(--acc);
+  background: color-mix(in srgb, var(--acc) 14%, transparent);
+}
+.sl-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accTx, var(--acc));
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.sl-link:hover:not(:disabled) {
+  text-decoration: underline;
+}
+.sl-link:disabled {
+  color: var(--mut2);
+  cursor: default;
+}
+
+/* ── Status / selection bar under the tools ──────────────────────────────── */
+.sl-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  min-height: 32px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel2);
+  color: var(--mut);
+  font-size: 11px;
+}
+.sl-bar__text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sl-bar--active {
+  background: color-mix(in srgb, var(--acc) 10%, var(--panel));
+  color: var(--tx1);
+}
+.sl-bar--active .sl-bar__text {
+  font-weight: 650;
+}
+.sl-bar--danger {
+  background: color-mix(in srgb, var(--err) 9%, var(--panel));
+  color: var(--tx1);
+}
+
+/* ── List body ────────────────────────────────────────────────────────────── */
+.sl-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 0 8px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line2) transparent;
+}
+.sl-group {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px 4px;
+  background: var(--panel);
+  color: var(--mut);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.sl-group__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sl-group__count {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--panel2);
+  color: var(--tx2);
+  font-size: 10px;
+  letter-spacing: 0;
+}
+
+.sl-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 6px;
+  padding: 6px 6px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: var(--tx1);
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+.sl-row:hover {
+  background: color-mix(in srgb, var(--acc) 8%, transparent);
+}
+.sl-row:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: -2px;
+}
+.sl-row.is-active,
+.sl-row.is-selected {
+  border-color: color-mix(in srgb, var(--acc) 35%, transparent);
+  background: color-mix(in srgb, var(--acc) 12%, transparent);
+}
+.sl-row.is-active::before {
+  content: "";
+  position: absolute;
+  top: 7px;
+  bottom: 7px;
+  left: -6px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--acc);
+}
+.sl-row.is-marked {
+  border-color: var(--err-border);
+  background: var(--err-soft);
+}
+.sl-row.is-disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+.sl-row.is-disabled:hover {
+  background: transparent;
+}
+
+.sl-row__check {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--acc);
+  cursor: pointer;
+}
+.sl-row__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--sl-colour, var(--acc)) 16%, transparent);
+  color: var(--sl-colour, var(--acc));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sl-colour, var(--acc)) 28%, transparent);
+}
+.sl-row__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+.sl-row__name {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sl-row__sub {
+  overflow: hidden;
+  color: var(--mut);
+  font-size: 11px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sl-row__aside {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.sl-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--mut2);
+  box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 0%, var(--panel));
+}
+.sl-dot--ok { background: var(--ok); }
+.sl-dot--warn { background: var(--warn, #f59e0b); }
+.sl-dot--acc { background: var(--acc); }
+.sl-dot--off { background: var(--mut2); }
+.sl-tag {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--panel2);
+  color: var(--tx2);
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.sl-tag--acc {
+  background: var(--acc-soft);
+  color: var(--accTx);
+}
+
+.sl-empty {
+  margin: 16px 12px;
+  color: var(--mut);
+  font-size: 12px;
+  line-height: 1.45;
+  text-align: center;
+}
+.sl-hint {
+  margin: 0;
+  color: var(--mut);
+  font-size: 11px;
+}

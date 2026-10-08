@@ -37,6 +37,30 @@ const DEFAULT_BORDER = "#94a3b8";
 
 export const statusBorderColor = (status) => STATUS_BORDER[status] || DEFAULT_BORDER;
 
+// Symbol shape (View → Symbol), as SWIIMS setEntitySymbolShape: circle or
+// rounded box, remembered per browser.
+export const SYMBOL_SHAPE_STORAGE_KEY = "widispatch_canvas_symbol_shape";
+const readStoredShape = () => {
+  try {
+    return globalThis.localStorage?.getItem(SYMBOL_SHAPE_STORAGE_KEY) === "box" ? "box" : "circle";
+  } catch {
+    return "circle";
+  }
+};
+let currentSymbolShape = readStoredShape();
+
+export const getEntitySymbolShape = () => currentSymbolShape;
+
+export function setEntitySymbolShape(shape) {
+  currentSymbolShape = shape === "box" ? "box" : "circle";
+  try {
+    globalThis.localStorage?.setItem(SYMBOL_SHAPE_STORAGE_KEY, currentSymbolShape);
+  } catch {
+    // Storage unavailable: the shape still applies for this session.
+  }
+  return currentSymbolShape;
+}
+
 // lucide glyph interiors, drawn in a 24×24 box and scaled into the symbol.
 const GLYPH = {
   plant:
@@ -119,11 +143,14 @@ export function applyEntitySymbol(node) {
   const data = node.data();
   const type = data.type || data.category;
 
-  const cardIcon = SYMBOL_TYPES.has(type)
+  const isSymbol = SYMBOL_TYPES.has(type);
+  const symbolShape = isSymbol ? currentSymbolShape : undefined;
+  const cardIcon = isSymbol
     ? makeEntitySymbol({
         type,
         typeColor: ENTITY_TYPE_COLORS[type],
         hasCapacityLimit: hasCapacityLimit(data),
+        symbolShape,
       })
     : // Junctions and annotations draw no symbol. "none" is a valid
       // background-image, so the base rule's data mapper stays defined.
@@ -132,4 +159,5 @@ export function applyEntitySymbol(node) {
 
   if (data.cardIcon !== cardIcon) node.data("cardIcon", cardIcon);
   if (data.cardStatusColor !== cardStatusColor) node.data("cardStatusColor", cardStatusColor);
+  if (isSymbol && data.symbolShape !== symbolShape) node.data("symbolShape", symbolShape);
 }

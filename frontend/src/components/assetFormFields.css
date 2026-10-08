@@ -1,0 +1,302 @@
+/* Shared asset-form styles: fields, buttons, toggles, radios and the pump
+   list. Used by the Asset Registry's create form and by the network canvas
+   forms (which render in a FloatingPanel, possibly in a popped-out window),
+   so it must not depend on any page stylesheet being loaded. The --ink /
+   --surface / --accent family is declared by every host (.ar-shell, .nb-page,
+   .fp). */
+
+/* Buttons */
+.af__btn {
+  height: 34px;
+  padding: 0 16px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.af__btn--ghost:hover {
+  background: var(--surface-subtle);
+  border-color: var(--line2);
+}
+
+.af__btn--primary {
+  border-color: transparent;
+  background: var(--accGrad);
+  color: var(--on-accent);
+}
+
+.af__btn--primary:hover {
+  filter: brightness(1.08);
+}
+
+.af__btn--primary:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+
+.af__body {
+  padding: 8px 24px 24px;
+}
+
+.af__section {
+  margin: 20px 0 12px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+}
+
+.af__grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px 18px;
+}
+
+.af__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-dim);
+}
+
+.af__field input,
+.af__field select {
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 2px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.85rem;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color-scheme: light;
+}
+
+.af__field input:disabled {
+  color: var(--ink-dim);
+  background: var(--surface-subtle);
+}
+
+.af__field input:focus-visible,
+.af__field select:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--acc-border);
+}
+
+.af__error {
+  margin-top: 16px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--err-border);
+  background: var(--err-soft);
+  color: var(--bad);
+  font-size: 0.85rem;
+}
+
+.af__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+@media (max-width: 640px) {
+  .af__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Map location picker */
+.af__map {
+  margin: 10px 0 4px;
+}
+.af__map-canvas {
+  height: 260px;
+  width: 100%;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+}
+.af__map-hint {
+  margin: 6px 2px 0;
+  font-size: 0.74rem;
+  color: var(--ink-dim);
+}
+
+/* Active/On-off toggle switch */
+.af__field--toggle {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+.af__toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.af__toggle input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  margin: 0;
+  z-index: 1;
+}
+.af__toggle-track {
+  width: 34px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  position: relative;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  flex-shrink: 0;
+}
+.af__toggle-thumb {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--panel);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.25);
+  transition: transform 0.15s ease;
+}
+.af__toggle[data-on="true"] .af__toggle-track {
+  background: var(--ok);
+  border-color: var(--ok);
+}
+.af__toggle[data-on="true"] .af__toggle-thumb {
+  transform: translateX(14px);
+}
+.af__toggle-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink-dim);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* Handover Point capacity-limitation radio group */
+.af__radio-group {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 32px;
+}
+.af__radio {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--ink);
+  cursor: pointer;
+}
+.af__radio input[type="radio"] {
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+/* Pump configuration list */
+.af__pump-list {
+  display: flex;
+  flex-direction: column;
+}
+.af__pump-empty {
+  font-size: 0.8rem;
+  color: var(--ink-dim);
+  padding: 8px 0;
+}
+.af__pump-row {
+  display: grid;
+  grid-template-columns: 1fr 150px 100px auto 28px;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.af__pump-name,
+.af__pump-capacity {
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 2px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.82rem;
+  color-scheme: light;
+}
+.af__pump-role {
+  font-size: 0.64rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+}
+.af__pump-role--functional {
+  color: var(--okTx);
+  background: var(--ok-soft);
+}
+.af__pump-role--backup {
+  color: var(--accTx);
+  background: var(--acc-soft);
+}
+.af__pump-remove {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-dim);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+}
+.af__pump-remove:hover {
+  background: var(--err-soft);
+  color: var(--bad);
+  border-color: var(--err-border);
+}
+.af__pump-add {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+/* Inline explanatory note inside a form (e.g. how route segments are named). */
+.af__hint {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  border-left: 3px solid var(--accent);
+  border-radius: 4px;
+  background: var(--surface-subtle);
+  color: var(--ink-dim);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.af__hint strong {
+  color: var(--ink);
+  font-weight: 600;
+}

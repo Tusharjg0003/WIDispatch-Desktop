@@ -145,8 +145,11 @@ test("the switch transaction runs its steps in the required order", async () => 
 
   assert.ok(idx("capture") < idx("cancelUnsafe"), "capture before cancel");
   assert.ok(idx("cancelUnsafe") < idx("interaction.reset"), "cancel before reset");
-  assert.ok(idx("interaction.reset") < idx("history.reset"), "reset before history");
-  assert.ok(idx("history.reset") < idx("restore"), "history reset before restore");
+  assert.ok(idx("cancelUnsafe") < idx("restore"), "cancel before restore");
+  // The history baseline must be the incoming graph, so it is taken after the
+  // restore; taken before, the first undo would revert the load itself.
+  assert.ok(idx("restore") < idx("history.reset"), "history reset after restore");
+  assert.ok(idx("history.reset") < idx("restoreViewport"), "history reset before viewport");
   assert.ok(idx("restore") < idx("restoreViewport"), "restore before viewport");
   assert.ok(idx("restoreViewport") < idx("view.apply"), "viewport before view toggles");
   assert.ok(idx("view.apply") < idx("restoreSelection"), "view toggles before selection");

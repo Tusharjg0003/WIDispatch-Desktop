@@ -10,15 +10,15 @@
 .ppd__state--err { color: var(--critical); }
 
 .ppd__sections { display: flex; flex-direction: column; gap: 12px; }
-.ppd__card { border: 1px solid #d2e0ea; border-radius: 2px; background: #fff; }
-.ppd__card-head { padding: 10px 12px; border-bottom: 1px solid #d2e0ea; }
-.ppd__card-head h2 { font-size: 0.95rem; font-weight: 700; color: #111827; }
-.ppd__card-head p { font-size: 0.72rem; color: #6b7280; margin-top: 2px; }
+.ppd__card { border: 1px solid var(--line); border-radius: 2px; background: var(--panel); }
+.ppd__card-head { padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.ppd__card-head h2 { font-size: 0.95rem; font-weight: 700; color: var(--tx1); }
+.ppd__card-head p { font-size: 0.72rem; color: var(--mut); margin-top: 2px; }
 .ppd__card-body { padding: 12px; }
 
 .ppd__tabs { display: flex; gap: 2px; margin-bottom: 8px; }
 .ppd__tab { display: inline-flex; align-items: center; height: 26px; padding: 0 12px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--mut); font-size: 11px; font-weight: 600; cursor: pointer; }
 .ppd__tab:hover { color: var(--tx1); background: var(--panel2); }
-.ppd__tab--active { color: #fff; background: var(--acc-grad); border-color: rgba(0,163,224,.5); }
-.ppd__tab--active:hover { color: #fff; }
+.ppd__tab--active { color: var(--on-accent); background: var(--acc-grad); border-color: var(--acc-border); }
+.ppd__tab--active:hover { color: var(--on-accent); }
 .ppd__tabpanel { min-height: 200px; }

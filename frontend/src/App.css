@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  padding-top: 56px;
+  overflow: hidden;
   box-sizing: border-box;
 }
 
@@ -39,7 +39,7 @@
   flex: 1;
   min-width: 0;
   overflow: auto;
-  background: var(--workspace);
+  background: transparent;
 }
 
 .route-loading {
@@ -79,7 +79,7 @@
 .route-failure__actions { display: flex; gap: 8px; margin-top: 10px; }
 .route-failure__actions button,
 .route-failure__actions a { display: inline-flex; align-items: center; height: 34px; padding: 0 13px; border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: var(--surface); color: var(--text-strong); font-size: var(--text-sm); font-weight: 700; text-decoration: none; cursor: pointer; }
-.route-failure__actions button { border-color: var(--brand); background: var(--brand); color: #fff; }
+.route-failure__actions button { border: none; background: var(--accGrad); color: var(--on-accent); }
 
 @keyframes route-spin { to { transform: rotate(360deg); } }
 
@@ -87,7 +87,7 @@
   .route-loading__spinner { animation: none; }
 }
 
-/* Bottom status bar — Production "Control Room" shell (24px). */
+/* Bottom status bar: Production "Control Room" shell (24px). */
 .app-status-bar {
   display: flex;
   align-items: center;
@@ -103,10 +103,16 @@
   white-space: nowrap;
   overflow: hidden;
 }
-.app-status-bar__left,
-.app-status-bar__right { display: flex; align-items: center; gap: 6px; min-width: 0; }
-.app-status-bar__brand { color: var(--tx1); font-weight: 700; }
-.app-status-bar__section { color: var(--acc); font-weight: 700; }
-.app-status-bar__sep { color: var(--line2); }
-.app-status-bar__status { display: inline-flex; align-items: center; gap: 5px; }
-.app-status-bar__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); }
+.app-status-bar__left { display: flex; flex: 1; align-items: center; gap: 14px; min-width: 0; overflow: hidden; }
+.app-status-bar__right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.app-status-bar__item { display: inline-flex; align-items: center; gap: 4px; }
+.app-status-bar strong { color: var(--tx1); }
+.app-status-bar__dot { display: inline-block; width: 6px; height: 6px; border-radius: 999px; background: var(--mut); }
+.app-status-bar__actions { display: inline-flex; align-items: center; gap: 2px; }
+.app-status-bar__action { min-width: 18px; height: 16px; padding: 0 5px; border: 1px solid var(--line2); border-radius: 4px; background: var(--panel2); color: var(--tx2); font: inherit; font-size: 10px; font-weight: 700; line-height: 1; cursor: pointer; }
+.app-status-bar__action:hover:not(:disabled) { color: var(--tx1); border-color: var(--acc-border); }
+.app-status-bar__toggles { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.app-status-bar__toggle { display: inline-flex; align-items: center; gap: 4px; height: 18px; padding: 0 6px; border: 1px solid var(--line2); border-radius: 4px; background: transparent; color: var(--mut); font: inherit; font-size: 10px; font-weight: 600; line-height: 1; cursor: pointer; }
+.app-status-bar__toggle:hover { color: var(--tx1); border-color: var(--acc-border); }
+.app-status-bar__toggle--on { color: var(--accTx, var(--acc)); border-color: var(--acc-border); background: var(--acc-soft); }
+.app-status-bar__readout { min-width: 38px; text-align: center; color: var(--tx1); font-weight: 700; font-variant-numeric: tabular-nums; }

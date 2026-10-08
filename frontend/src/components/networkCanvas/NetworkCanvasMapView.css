@@ -3,7 +3,7 @@
    Cytoscape canvas (see .nb-map-overlay in NetworkBuilderPage.css). */
 
 .ncm-root { display: flex; flex-direction: column; width: 100%; height: 100%; min-height: 0; }
-.ncm-map { flex: 1 1 auto; width: 100%; min-height: 320px; background: #dbe4ec; }
+.ncm-map { flex: 1 1 auto; width: 100%; min-height: 320px; background: var(--line); }
 
 .ncm-toolbar {
   display: flex;
@@ -11,26 +11,26 @@
   justify-content: space-between;
   gap: 12px;
   padding: 8px 10px;
-  border-bottom: 1px solid #cbd5e1;
-  background: #fff;
-  color: #0f172a;
+  border-bottom: 1px solid var(--line2);
+  background: var(--panel);
+  color: var(--tx1);
 }
 .ncm-toolbar > div { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
 .ncm-toolbar strong { font-size: 12px; }
-.ncm-toolbar span { overflow: hidden; color: #5d7f96; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.ncm-toolbar span { overflow: hidden; color: var(--mut); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
 .ncm-toolbar button,
 .ncm-hint button {
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--line2);
   border-radius: 4px;
-  background: #fff;
-  color: #26516e;
+  background: var(--panel);
+  color: var(--tx2);
   padding: 4px 8px;
   font-size: 10px;
   font-weight: 600;
   cursor: pointer;
 }
 .ncm-toolbar button:disabled { cursor: not-allowed; opacity: .5; }
-.ncm-toolbar button.ncm-active { border-color: #1d4f91; background: #dbeafe; color: #16407a; }
+.ncm-toolbar button.ncm-active { border-color: var(--acc); background: var(--acc-soft); color: var(--accTx); }
 
 .ncm-hint {
   display: flex;
@@ -38,21 +38,21 @@
   justify-content: space-between;
   gap: 10px;
   padding: 5px 10px;
-  border-bottom: 1px solid #fed7aa;
-  background: #fff7ed;
-  color: #9a3412;
+  border-bottom: 1px solid var(--warn-border);
+  background: var(--warn-soft);
+  color: var(--warnTx);
   font-size: 10px;
 }
 
-.ncm-empty { display: grid; flex: 1; place-items: center; padding: 24px; color: #5d7f96; font-size: 12px; text-align: center; }
+.ncm-empty { display: grid; flex: 1; place-items: center; padding: 24px; color: var(--mut); font-size: 12px; text-align: center; }
 
 .ncm-marker {
   display: block;
   width: 14px;
   height: 14px;
-  border: 2px solid #fff;
+  border: 2px solid var(--panel);
   border-radius: 50%;
   background: var(--ncm-color);
   box-shadow: 0 1px 4px rgba(15, 23, 42, .45);
 }
-.ncm-marker--anchor { outline: 3px solid rgba(249, 115, 22, .72); outline-offset: 2px; }
+.ncm-marker--anchor { outline: 3px solid var(--warn-border); outline-offset: 2px; }

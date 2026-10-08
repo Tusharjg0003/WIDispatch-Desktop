@@ -1,15 +1,12 @@
 .metric {
-  --line: #d2e0ea;
-  --line-soft: #eef2f6;
-  --ink: #003057;
-  --ink-dim: #5d7f96;
-  --accent: #1d4f91;
-  --accent-soft: rgba(29, 79, 145, 0.08);
-  --good: #567f00;
-  --warn: #c4380f;
-  --bad: #c11b1b;
-  --surface: #ffffff;
-  --surface-subtle: #f3f8fb;
+  --ink: var(--tx1);
+  --ink-dim: var(--mut);
+  --accent: var(--acc);
+  --accent-soft: var(--acc-soft);
+  --good: var(--ok);
+  --bad: var(--err);
+  --surface: var(--panel);
+  --surface-subtle: var(--panel2);
 
   width: 100%;
   min-height: 100%;
@@ -88,7 +85,7 @@
 .metric__clear:focus-visible {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(29, 79, 145, 0.15);
+  box-shadow: 0 0 0 3px var(--acc-border);
 }
 
 .metric__clear {
@@ -105,7 +102,7 @@
 
 .metric__clear:hover {
   background: var(--surface-subtle);
-  border-color: #cbd5e1;
+  border-color: var(--line2);
   color: var(--ink);
 }
 
@@ -125,15 +122,15 @@
   justify-content: center;
   gap: 16px;
   border-style: solid;
-  border-color: rgba(220, 38, 38, 0.3);
-  background: #fbeaea;
+  border-color: var(--err-border);
+  background: var(--err-soft);
   color: var(--bad);
 }
 
 .metric__notice--error button {
   padding: 6px 14px;
   border-radius: 6px;
-  border: 1px solid rgba(220, 38, 38, 0.35);
+  border: 1px solid var(--err-border);
   background: var(--surface);
   color: var(--bad);
   cursor: pointer;
@@ -356,14 +353,14 @@
 
 .q-flag--ok {
   color: var(--good);
-  border-color: rgba(5, 150, 105, 0.3);
-  background: rgba(5, 150, 105, 0.08);
+  border-color: var(--ok-border);
+  background: var(--ok-soft);
 }
 
 .q-flag--bad {
   color: var(--bad);
-  border-color: rgba(220, 38, 38, 0.3);
-  background: rgba(220, 38, 38, 0.08);
+  border-color: var(--err-border);
+  background: var(--err-soft);
 }
 
 .ledger {
@@ -407,7 +404,7 @@
 .ledger tbody tr.is-selected,
 .ledger tbody tr.row-selected,
 .ledger tbody tr[aria-selected="true"] {
-  background: #e9f1f9;
+  background: var(--acc-soft);
 }
 .ledger tbody tr.is-selected td:first-child,
 .ledger tbody tr.row-selected td:first-child,
@@ -435,7 +432,7 @@
 }
 
 .meter--empty {
-  color: #cbd5e1;
+  color: var(--mut2);
 }
 
 .meter__track {
@@ -495,15 +492,15 @@
   font-size: 10px;
   font-weight: 700;
   line-height: 1;
-  background: #eef2f7;
-  color: #8aa5b8;
+  background: var(--panel2);
+  color: var(--mut2);
   white-space: nowrap;
 }
-.chip--ok { background: #eef6df; color: #567f00; }
-.chip--info { background: #e9f1f9; color: #1d4f91; }
-.chip--warn { background: #fdeee7; color: #a32e0b; }
-.chip--danger { background: #fbeaea; color: #a31616; }
-.chip--muted { background: #f3f8fb; color: #5d7f96; }
+.chip--ok { background: var(--ok-soft); color: var(--okTx); }
+.chip--info { background: var(--acc-soft); color: var(--accTx); }
+.chip--warn { background: var(--warn-soft); color: var(--warnTx); }
+.chip--danger { background: var(--err-soft); color: var(--errTx); }
+.chip--muted { background: var(--panel2); color: var(--mut); }
 
 /* 19px blue circle + white numeral, for numbered section headers. */
 .section-badge {
@@ -513,8 +510,8 @@
   width: 19px;
   height: 19px;
   border-radius: 999px;
-  background: #1d4f91;
-  color: #fff;
+  background: var(--acc);
+  color: var(--on-accent);
   font-family: var(--mono);
   font-size: 10px;
   font-weight: 700;

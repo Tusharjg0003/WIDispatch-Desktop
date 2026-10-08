@@ -4,6 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Utility Optimo</title>
+    <script>
+      // Apply the saved light/dark theme before first paint (see ThemeContext).
+      (function () {
+        var theme = "dark";
+        try {
+          var stored = localStorage.getItem("widispatch-theme");
+          if (stored === "light" || stored === "dark") theme = stored;
+        } catch (e) {}
+        document.documentElement.setAttribute("data-theme", theme);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

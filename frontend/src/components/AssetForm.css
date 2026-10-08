@@ -3,7 +3,7 @@
 .create-asset-page {
   font-family: 'Segoe UI', Roboto, sans-serif;
   padding: 12px;
-  background: #f3f8fb;
+  background: var(--panel2);
   min-height: 100vh;
   position: relative;
 }
@@ -15,21 +15,21 @@
 
 .create-asset-page.view-mode {
   padding: 12px;
-  background: #f3f8fb;
+  background: var(--panel2);
   min-height: 100vh;
   position: relative;
 }
 
 /* Page Header - Neutral Styling */
 .create-asset-page .page-header {
-  background: white;
-  color: #003057;
+  background: var(--panel);
+  color: var(--tx1);
   padding: 12px;
   box-shadow: none;
   position: relative;
   overflow: visible;
   margin-bottom: 12px;
-  border-bottom: 1px solid #d2e0ea;
+  border-bottom: 1px solid var(--line);
   border-radius: 2px;
 }
 
@@ -52,9 +52,9 @@
 }
 
 .create-asset-page .back-button {
-  background: #ffffff;
-  border: 1px solid #d2e0ea;
-  color: #8aa5b8;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--mut2);
   padding: 12px;
   border-radius: 2px;
   cursor: pointer;
@@ -65,8 +65,8 @@
 }
 
 .create-asset-page .back-button:hover {
-  background: #f3f8fb;
-  border-color: #cbd5e1;
+  background: var(--panel2);
+  border-color: var(--line2);
 }
 
 .create-asset-page .page-header__title-section {
@@ -80,17 +80,17 @@
   display: flex;
   align-items: center;
   gap: 1rem;
-  color: #003057;
+  color: var(--tx1);
 }
 
 .create-asset-page .page-header__title-icon {
   font-size: 1.25rem;
-  color: #5d7f96;
+  color: var(--mut);
 }
 
 .create-asset-page .page-header__subtitle {
   font-size: 0.875rem;
-  color: #5d7f96;
+  color: var(--mut);
   margin: 0;
   line-height: 1.6;
   max-width: 600px;
@@ -117,52 +117,52 @@
 }
 
 .create-asset-page .header-action-btn.primary {
-  background: #111827;
-  color: white;
+  background: var(--accGrad);
+  color: var(--on-accent);
   box-shadow: none;
 }
 
 .create-asset-page .header-action-btn.primary:hover:not(:disabled) {
-  background: #374151;
+  filter: brightness(1.08);
 }
 
 .create-asset-page .header-action-btn.primary:disabled {
-  background: #9ca3af;
+  background: var(--mut2);
   cursor: not-allowed;
 }
 
 .create-asset-page .header-action-btn.secondary {
-  background: #ffffff;
-  color: #8aa5b8;
-  border: 1px solid #d2e0ea;
+  background: var(--panel);
+  color: var(--mut2);
+  border: 1px solid var(--line);
 }
 
 .create-asset-page .header-action-btn.secondary:hover {
-  background: #f3f8fb;
-  border-color: #cbd5e1;
-  color: #26516e;
+  background: var(--panel2);
+  border-color: var(--line2);
+  color: var(--tx2);
 }
 
 .create-asset-page .header-action-btn.danger {
-  background: #c11b1b;
-  color: #ffffff;
-  border: 1px solid #c11b1b;
+  background: var(--err);
+  color: var(--on-accent);
+  border: 1px solid var(--err);
 }
 
 .create-asset-page .header-action-btn.danger:hover {
-  background: #a31616;
-  border-color: #a31616;
+  background: var(--err);
+  border-color: var(--err);
 }
 
 /* Success Banner */
 .create-asset-page .success-banner,
 .create-asset-page .af__success {
-  background: #ffffff;
-  color: #003057;
+  background: var(--panel);
+  color: var(--tx1);
   padding: 16px 24px;
   border-radius: 8px;
   margin-bottom: 24px;
-  border: 1px solid #d2e0ea;
+  border: 1px solid var(--line);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
@@ -182,10 +182,10 @@
 }
 
 .create-asset-page .form-content {
-  background: white;
+  background: var(--panel);
   border-radius: 2px;
   box-shadow: none;
-  border: 1px solid #d2e0ea;
+  border: 1px solid var(--line);
   padding: 12px;
   margin-bottom: 12px;
 }
@@ -195,12 +195,12 @@
 .create-asset-page .form-section > h3 {
   font-size: 0.75rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--tx1);
   margin: 0 0 6px 0;
   padding: 8px;
-  background: #f3f8fb;
+  background: var(--panel2);
   border-radius: 2px;
-  border-left: 2px solid #1d4f91;
+  border-left: 2px solid var(--acc);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -233,11 +233,11 @@
 .create-asset-page .production-import__hint {
   margin: 0;
   font-size: 0.6875rem;
-  color: #6b7280;
+  color: var(--mut);
 }
 
 .create-asset-page .production-import__hint code {
-  background: #f3f4f6;
+  background: var(--panel2);
   padding: 1px 4px;
   border-radius: 2px;
   font-size: 0.625rem;
@@ -251,16 +251,16 @@
   padding: 6px 10px;
   font-size: 0.6875rem;
   font-weight: 600;
-  color: #1d4f91;
-  background: #ffffff;
-  border: 1px solid #1d4f91;
+  color: var(--accTx);
+  background: var(--panel);
+  border: 1px solid var(--acc);
   border-radius: 2px;
   cursor: pointer;
   transition: background 0.12s ease;
 }
 
 .create-asset-page .production-import__button:hover {
-  background: #f0f6ff;
+  background: var(--panel2);
 }
 
 .create-asset-page .production-import__chip {
@@ -270,9 +270,9 @@
   align-self: flex-start;
   padding: 6px 10px;
   font-size: 0.6875rem;
-  color: #111827;
-  background: #f3f8fb;
-  border: 1px solid #d2e0ea;
+  color: var(--tx1);
+  background: var(--panel2);
+  border: 1px solid var(--line);
   border-radius: 2px;
 }
 
@@ -285,7 +285,7 @@
 }
 
 .create-asset-page .production-import__size {
-  color: #6b7280;
+  color: var(--mut);
 }
 
 .create-asset-page .production-import__clear {
@@ -293,7 +293,7 @@
   align-items: center;
   justify-content: center;
   padding: 2px;
-  color: #a31616;
+  color: var(--errTx);
   background: transparent;
   border: 0;
   cursor: pointer;
@@ -301,13 +301,13 @@
 }
 
 .create-asset-page .production-import__clear:hover {
-  background: #fbeaea;
+  background: var(--err-soft);
 }
 
 .create-asset-page .form-group label {
   font-size: 0.6875rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--tx1);
   margin-bottom: 4px;
   text-transform: uppercase;
   letter-spacing: 0.25px;
@@ -320,11 +320,11 @@
 .create-asset-page .form-group > select,
 .create-asset-page .form-group > textarea {
   padding: 4px 6px;
-  border: 2px solid #d2e0ea;
+  border: 2px solid var(--line);
   border-radius: 2px;
   font-size: 0.75rem;
-  color: #111827;
-  background: white;
+  color: var(--tx1);
+  background: var(--panel);
   transition: all 0.2s ease;
   height: 28px;
   box-shadow: inset 0 1px 0 rgba(0,0,0,0.02);
@@ -342,7 +342,7 @@
 .create-asset-page .form-group > select:focus,
 .create-asset-page .form-group > textarea:focus {
   outline: none;
-  border-color: #1d4f91;
+  border-color: var(--acc);
   box-shadow: inset 0 1px 0 rgba(0,0,0,0.02);
 }
 
@@ -350,8 +350,8 @@
 .create-asset-page .form-select:disabled,
 .create-asset-page .form-group > input:disabled,
 .create-asset-page .form-group > select:disabled {
-  color: #5d7f96;
-  background: #f3f8fb;
+  color: var(--mut);
+  background: var(--panel2);
 }
 
 .create-asset-page .form-textarea,
@@ -363,8 +363,8 @@
 
 /* Generated ID Section */
 .create-asset-page .generated-id-section {
-  background: white;
-  border: 1px solid #d2e0ea;
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 2px;
   padding: 12px;
   margin-bottom: 12px;
@@ -374,24 +374,24 @@
   margin: 0 0 4px 0;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--tx1);
   padding: 8px;
-  background: #f3f8fb;
+  background: var(--panel2);
   border-radius: 2px;
-  border-left: 2px solid #1d4f91;
+  border-left: 2px solid var(--acc);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .create-asset-page .generated-id-header p {
   margin: 0 0 6px 0;
-  color: #111827;
+  color: var(--tx1);
   font-size: 0.6875rem;
 }
 
 .create-asset-page .view-asset-meta__caption {
   margin: 6px 0 0;
-  color: #111827;
+  color: var(--tx1);
   font-size: 0.6875rem;
   line-height: 1.4;
 }
@@ -408,14 +408,14 @@
 }
 
 .create-asset-page .generated-id-code {
-  background: #ffffff;
-  border: 1px solid #d2e0ea;
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 2px;
   padding: 4px 6px;
   font-family: 'Segoe UI', Roboto, sans-serif;
   font-size: 0.75rem;
   font-weight: 400;
-  color: #111827;
+  color: var(--tx1);
   text-align: center;
   letter-spacing: 0;
   box-shadow: inset 0 1px 0 rgba(0,0,0,0.02);
@@ -429,7 +429,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #5d7f96;
+  color: var(--mut);
   font-size: 14px;
   font-weight: 500;
 }
@@ -445,8 +445,8 @@
 
 /* SWA Info Section */
 .create-asset-page .swa-info-section {
-  background: white;
-  border: 1px solid #d2e0ea;
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 2px;
   padding: 12px;
   margin-bottom: 12px;
@@ -456,11 +456,11 @@
   margin: 0 0 8px 0;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--tx1);
   padding: 8px;
-  background: #f3f8fb;
+  background: var(--panel2);
   border-radius: 2px;
-  border-left: 2px solid #1d4f91;
+  border-left: 2px solid var(--acc);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -472,8 +472,8 @@
 }
 
 .create-asset-page .info-card {
-  background: #ffffff;
-  border: 1px solid #d2e0ea;
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 1.5rem;
   margin-bottom: 1rem;
@@ -484,7 +484,7 @@
   margin: 0 0 4px 0;
   font-size: 0.6875rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--tx1);
   text-transform: uppercase;
   letter-spacing: 0.25px;
 }
@@ -492,14 +492,14 @@
 .create-asset-page .info-card p {
   margin: 0;
   font-size: 0.6875rem;
-  color: #6b7280;
+  color: var(--mut);
   line-height: 1.4;
 }
 
 /* Map Section */
 .create-asset-page .map-section {
-  background: white;
-  border: 1px solid #d2e0ea;
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 2px;
   padding: 12px;
   margin-bottom: 12px;
@@ -509,19 +509,19 @@
 .create-asset-page .map-header h4 {
   font-size: 0.75rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--tx1);
   margin: 0 0 4px 0;
   padding: 8px;
-  background: #f3f8fb;
+  background: var(--panel2);
   border-radius: 2px;
-  border-left: 2px solid #1d4f91;
+  border-left: 2px solid var(--acc);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .create-asset-page .map-header p {
   font-size: 0.6875rem;
-  color: #111827;
+  color: var(--tx1);
   margin: 0 0 6px 0;
 }
 
@@ -535,7 +535,7 @@
   width: 100%;
   position: relative;
   z-index: 1;
-  border: 1px solid #d2e0ea;
+  border: 1px solid var(--line);
 }
 
 .create-asset-page .selected-coordinates {
@@ -543,11 +543,11 @@
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background: white;
-  border: 1px solid #6fa300;
+  background: var(--panel);
+  border: 1px solid var(--ok);
   border-radius: 6px;
   font-size: 14px;
-  color: #065f46;
+  color: var(--okTx);
   margin-top: 16px;
 }
 
@@ -579,7 +579,7 @@
 
 .create-asset-page .leaflet-popup-content strong {
   font-weight: 600;
-  color: #003057;
+  color: var(--tx1);
 }
 
 .create-asset-page .leaflet-control-zoom {
@@ -589,12 +589,12 @@
 
 /* View Asset Page / shared badges */
 .create-asset-page .form-display {
-  background: #ffffff;
-  border: 1px solid #d2e0ea;
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 2px;
   padding: 4px 6px;
   font-size: 0.6875rem;
-  color: #111827;
+  color: var(--tx1);
   min-height: 26px;
   display: flex;
   align-items: center;
@@ -605,13 +605,13 @@
 .create-asset-page .form-display.asset-uuid {
   font-family: 'Courier New', monospace;
   font-size: 0.8rem;
-  background: #e9ecef;
-  color: #6c757d;
+  background: var(--panel2);
+  color: var(--mut);
 }
 
 .create-asset-page .form-display.code-badge {
-  background: #007bff;
-  color: white;
+  background: var(--acc);
+  color: var(--on-accent);
   font-weight: 600;
   text-align: center;
   justify-content: center;
@@ -625,52 +625,52 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.3px;
-  background: #f3f8fb;
-  color: #111827;
-  border: 1px solid #d2e0ea;
+  background: var(--panel2);
+  color: var(--tx1);
+  border: 1px solid var(--line);
 }
 
 .create-asset-page .status-badge.operational,
 .create-asset-page .status-badge.in-operation {
-  background: #ecfdf5;
-  color: #065f46;
-  border-color: #d1fae5;
+  background: var(--ok-soft);
+  color: var(--okTx);
+  border-color: var(--ok-border);
 }
 
 .create-asset-page .status-badge.maintenance {
-  background: #fdeee7;
-  color: #92400e;
-  border-color: #fde68a;
+  background: var(--warn-soft);
+  color: var(--amberTx);
+  border-color: var(--amber-border);
 }
 
 .create-asset-page .status-badge.planned {
-  background: #fdeee7;
-  color: #92400e;
-  border-color: #fde68a;
+  background: var(--warn-soft);
+  color: var(--amberTx);
+  border-color: var(--amber-border);
 }
 
 .create-asset-page .status-badge.under-construction,
 .create-asset-page .status-badge.under_construction {
-  background: #dbeafe;
-  color: #1e40af;
-  border-color: #bfdbfe;
+  background: var(--acc-soft);
+  color: var(--accTx);
+  border-color: var(--acc-border);
 }
 
 .create-asset-page .status-badge.decommissioned {
-  background: #fbeaea;
-  color: #991b1b;
-  border-color: #fecaca;
+  background: var(--err-soft);
+  color: var(--errTx);
+  border-color: var(--err-border);
 }
 
 .create-asset-page .code-badge {
-  background: #f3f8fb;
-  color: #003057;
+  background: var(--panel2);
+  color: var(--tx1);
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
   font-family: 'Courier New', monospace;
   font-weight: 600;
   font-size: 0.9rem;
-  border: 1px solid #d2e0ea;
+  border: 1px solid var(--line);
 }
 
 /* Loading and Error States */
@@ -687,26 +687,26 @@
 .create-asset-page .loading-spinner {
   width: 40px;
   height: 40px;
-  border: 4px solid #d2e0ea;
-  border-top: 4px solid #3b82f6;
+  border: 4px solid var(--line);
+  border-top: 4px solid var(--acc);
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 1rem;
 }
 
 .create-asset-page .error-container h2 {
-  color: #c11b1b;
+  color: var(--errTx);
   margin-bottom: 1rem;
 }
 
 .create-asset-page .error-container p {
-  color: #5d7f96;
+  color: var(--mut);
   margin-bottom: 2rem;
 }
 
 /* View Asset Page - Mega Projects Style */
 .create-asset-page .view-header {
-  background: white;
+  background: var(--panel);
   border-radius: 1px;
   padding: 0;
   box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
@@ -715,7 +715,7 @@
   align-items: center;
   flex-wrap: nowrap;
   gap: 0.125rem;
-  border: 1px solid #d2e0ea;
+  border: 1px solid var(--line);
   height: 40px;
   overflow: hidden;
   position: relative;
@@ -725,7 +725,7 @@
 
 .create-asset-page .view-header .breadcrumb {
   font-size: 0.75rem;
-  color: #374151;
+  color: var(--tx2);
   display: flex;
   align-items: center;
   gap: 0.25rem;
@@ -760,8 +760,8 @@
 }
 
 .create-asset-page .view-header .breadcrumb span:hover {
-  color: #1d4f91;
-  background: #f3f8fb;
+  color: var(--accTx);
+  background: var(--panel2);
 }
 
 .create-asset-page .view-actions {
@@ -780,9 +780,9 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
-  border: 1px solid #1971E5;
-  background: white;
-  color: #374151;
+  border: 1px solid var(--acc);
+  background: var(--panel);
+  color: var(--tx2);
   min-width: 28px;
   height: 28px;
   display: flex;
@@ -792,8 +792,8 @@
 }
 
 .create-asset-page .view-actions button:hover {
-  background: #f3f8fb;
-  border-color: #1d4f91;
+  background: var(--panel2);
+  border-color: var(--acc);
   transform: translateY(-1px);
 }
 
@@ -804,8 +804,8 @@
 
 /* Form Section - Mega Projects Style */
 .create-asset-page .form-section {
-  background: white;
-  border: 1px solid #d2e0ea;
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 2px;
   padding: 12px;
   margin-bottom: 12px;
@@ -830,7 +830,7 @@
 
 .create-asset-page .af__map-hint {
   margin: 0;
-  color: #6b7280;
+  color: var(--mut);
   font-size: 0.6875rem;
 }
 
@@ -841,7 +841,7 @@
   gap: 6px;
   margin-bottom: 12px;
   padding-bottom: 6px;
-  border-bottom: 1px solid #d2e0ea;
+  border-bottom: 1px solid var(--line);
 }
 
 .create-asset-page .view-actions-container button {
@@ -851,28 +851,28 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
-  border: 1px solid #d2e0ea;
-  background: white;
-  color: #111827;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--tx1);
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
 .create-asset-page .view-actions-container button:hover {
-  background: #f3f8fb;
-  border-color: #111827;
+  background: var(--panel2);
+  border-color: var(--tx1);
 }
 
 .create-asset-page .view-actions-container button.danger {
-  background: #c11b1b;
-  color: white;
-  border-color: #c11b1b;
+  background: var(--err);
+  color: var(--on-accent);
+  border-color: var(--err);
 }
 
 .create-asset-page .view-actions-container button.danger:hover {
-  background: #a31616;
-  border-color: #a31616;
+  background: var(--err);
+  border-color: var(--err);
 }
 
 /* Create Asset Button - Mega Projects Style */
@@ -883,7 +883,7 @@
   gap: 12px;
   margin-top: 24px;
   padding-top: 12px;
-  border-top: 1px solid #d2e0ea;
+  border-top: 1px solid var(--line);
 }
 
 .create-asset-page .form-action-btn,
@@ -904,22 +904,22 @@
 
 .create-asset-page .form-action-btn.primary,
 .create-asset-page .af__btn--primary {
-  background: #0969da;
-  color: white;
-  box-shadow: 0 4px 12px rgba(9, 105, 218, 0.25), 0 2px 4px rgba(9, 105, 218, 0.15);
+  background: var(--acc);
+  color: var(--on-accent);
+  box-shadow: 0 4px 12px var(--acc-border), 0 2px 4px var(--acc-border);
 }
 
 .create-asset-page .form-action-btn.primary:hover:not(:disabled),
 .create-asset-page .af__btn--primary:hover:not(:disabled) {
-  background: #0550ae;
+  background: var(--acc);
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(5, 80, 174, 0.35), 0 4px 8px rgba(5, 80, 174, 0.2);
+  box-shadow: 0 6px 20px var(--acc-border), 0 4px 8px var(--acc-border);
 }
 
 .create-asset-page .form-action-btn.primary:active:not(:disabled),
 .create-asset-page .af__btn--primary:active:not(:disabled) {
   transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(9, 105, 218, 0.25);
+  box-shadow: 0 2px 8px var(--acc-border);
 }
 
 .create-asset-page .form-action-btn:disabled,
@@ -942,10 +942,10 @@
 .create-asset-page .af__error {
   margin-bottom: 12px;
   padding: 12px;
-  border: 1px solid #fecaca;
+  border: 1px solid var(--err-border);
   border-radius: 2px;
-  background: #fbeaea;
-  color: #991b1b;
+  background: var(--err-soft);
+  color: var(--errTx);
   font-size: 0.75rem;
 }
 

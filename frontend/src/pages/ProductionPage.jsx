@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import ProductionPlantList from "./ProductionPlantList";
@@ -8,9 +8,55 @@ import TabStripBoundary from "../tabs/components/TabStripBoundary";
 import { useProductionTabStore } from "../production/tabs/productionTabStore";
 import { productionTabController } from "../production/tabs/productionTabControllerInstance";
 import { useTabShortcuts } from "../tabs/hooks/useTabShortcuts";
+import { fetchProductionPlants } from "../api/production";
+import { useStatusItems } from "../components/StatusBar";
 import "./ProductionPage.css";
 
+const parseDate = (value) => {
+  if (!value || value === "NULL") return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+// Status-bar metrics, computed exactly as WIDispatch-Production's
+// components/layout/status-bar.tsx: plant counts by status, plus the design
+// capacity active today (commissioned on/before today, not decommissioned).
+function useProductionStatusItems() {
+  const [plants, setPlants] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    fetchProductionPlants()
+      .then((data) => { if (alive) setPlants(Array.isArray(data) ? data : []); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
+  const items = useMemo(() => {
+    if (!plants.length) return null;
+    const count = (status) => plants.filter((plant) => String(plant.status || "").toLowerCase() === status).length;
+    const today = new Date();
+    const totalCapacity = plants.reduce((sum, plant) => {
+      const commissioned = parseDate(plant.commissioning_date);
+      const decommissioned = parseDate(plant.decommissioning_date);
+      const activeToday = !!commissioned && commissioned <= today && (!decommissioned || decommissioned > today);
+      return activeToday ? sum + (plant.specifications?.contracted_capacity || 0) : sum;
+    }, 0);
+    return {
+      left: [
+        { label: "Total plants", value: plants.length, tone: "neutral" },
+        { label: "Operational", value: count("operational"), tone: "ok" },
+        { label: "Maintenance", value: count("maintenance"), tone: "warn" },
+        { label: "Offline", value: count("offline"), tone: "err" },
+      ],
+      right: [{ label: "Total Design Capacity", value: `${(totalCapacity / 1000).toLocaleString()} K m³/day` }],
+    };
+  }, [plants]);
+
+  useStatusItems(items);
+}
+
 export default function ProductionPage() {
+  useProductionStatusItems();
   const navigate = useNavigate();
   const { plantId } = useParams();
   const [searchParams] = useSearchParams();

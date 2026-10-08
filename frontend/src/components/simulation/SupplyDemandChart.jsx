@@ -18,13 +18,13 @@ export default function SupplyDemandChart({ plan, compact = false, className = "
       <div className="sdchart">
         <ResponsiveContainer width="100%" height={compact ? 220 : 320}>
           <ComposedChart data={series}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#d9e4ec" vertical={false} />
-            <XAxis dataKey="label" tick={{ fill: "#607d91", fontSize: 11 }} />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
+            <XAxis dataKey="label" tick={{ fill: "var(--chart-axis)", fontSize: 11 }} />
             <YAxis
-              tick={{ fill: "#607d91", fontSize: 11 }}
+              tick={{ fill: "var(--chart-axis)", fontSize: 11 }}
               tickFormatter={(v) => nf.format(v)}
               width={80}
-              label={{ value: "m³/day", angle: -90, position: "insideLeft", fill: "#607d91", fontSize: 11 }}
+              label={{ value: "m³/day", angle: -90, position: "insideLeft", fill: "var(--chart-axis)", fontSize: 11 }}
             />
             <Tooltip formatter={(v, name) => [`${nf.format(Math.round(v))} m³`, name]} />
             <Legend />
@@ -32,7 +32,7 @@ export default function SupplyDemandChart({ plan, compact = false, className = "
               type="monotone"
               dataKey="required"
               name="Required"
-              stroke="#8b5cf6"
+              stroke="var(--chart-purple)"
               strokeWidth={2}
               strokeDasharray="6 3"
               dot={false}
@@ -55,14 +55,14 @@ export default function SupplyDemandChart({ plan, compact = false, className = "
               stackId="shortageGap"
               name="Shortfall"
               stroke="none"
-              fill="#c11b1b"
+              fill="var(--err)"
               fillOpacity={0.22}
               isAnimationActive={false}
             />
             <Line
               type="monotone"
               dataKey="shortageCeiling"
-              stroke="#c11b1b"
+              stroke="var(--err)"
               strokeWidth={2}
               dot={{ r: 2 }}
               activeDot={{ r: 3 }}
@@ -75,7 +75,7 @@ export default function SupplyDemandChart({ plan, compact = false, className = "
               type="monotone"
               dataKey="delivered"
               name="Delivered"
-              stroke="#1d4f91"
+              stroke="var(--acc)"
               strokeWidth={3}
               dot={{ r: 2 }}
               isAnimationActive={false}

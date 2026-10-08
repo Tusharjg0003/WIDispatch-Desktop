@@ -1,0 +1,422 @@
+[
+  {
+    "slide": 1,
+    "title": "WIDispatch",
+    "originalSlide": 1
+  },
+  {
+    "slide": 2,
+    "title": "WIDispatch: purpose and objectives",
+    "introduction": true
+  },
+  {
+    "slide": 3,
+    "title": "Today’s demonstration",
+    "originalSlide": 2
+  },
+  {
+    "slide": 4,
+    "title": "One operating cycle, distinct responsibilities",
+    "originalSlide": 3
+  },
+  {
+    "slide": 5,
+    "title": "WIDispatch Desktop: planning and dispatch",
+    "introduction": true
+  },
+  {
+    "slide": 6,
+    "title": "The shared asset registry",
+    "originalSlide": 4
+  },
+  {
+    "slide": 7,
+    "title": "Asset identity and operating specifications",
+    "originalSlide": 5
+  },
+  {
+    "slide": 8,
+    "title": "Creating an asset",
+    "originalSlide": 6
+  },
+  {
+    "slide": 9,
+    "title": "Production Portal: supply availability and reporting",
+    "introduction": true
+  },
+  {
+    "slide": 10,
+    "title": "Production dashboard",
+    "originalSlide": 7
+  },
+  {
+    "slide": 11,
+    "title": "Production starts with the plant",
+    "originalSlide": 8
+  },
+  {
+    "slide": 12,
+    "title": "Recording production",
+    "originalSlide": 9
+  },
+  {
+    "slide": 13,
+    "title": "Maintenance changes available production",
+    "originalSlide": 10
+  },
+  {
+    "slide": 14,
+    "title": "Outage records and operating impact",
+    "originalSlide": 11
+  },
+  {
+    "slide": 15,
+    "title": "Reporting an outage",
+    "originalSlide": 12
+  },
+  {
+    "slide": 16,
+    "title": "Outage notification and planner response",
+    "originalSlide": 13
+  },
+  {
+    "slide": 17,
+    "title": "Quality and outages complete the operating picture",
+    "originalSlide": 14
+  },
+  {
+    "slide": 18,
+    "title": "Production submission approval",
+    "originalSlide": 15
+  },
+  {
+    "slide": 19,
+    "title": "Demand Portal: requirements and reconciliation",
+    "introduction": true
+  },
+  {
+    "slide": 20,
+    "title": "Demand starts at the city gate",
+    "originalSlide": 16
+  },
+  {
+    "slide": 21,
+    "title": "Entering city-gate demand",
+    "originalSlide": 17
+  },
+  {
+    "slide": 22,
+    "title": "Demand approval and correction",
+    "originalSlide": 18
+  },
+  {
+    "slide": 23,
+    "title": "Transmission Portal: network availability and water movement",
+    "introduction": true
+  },
+  {
+    "slide": 24,
+    "title": "Transmission dashboard",
+    "originalSlide": 19
+  },
+  {
+    "slide": 25,
+    "title": "Transmission systems in the portal",
+    "originalSlide": 20
+  },
+  {
+    "slide": 26,
+    "title": "The system schematic and line details",
+    "originalSlide": 21
+  },
+  {
+    "slide": 27,
+    "title": "Transmission availability at pump level",
+    "originalSlide": 22
+  },
+  {
+    "slide": 28,
+    "title": "Pump maintenance and standby substitution",
+    "originalSlide": 23
+  },
+  {
+    "slide": 29,
+    "title": "Transmission approvals",
+    "originalSlide": 24
+  },
+  {
+    "slide": 30,
+    "title": "Economics Portal: approved cost assumptions",
+    "introduction": true
+  },
+  {
+    "slide": 31,
+    "title": "Economics dashboard",
+    "originalSlide": 25
+  },
+  {
+    "slide": 32,
+    "title": "Economics uses effective cost snapshots",
+    "originalSlide": 26
+  },
+  {
+    "slide": 33,
+    "title": "Proposing a cost change",
+    "originalSlide": 27
+  },
+  {
+    "slide": 34,
+    "title": "Economic approval activates the cost basis",
+    "originalSlide": 28
+  },
+  {
+    "slide": 35,
+    "title": "Building a network from registered assets",
+    "originalSlide": 29
+  },
+  {
+    "slide": 36,
+    "title": "New assets from the canvas toolbar",
+    "originalSlide": 30
+  },
+  {
+    "slide": 37,
+    "title": "Library placement and drag-and-drop",
+    "originalSlide": 31
+  },
+  {
+    "slide": 38,
+    "title": "Pipe variables and system creation",
+    "originalSlide": 32
+  },
+  {
+    "slide": 39,
+    "title": "Main lines and branches",
+    "originalSlide": 33
+  },
+  {
+    "slide": 40,
+    "title": "The saved system in Desktop",
+    "originalSlide": 34
+  },
+  {
+    "slide": 41,
+    "title": "The Systems library",
+    "originalSlide": 35
+  },
+  {
+    "slide": 42,
+    "title": "A complete system placed on the canvas",
+    "originalSlide": 36
+  },
+  {
+    "slide": 43,
+    "title": "Finding an asset on the canvas",
+    "originalSlide": 37
+  },
+  {
+    "slide": 44,
+    "title": "Tracing the upstream supply path",
+    "originalSlide": 38
+  },
+  {
+    "slide": 45,
+    "title": "Isolating systems, lines and assets",
+    "originalSlide": 39
+  },
+  {
+    "slide": 46,
+    "title": "Pipe bends and route clarity",
+    "originalSlide": 40
+  },
+  {
+    "slide": 47,
+    "title": "Alignment, grid and snapping",
+    "originalSlide": 41
+  },
+  {
+    "slide": 48,
+    "title": "Active assets and disconnected paths",
+    "originalSlide": 42
+  },
+  {
+    "slide": 49,
+    "title": "A schematic reflected on the map",
+    "originalSlide": 43
+  },
+  {
+    "slide": 50,
+    "title": "KMZ import and geographic review",
+    "originalSlide": 44
+  },
+  {
+    "slide": 51,
+    "title": "Saving and exporting the network",
+    "originalSlide": 45
+  },
+  {
+    "slide": 52,
+    "title": "Canvas shortcuts and supporting tools",
+    "originalSlide": 46
+  },
+  {
+    "slide": 53,
+    "title": "Connections, direction and capacity",
+    "originalSlide": 47
+  },
+  {
+    "slide": 54,
+    "title": "Network validation and saving",
+    "originalSlide": 48
+  },
+  {
+    "slide": 55,
+    "title": "The worked outage scenario",
+    "originalSlide": 49
+  },
+  {
+    "slide": 56,
+    "title": "Simulation setup and the planning horizon",
+    "originalSlide": 50
+  },
+  {
+    "slide": 57,
+    "title": "Configuration tables and asset inclusion",
+    "originalSlide": 51
+  },
+  {
+    "slide": 58,
+    "title": "Emergency capacity and demand assumptions",
+    "originalSlide": 52
+  },
+  {
+    "slide": 59,
+    "title": "Storage and throughput during an emergency",
+    "originalSlide": 53
+  },
+  {
+    "slide": 60,
+    "title": "What to check before Run simulation",
+    "originalSlide": 54
+  },
+  {
+    "slide": 61,
+    "title": "Results for the selected run",
+    "originalSlide": 55
+  },
+  {
+    "slide": 62,
+    "title": "Daily supply and dispatch behavior",
+    "originalSlide": 56
+  },
+  {
+    "slide": 63,
+    "title": "Storage and shortage investigation",
+    "originalSlide": 57
+  },
+  {
+    "slide": 64,
+    "title": "The shortage day on the canvas",
+    "originalSlide": 58
+  },
+  {
+    "slide": 65,
+    "title": "Binding constraints on the simulation canvas",
+    "originalSlide": 59
+  },
+  {
+    "slide": 66,
+    "title": "Tracing delivered water after the run",
+    "originalSlide": 60
+  },
+  {
+    "slide": 67,
+    "title": "Simulation canvas review tools",
+    "originalSlide": 61
+  },
+  {
+    "slide": 68,
+    "title": "Draft decisions and proposed publication",
+    "originalSlide": 62
+  },
+  {
+    "slide": 69,
+    "title": "Editing the daily demand decision",
+    "originalSlide": 63
+  },
+  {
+    "slide": 70,
+    "title": "A useful decision comment",
+    "originalSlide": 64
+  },
+  {
+    "slide": 71,
+    "title": "Maintenance decisions and schedule changes",
+    "originalSlide": 65
+  },
+  {
+    "slide": 72,
+    "title": "When a decision needs a new simulation",
+    "originalSlide": 66
+  },
+  {
+    "slide": 73,
+    "title": "Publication is the operational handoff",
+    "originalSlide": 67
+  },
+  {
+    "slide": 74,
+    "title": "What publication changes",
+    "originalSlide": 68
+  },
+  {
+    "slide": 75,
+    "title": "Production sees the requested allocation",
+    "originalSlide": 69
+  },
+  {
+    "slide": 76,
+    "title": "Demand reconciliation after publication",
+    "originalSlide": 70
+  },
+  {
+    "slide": 77,
+    "title": "Transmission records actual receipts",
+    "originalSlide": 71
+  },
+  {
+    "slide": 78,
+    "title": "Transmission records actual city-gate delivery",
+    "originalSlide": 72
+  },
+  {
+    "slide": 79,
+    "title": "Approval history and audit trail",
+    "originalSlide": 73
+  },
+  {
+    "slide": 80,
+    "title": "The next operating cycle",
+    "originalSlide": 74
+  },
+  {
+    "slide": 81,
+    "title": "Client discussion and rehearsal checkpoints",
+    "originalSlide": 75
+  },
+  {
+    "slide": 82,
+    "title": "Reference: the four portal workflows",
+    "originalSlide": 76
+  },
+  {
+    "slide": 83,
+    "title": "Reference: sample scenario results",
+    "originalSlide": 77
+  },
+  {
+    "slide": 84,
+    "title": "Reference material",
+    "originalSlide": 78
+  }
+]

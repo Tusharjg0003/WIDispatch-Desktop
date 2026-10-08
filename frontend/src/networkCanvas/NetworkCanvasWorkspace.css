@@ -1,0 +1,1972 @@
+/* Network Builder — light enterprise theme (see MetricDashboard.css for the
+   shared palette). The contextual toolbar renders outside .nb-page (mounted
+   into <header class="app-toolbar"> by LayoutContext), so it repeats the same
+   token block rather than inheriting one from a common ancestor. */
+
+/* ── Page shell: canvas + right inspector ─────────────────────────────────── */
+.nb-page {
+  --left-sidebar-width: 158px;
+  --ink: var(--tx1);
+  --ink-dim: var(--mut);
+  --accent: var(--acc);
+  --accent-soft: var(--acc-soft);
+  --accent-hover: var(--acc-soft);
+  --accent-active: var(--acc-soft);
+  --accent-border: var(--acc-border);
+  --good: var(--ok);
+  --bad: var(--err);
+  --surface: var(--panel);
+  --surface-subtle: var(--panel2);
+
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  color: var(--ink);
+}
+
+.nb-workspace {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  background: var(--surface-subtle);
+}
+
+.nb-canvas-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  /* Written by the canvas on every pan/zoom (see computeGridPitch): the pitch
+     doubles/halves to stay legible, and minor lines cross-fade at the step. */
+  --grid-size: 40px;
+  --grid-major-size: 200px;
+  --grid-minor-alpha: 1;
+  --grid-offset-x: 0px;
+  --grid-offset-y: 0px;
+  --grid-major-offset-x: 0px;
+  --grid-major-offset-y: 0px;
+  border: 1px solid var(--line);
+  background: var(--surface-subtle);
+  overflow: hidden;
+}
+
+/* First pair of gradients is the minor grid, second pair the major one. */
+.nb-canvas-wrap--grid {
+  background-image:
+    linear-gradient(to right, rgba(99, 130, 191, calc(0.16 * var(--grid-minor-alpha))) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(99, 130, 191, calc(0.16 * var(--grid-minor-alpha))) 1px, transparent 1px),
+    linear-gradient(to right, var(--acc-soft) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--acc-soft) 1px, transparent 1px);
+  background-size:
+    var(--grid-size) var(--grid-size),
+    var(--grid-size) var(--grid-size),
+    var(--grid-major-size) var(--grid-major-size),
+    var(--grid-major-size) var(--grid-major-size);
+  background-position:
+    var(--grid-offset-x) var(--grid-offset-y),
+    var(--grid-offset-x) var(--grid-offset-y),
+    var(--grid-major-offset-x) var(--grid-major-offset-y),
+    var(--grid-major-offset-x) var(--grid-major-offset-y);
+}
+
+/* Ghost bend handles — an SVG layer of our own, separate from the Konva stage
+   cytoscape-edge-editing draws its drag anchors on. */
+.nb-edge-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.nb-edge-ghost-handle {
+  pointer-events: auto;
+  cursor: crosshair;
+}
+
+.nb-edge-ghost-handle-dot {
+  fill: var(--panel);
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  opacity: 0.75;
+  transition: opacity 0.12s ease, fill 0.12s ease;
+}
+
+.nb-edge-ghost-handle:hover .nb-edge-ghost-handle-dot {
+  opacity: 1;
+  fill: var(--accent);
+  stroke: var(--panel);
+}
+
+.nb-canvas {
+  position: absolute;
+  inset: 0;
+  /* Own stacking context: cytoscape-edge-editing puts its Konva stage inside
+     at z-index 999, which would otherwise rise above every popup, panel and
+     control layered over the canvas and swallow their clicks. */
+  z-index: 0;
+  background-color: transparent;
+}
+
+.nb-page--canvas-focus .nb-workspace {
+  padding: 4px;
+}
+
+.nb-canvas-controls {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 7;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nb-canvas-ctl {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--line2);
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--tx1);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.nb-canvas-ctl svg,
+.nb-canvas-ctl img {
+  width: 13px;
+  height: 13px;
+  color: currentColor;
+}
+
+.nb-canvas-ctl:hover,
+.nb-canvas-ctl.is-active {
+  border-color: var(--acc-border);
+  background: var(--panel2);
+  color: var(--accTx);
+}
+
+.nb-canvas-ctl:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--acc-border);
+}
+
+.nb-page--place-asset .nb-canvas,
+.nb-page--place-entity .nb-canvas,
+.nb-page--place-note .nb-canvas,
+.nb-page--insert-on-edge .nb-canvas,
+.nb-page--draw-pipe .nb-canvas,
+.nb-page--trace .nb-canvas {
+  cursor: crosshair;
+}
+
+/* Contextual mode banner (with cancel). */
+.nb-mode-banner {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 8px 7px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--accent-border);
+  background: var(--panel2);
+  color: var(--accent);
+  font-size: 0.82rem;
+  font-weight: 500;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+}
+.nb-mode-banner__cancel {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+.nb-mode-banner__cancel:hover {
+  background: var(--surface-subtle);
+}
+
+.nb-canvas__empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+  color: var(--ink-dim);
+  pointer-events: none;
+}
+.nb-canvas__empty h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--ink);
+}
+.nb-canvas__empty p {
+  margin: 0;
+  max-width: 340px;
+  font-size: 0.85rem;
+}
+
+.nb-toast {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
+  padding: 9px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.83rem;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+}
+
+.ns2-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: var(--chip);
+}
+
+.ns2-modal {
+  width: min(560px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
+  display: flex;
+  flex-direction: column;
+}
+
+.ns2-modal--sm {
+  width: min(420px, 100%);
+}
+
+.ns2-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel2);
+}
+
+.ns2-modal-header h2 {
+  margin: 0;
+  color: var(--tx1);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.ns2-modal-close {
+  width: 28px;
+  height: 28px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--mut2);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ns2-modal-close:hover {
+  border-color: var(--line);
+  background: var(--panel);
+  color: var(--tx1);
+}
+
+.ns2-insert-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  padding: 14px 16px;
+}
+
+.ns2-insert-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 58px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--tx1);
+  text-align: left;
+  cursor: pointer;
+}
+
+.ns2-insert-card:hover {
+  border-color: var(--acc-border);
+  background: var(--panel);
+}
+
+.ns2-entity-badge {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: var(--on-accent);
+}
+
+.ns2-insert-card__copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ns2-insert-card__copy strong {
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.ns2-insert-card__copy small {
+  color: var(--mut);
+  font-size: 0.72rem;
+}
+
+.ns2-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--line);
+  background: var(--panel2);
+}
+
+/* Flush rail, same build as .nb-rail: no gap to the canvas, tab bar or
+   footer, square corners. Width comes from useSidebarResize (inline style). */
+.nb-inspector {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  z-index: 1;
+}
+
+/* Right details panel, matching the NetworkSimulation2-style inspector. */
+.ns2-right-panel {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
+  border: 0;
+  border-radius: 0;
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  box-shadow: none;
+}
+
+.ns2-panel-tabs {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 3px;
+  padding: 6px;
+  background: var(--panel2);
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.ns2-panel-tab {
+  position: relative;
+  height: 24px;
+  min-width: 0;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--mut);
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ns2-panel-tab:hover {
+  background: var(--panel);
+  border-color: var(--line);
+  color: var(--tx1);
+}
+
+.ns2-panel-tab--active {
+  background: var(--panel);
+  border-color: var(--acc-border);
+  color: var(--accTx);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+.ns2-panel-tab--has-data::after {
+  content: "";
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--amber);
+}
+
+.ns2-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  background: var(--panel2);
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.ns2-panel-title {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--mut);
+}
+
+.ns2-panel-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--panel);
+  padding: 9px;
+}
+
+.ns2-panel-body--details,
+.ns2-panel-body--config,
+.ns2-panel-body--results,
+.ns2-panel-body--issues,
+.ns2-panel-body--trace {
+  background: var(--panel);
+}
+
+.ns2-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--panel);
+  color: var(--tx2);
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ns2-btn:hover {
+  border-color: var(--acc-border);
+  background: var(--panel);
+}
+
+.ns2-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ns2-btn--sm {
+  height: 24px;
+  padding: 0 7px;
+  font-size: 0.6875rem;
+}
+
+.ns2-adv-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.ns2-adv-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 28px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel2);
+  color: var(--tx2);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ns2-adv-toggle-btn--active {
+  border-color: var(--acc-border);
+  background: var(--acc-soft);
+  color: var(--accTx);
+}
+
+.ns2-issues-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px;
+  margin-bottom: 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel2);
+}
+
+.ns2-issues-title {
+  color: var(--tx1);
+  font-size: 0.8125rem;
+  font-weight: 800;
+}
+
+.ns2-issues-subtitle,
+.ns2-find-meta {
+  color: var(--mut);
+  font-size: 0.6875rem;
+  margin-top: 2px;
+}
+
+.ns2-issue-list,
+.ns2-find-results {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ns2-issue-row,
+.ns2-find-row {
+  display: flex;
+  width: 100%;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ns2-issue-row:disabled {
+  cursor: default;
+}
+
+.ns2-issue-row:hover:not(:disabled),
+.ns2-find-row:hover {
+  border-color: var(--acc-border);
+  background: var(--panel);
+}
+
+.ns2-issue-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--panel2);
+  color: var(--mut2);
+  font-size: 0.625rem;
+  font-weight: 900;
+}
+
+.ns2-issue-row--error .ns2-issue-icon {
+  background: var(--err-soft);
+  color: var(--errTx);
+}
+
+.ns2-issue-row--warning .ns2-issue-icon {
+  background: var(--warn-soft);
+  color: var(--warnTx);
+}
+
+.ns2-issue-row--success .ns2-issue-icon {
+  background: var(--ok-soft);
+  color: var(--okTx);
+}
+
+.ns2-issue-copy,
+.ns2-find-row {
+  min-width: 0;
+}
+
+.ns2-issue-copy,
+.ns2-find-row {
+  display: flex;
+  flex-direction: column;
+}
+
+.ns2-issue-title,
+.ns2-find-name {
+  display: block;
+  color: var(--tx1);
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.ns2-issue-detail,
+.ns2-find-detail {
+  display: block;
+  margin-top: 2px;
+  color: var(--mut);
+  font-size: 0.6875rem;
+  line-height: 1.25;
+}
+
+.ns2-find-panel .ns2-input {
+  margin-bottom: 6px;
+}
+
+.ns2-find-meta {
+  margin-bottom: 8px;
+}
+
+.ns2-trace-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ns2-trace-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel2);
+}
+
+.ns2-trace-root {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--tx1);
+  font-size: 0.8125rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ns2-trace-subtitle {
+  margin-top: 2px;
+  color: var(--mut);
+  font-size: 0.6875rem;
+  line-height: 1.25;
+}
+
+.ns2-trace-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.ns2-trace-stat {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 8px;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+}
+
+.ns2-trace-stat span {
+  color: var(--mut);
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.ns2-trace-stat strong {
+  color: var(--tx1);
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.ns2-trace-stat small {
+  grid-column: 1 / -1;
+  color: var(--mut);
+  font-size: 0.6875rem;
+}
+
+.ns2-trace-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ns2-trace-section__title {
+  color: var(--tx1);
+  font-size: 0.6875rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ns2-trace-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ns2-trace-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ns2-trace-row:hover {
+  border-color: var(--acc-border);
+  background: var(--panel);
+}
+
+.ns2-trace-row__name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--tx1);
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ns2-trace-row__flow,
+.ns2-trace-row__type {
+  color: var(--mut);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ns2-panel-empty {
+  padding: 0;
+}
+
+.ns2-panel-hint {
+  font-size: 0.75rem;
+  color: var(--mut);
+  font-style: normal;
+  text-align: center;
+  padding: 16px 12px;
+  border: 1px dashed var(--line2);
+  border-radius: 8px;
+  background: var(--panel2);
+  margin-bottom: 12px;
+}
+
+.ns2-label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--mut);
+}
+
+.ns2-input {
+  height: 28px;
+  padding: 0 8px;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  color: var(--tx1);
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  outline: none;
+  box-sizing: border-box;
+  width: 100%;
+  transition: border-color 0.1s, background 0.1s;
+}
+.ns2-input:focus {
+  border-color: var(--acc);
+  background: var(--panel);
+}
+
+.ns2-isolation-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.ns2-isolation-status {
+  color: var(--mut2);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.ns2-isolation-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ns2-isolation-tree__title {
+  color: var(--tx1);
+  font-size: 0.6875rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ns2-isolation-tree__system,
+.ns2-isolation-tree__ungrouped {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel2);
+}
+
+.ns2-isolation-tree__children,
+.ns2-isolation-tree__line {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ns2-isolation-tree__row {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ns2-isolation-tree__row--line {
+  margin-left: 10px;
+}
+
+.ns2-isolation-tree__row--segment {
+  margin-left: 20px;
+}
+
+.ns2-isolation-tree__focus {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px 6px;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  padding: 7px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ns2-isolation-tree__focus:disabled {
+  cursor: default;
+}
+
+.ns2-isolation-tree__focus:hover:not(:disabled) {
+  border-color: var(--acc-border);
+  background: var(--panel);
+}
+
+.ns2-isolation-tree__focus--active,
+.ns2-isolation-tree__focus--active:hover:not(:disabled) {
+  border-color: var(--ok);
+  box-shadow: 0 0 0 2px var(--ok-border);
+  background: var(--ok-soft);
+}
+
+.ns2-isolation-tree__focus--active .ns2-isolation-tree__level {
+  background: var(--ok-soft);
+  color: var(--okTx);
+}
+
+.ns2-isolation-tree__focus strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--tx1);
+  font-size: 0.75rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ns2-isolation-tree__focus small {
+  grid-column: 2;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--mut);
+  font-size: 0.6875rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ns2-isolation-tree__level {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--panel2);
+  color: var(--accTx);
+  font-size: 0.5625rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.ns2-isolation-tree__branch-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 12px;
+  color: var(--mut2);
+  font-size: 0.75rem;
+}
+
+.ns2-isolation-tree__empty {
+  padding: 8px;
+  color: var(--mut);
+  font-size: 0.75rem;
+  border: 1px dashed var(--line2);
+  border-radius: 6px;
+  background: var(--panel);
+}
+
+.tlp {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.nb-page .af__field--toggle {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nb-page .af__toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nb-page .af__toggle input {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  margin: 0;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.nb-page .af__toggle-track {
+  position: relative;
+  width: 34px;
+  height: 20px;
+  flex-shrink: 0;
+  border: 1px solid var(--line2);
+  border-radius: 999px;
+  background: var(--line);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.nb-page .af__toggle-thumb {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--panel);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.25);
+  transition: transform 0.15s ease;
+}
+
+.nb-page .af__toggle[data-on="true"] .af__toggle-track {
+  border-color: var(--ok);
+  background: var(--ok);
+}
+
+.nb-page .af__toggle[data-on="true"] .af__toggle-thumb {
+  transform: translateX(14px);
+}
+
+.nb-page .af__toggle-label {
+  color: var(--mut2);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.tlp__group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tlp__label {
+  color: var(--mut2);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tlp__check-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 150px;
+  overflow: auto;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel2);
+}
+
+.tlp__check {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  padding: 7px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  cursor: pointer;
+}
+
+.tlp__check input {
+  width: 14px;
+  height: 14px;
+  margin: 2px 0 0;
+  accent-color: var(--ok);
+}
+
+.tlp__check-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tlp__check-copy strong {
+  overflow: hidden;
+  color: var(--tx1);
+  font-size: 0.8rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tlp__check-copy small,
+.tlp__empty {
+  color: var(--mut);
+  font-size: 0.72rem;
+}
+
+.tlp__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tlp__branch-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--acc-border);
+  border-radius: 8px;
+  background: var(--acc-soft);
+}
+
+/* Area-zoom drag overlay. */
+.nb-area-capture {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  cursor: crosshair;
+}
+/* Right-drag selection rectangle (see handleBoxSelect* in the page). */
+.nb-box-select-rect {
+  position: absolute;
+  z-index: 10;
+  border: 1.5px dashed var(--acc);
+  /* Translucent so the assets being selected stay visible underneath. */
+  background: color-mix(in srgb, var(--acc) 12%, transparent);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.nb-area-rect {
+  position: absolute;
+  border: 1px solid var(--accent);
+  background: color-mix(in srgb, var(--acc) 12%, transparent);
+  pointer-events: none;
+}
+
+/* Find box (top-right of canvas). */
+.nb-find {
+  position: absolute;
+  top: 14px;
+  right: 52px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+}
+.nb-find input {
+  width: 240px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  font-size: 0.85rem;
+  outline: none;
+}
+.nb-find button {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-dim);
+  font-size: 1rem;
+  cursor: pointer;
+}
+.nb-find button:hover {
+  background: var(--surface-subtle);
+  color: var(--ink);
+}
+
+/* ── Library panel ───────────────────────────────────────────────────────── */
+.ns2-library {
+  width: auto;
+  min-width: 0;
+  /* The rail already draws the border. */
+  border: 0;
+  border-radius: 0;
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: none;
+}
+
+.ns2-library-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px;
+  padding: 5px 6px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel2);
+}
+
+.ns2-library-tab {
+  height: 24px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--mut);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.6875rem;
+  font-weight: 800;
+}
+
+.ns2-library-tab:hover {
+  border-color: var(--line2);
+  background: var(--panel);
+  color: var(--tx1);
+}
+
+.ns2-library-tab--active {
+  border-color: var(--acc-border);
+  background: var(--panel);
+  color: var(--accTx);
+}
+
+/* Library → Assets | Systems: second-level underline tabs, deliberately
+   lighter than the boxed Networks | Library tabs above them. */
+.nb-subtabs {
+  display: flex;
+  gap: 14px;
+  flex-shrink: 0;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+.nb-subtab {
+  position: relative;
+  height: 30px;
+  padding: 0 2px;
+  border: 0;
+  background: transparent;
+  color: var(--mut);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.12s ease;
+}
+.nb-subtab::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: transparent;
+  transition: background-color 0.12s ease;
+}
+.nb-subtab:hover {
+  color: var(--tx1);
+}
+.nb-subtab:hover::after {
+  background: var(--line2);
+}
+.nb-subtab.is-active {
+  color: var(--accTx, var(--acc));
+}
+.nb-subtab.is-active::after {
+  background: var(--acc);
+}
+.nb-subtab:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: -2px;
+  border-radius: 3px;
+}
+
+.ns2-legend {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--tx2);
+  overflow: hidden;
+}
+
+.ns2-legend__title {
+  padding: 9px 10px 8px;
+  border-bottom: 1px solid var(--line);
+  color: var(--tx1);
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.ns2-legend__section {
+  padding: 8px 10px 9px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.ns2-legend__section:last-child {
+  border-bottom: 0;
+}
+
+.ns2-legend__section-title {
+  margin-bottom: 7px;
+  color: var(--mut);
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.ns2-legend__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 8px;
+}
+
+.ns2-legend__item {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: center;
+  min-width: 0;
+  min-height: 20px;
+}
+
+.ns2-legend__label {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--tx2);
+  font-size: 0.71875rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Rings, because that is how a node reports its status on the canvas: the
+   symbol's fill is its type and its border is its lifecycle. */
+.ns2-legend__status {
+  justify-self: start;
+  width: 11px;
+  height: 11px;
+  border: 2px solid var(--line2);
+  border-radius: 50%;
+  background: var(--panel);
+}
+
+.ns2-legend__status--planned {
+  border-color: var(--acc);
+}
+
+.ns2-legend__status--operational {
+  border-color: var(--ok);
+}
+
+.ns2-legend__status--construction {
+  border-color: var(--amber);
+}
+
+.ns2-legend__status--inactive {
+  border-color: var(--line2);
+  border-style: dashed;
+}
+
+/* The amber dot the symbol carries when an asset's capacity is capped. */
+.ns2-legend__status--capacity-limited {
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid var(--panel);
+  background: var(--amber);
+  box-shadow: 0 0 0 1px var(--amber-border);
+}
+
+.ns2-legend__hint {
+  margin-bottom: 8px;
+  font-size: 0.6875rem;
+  line-height: 1.35;
+  color: var(--ink-dim);
+}
+.ns2-legend__hint--footer {
+  margin: 10px 0 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.ns2-legend__asset {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: start;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel2);
+  color: var(--mut2);
+}
+
+.ns2-legend__asset-text {
+  color: var(--mut2);
+  font-size: 0.5625rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.ns2-legend__junction {
+  width: 8px;
+  height: 8px;
+  border: 2px solid var(--panel);
+  border-radius: 50%;
+  background: var(--mut);
+  box-shadow: 0 0 0 1px var(--line2);
+}
+
+.ns2-legend__line {
+  justify-self: start;
+  width: 22px;
+  height: 0;
+  border-top: 3px solid var(--warn);
+  border-radius: 2px;
+}
+
+.ns2-legend__line--capacity {
+  border-top-color: var(--warn);
+}
+
+.ns2-legend__line--utilisation {
+  border-top-color: var(--chart-purple);
+}
+
+.ns2-legend__line--bottleneck,
+.ns2-legend__line--shortage {
+  border-top-color: var(--err);
+}
+
+.ns2-legend__line--dashed {
+  border-top-style: dashed;
+}
+
+/* ── Saved-networks rail (fixed, far left) ─────────────────────────────────
+   Content is the generic WorkspaceRecordSidebar (see components/); this just
+   supplies the rail's fixed width/border/scroll. ── */
+.nb-rail {
+  --sidebar-border-color: var(--line);
+  /* One width for both the Networks and Library tabs, so switching between
+     them never resizes the rail; drag the inner edge to resize (width comes
+     from useSidebarResize as an inline style). */
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--sidebar-border-color);
+  background: var(--panel);
+  box-shadow: none;
+  z-index: 1;
+}
+
+/* ── Left sidebar switcher: saved networks / asset library ────────────────── */
+.nb-rail__switch {
+  flex-shrink: 0;
+}
+
+.nb-rail__body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.nb-library {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  border: 0;
+  overflow: auto;
+}
+/* ── Static-fit ribbon variant, matching the compact grouped toolbar reference. */
+.contextual-toolbar.contextual-toolbar--static-fit {
+  --toolbar-height: 104px;
+  height: var(--toolbar-height);
+  padding: 3px 4px 4px;
+  overflow: hidden;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  font-family: "Inter", "Segoe UI", "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  scrollbar-width: none;
+}
+
+.contextual-toolbar.contextual-toolbar--static-fit::-webkit-scrollbar {
+  display: none;
+}
+
+.contextual-toolbar--compact .contextual-toolbar__container,
+.contextual-toolbar--static-fit .contextual-toolbar__container {
+  justify-content: flex-start;
+}
+
+/* Groups never shrink below their content, so button text is never cut off;
+   on screens too narrow for the whole ribbon it scrolls sideways instead. */
+.contextual-toolbar--static-fit .contextual-toolbar__container {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  gap: 1px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+.contextual-toolbar--static-fit .toolbar-group,
+.contextual-toolbar--static-fit .toolbar-group--fill {
+  --toolbar-fit-columns: 2;
+  flex: var(--toolbar-fit-columns) 1 auto;
+  min-width: min-content;
+  max-width: none;
+  padding: 0 1px 1px;
+  gap: 1px;
+  border-radius: 2px;
+  border-right: 1px solid var(--line-soft);
+  background: var(--panel);
+}
+
+.contextual-toolbar--static-fit .toolbar-group--cols-1 {
+  --toolbar-fit-columns: 1;
+}
+
+.contextual-toolbar--static-fit .toolbar-group--cols-2 {
+  --toolbar-fit-columns: 2;
+}
+
+.contextual-toolbar--static-fit .toolbar-group--cols-3 {
+  --toolbar-fit-columns: 3;
+}
+
+.contextual-toolbar--static-fit .toolbar-group__label {
+  order: -1;
+  min-height: 12px;
+  height: 12px;
+  margin: 0;
+  padding: 0 1px;
+  border-top: 0;
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--mut);
+  font-size: 0.5rem;
+  font-weight: 500;
+  line-height: 12px;
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.contextual-toolbar--static-fit .toolbar-group__buttons {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(3, 20px);
+  grid-auto-columns: auto;
+  width: 100%;
+  min-width: min-content;
+  gap: 1px 2px;
+  align-items: stretch;
+}
+
+.contextual-toolbar--static-fit .toolbar-group__buttons--note {
+  grid-auto-flow: column;
+  grid-template-rows: repeat(3, 20px);
+  grid-auto-columns: auto;
+  width: 100%;
+}
+
+.contextual-toolbar--static-fit .toolbar-button {
+  min-width: min-content;
+  width: 100%;
+  max-width: none;
+  height: 20px;
+  padding: 0 2px;
+  gap: 2px;
+  border-radius: 2px;
+  color: var(--tx2);
+  font-size: 0.55rem;
+  font-weight: 400;
+  line-height: 0.95;
+}
+
+/* Multi-word labels may wrap onto a second line, but never break mid-word. */
+.contextual-toolbar--static-fit .toolbar-button span {
+  min-width: min-content;
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: keep-all;
+  line-height: 1;
+}
+
+.contextual-toolbar--static-fit .toolbar-button svg,
+.contextual-toolbar--static-fit .toolbar-button img {
+  width: 10px;
+  height: 10px;
+}
+
+.contextual-toolbar--static-fit .toolbar-button.toolbar-button--icon,
+.contextual-toolbar--static-fit .toolbar-button.toolbar-button--icon-only {
+  min-width: 20px;
+  width: 100%;
+  max-width: none;
+  height: 20px;
+}
+
+.contextual-toolbar--static-fit .toolbar-select {
+  min-width: 0;
+  width: 100%;
+  height: 20px;
+  padding: 0 2px;
+  border-radius: 2px;
+  color: var(--mut);
+  font-size: 0.55rem;
+  font-weight: 400;
+}
+
+.contextual-toolbar--static-fit .toolbar-button.active,
+.contextual-toolbar--static-fit .toolbar-button--primary {
+  border-color: var(--acc-border);
+  background: var(--panel2);
+  color: var(--accTx);
+}
+
+.contextual-toolbar--static-fit .toolbar-button--primary svg {
+  color: var(--accTx);
+}
+
+.contextual-toolbar--static-fit .toolbar-button--primary:hover:not(:disabled),
+.contextual-toolbar--static-fit .toolbar-button:hover:not(.disabled):not(:disabled) {
+  border-color: var(--acc-border);
+  background: var(--panel2);
+  color: var(--accTx);
+}
+
+/* ── Keyboard shortcut guide ───────────────────────────────────────────────── */
+/* A collapsible panel pinned under the canvas controls, not a modal: the
+   canvas stays live underneath it. */
+.nb-shortcut-guide {
+  position: absolute;
+  top: 48px;
+  right: 10px;
+  z-index: 8;
+  width: min(320px, calc(100% - 20px));
+  max-height: calc(100% - 60px);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--line2);
+  border-radius: 8px;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
+  overflow: hidden;
+}
+
+.nb-shortcut-guide__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 8px 7px 10px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-subtle);
+}
+
+.nb-shortcut-guide__title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+.nb-shortcut-guide__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--ink-dim);
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.nb-shortcut-guide__close:hover {
+  background: var(--accent-hover);
+  color: var(--accent);
+}
+
+.nb-shortcut-guide__body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 10px;
+  overflow-y: auto;
+}
+
+.nb-shortcut-group-title {
+  margin-bottom: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-dim, var(--mut));
+}
+
+.nb-shortcut-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 3px 0;
+  font-size: 11px;
+}
+
+.nb-shortcut-keys {
+  flex-shrink: 0;
+  min-width: 130px;
+  padding: 2px 6px;
+  background: var(--panel2);
+  border: 1px solid var(--line2);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 10px;
+  color: var(--tx2);
+  white-space: nowrap;
+}
+
+.nb-shortcut-desc {
+  color: var(--tx1);
+}
+
+/* Column wrapper so the tab bar stacks above the toolbar inside the
+   row-oriented .app-toolbar slot. */
+.nb-chrome {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Builder: the ribbon sits at the top of the canvas column, between the
+   rails. Negative margins cancel .nb-workspace's padding so it runs flush. */
+.nb-workspace > .nb-chrome {
+  flex: 0 0 auto;
+  width: auto;
+  margin: -6px -6px 6px;
+  border-bottom: 1px solid var(--line);
+}
+
+/* Geographic map view — full-bleed overlay over the schematic canvas while the
+   Map toolbar toggle is active (see NetworkCanvasMapView). */
+.nb-map-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  background: var(--surface, var(--panel));
+}
+
+/* ── Ribbon tabs (SWIIMS WIPlan: Home / Insert / Edit / View / Tools) ─────── */
+.nb-ribbon { display: flex; flex-direction: column; min-width: 0; background: var(--panel); }
+.nb-ribbon__tabs { display: flex; align-items: flex-end; gap: 2px; padding: 3px 8px 0; border-bottom: 1px solid var(--line); background: var(--headBg); }
+.nb-ribbon__tab { height: 24px; padding: 0 12px; border: 1px solid transparent; border-bottom: 0; border-radius: 6px 6px 0 0; background: transparent; color: var(--mut); font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; margin-bottom: -1px; }
+.nb-ribbon__tab:hover { color: var(--tx1); background: var(--chip); }
+.nb-ribbon__tab--active { color: var(--accTx); background: var(--panel); border-color: var(--line); box-shadow: inset 0 2px 0 var(--acc); }
+.nb-ribbon__contextual-label { margin-left: auto; align-self: center; padding: 0 8px; border-radius: 4px; background: var(--amber-soft); color: var(--amberTx); font-size: 9px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; }
+
+/* Draw Route live preview (SWIIMS segmented-line preview). */
+.nb-route-preview polyline { fill: none; stroke: var(--acc); stroke-width: 2.5; stroke-dasharray: 7 5; }
+.nb-route-preview__junction { fill: var(--panel); stroke: var(--acc); stroke-width: 2.5; }
+.nb-route-preview__bend { fill: var(--acc); stroke: var(--panel); stroke-width: 1.5; }
+
+/* ── Notes & group boxes (HTML overlays over the canvas) ─────────────────── */
+.nb-annotations { position: absolute; inset: 0; z-index: 5; pointer-events: none; overflow: hidden; }
+.nb-note { position: absolute; display: flex; flex-direction: column; box-sizing: border-box; padding: calc(6px * var(--note-scale)) calc(8px * var(--note-scale)); color: var(--amberTx); line-height: 1.35; pointer-events: auto; border-radius: 6px; }
+.nb-note.is-selected { outline: 2px solid var(--acc); outline-offset: 1px; }
+.nb-note__editor { flex: 1; min-height: 1em; outline: none; overflow-wrap: anywhere; white-space: pre-wrap; cursor: text; }
+.nb-note__editor:focus { background: var(--chip); border-radius: 3px; }
+.nb-note__grip { position: absolute; top: -9px; left: 50%; transform: translateX(-50%); padding: 0 6px; border: 1px solid var(--line2); border-radius: 4px; background: var(--panel); color: var(--mut); font-size: 9px; line-height: 14px; letter-spacing: -1px; cursor: grab; opacity: 0; transition: opacity .12s ease; }
+.nb-note:hover .nb-note__grip, .nb-note.is-selected .nb-note__grip { opacity: 1; }
+.nb-groupbox { position: absolute; box-sizing: border-box; pointer-events: none; border-radius: 8px; }
+.nb-groupbox.is-selected { outline: 2px dashed var(--acc); outline-offset: 2px; }
+.nb-annotation__resize { position: absolute; right: -5px; bottom: -5px; width: 10px; height: 10px; border: 2px solid var(--acc); border-radius: 2px; background: var(--panel); cursor: nwse-resize; pointer-events: auto; }
+
+/* Bottom validation dock */
+.nb-validation-dock { flex: 0 0 auto; display: flex; flex-direction: column; max-height: 32%; min-height: 120px; border-top: 1px solid var(--line); background: var(--panel); }
+.nb-validation-dock__head { display: flex; align-items: center; gap: 8px; padding: 4px 8px; border-bottom: 1px solid var(--line); background: var(--headBg); color: var(--tx1); font-size: 11px; }
+.nb-validation-dock__body { flex: 1; min-height: 0; overflow: auto; }
+
+/* Floating flow-traces panel (SWIIMS trace panel) */
+.nb-trace-float { position: absolute; top: 10px; left: 10px; z-index: 8; display: flex; flex-direction: column; width: 320px; max-height: calc(100% - 20px); border: 1px solid var(--line2); border-radius: 8px; background: var(--panel); box-shadow: var(--shadow-md); }
+.nb-trace-float__head { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-bottom: 1px solid var(--line); background: var(--headBg); color: var(--tx1); font-size: 11px; }
+.nb-trace-float__body { overflow: auto; padding: 6px 8px; display: flex; flex-direction: column; gap: 6px; }
+.nb-trace-legend { display: flex; gap: 10px; color: var(--mut); font-size: 9.5px; }
+.nb-trace-legend span { display: inline-flex; align-items: center; gap: 4px; }
+.nb-trace-swatch { display: inline-block; width: 14px; height: 3px; border-radius: 2px; }
+.nb-trace-swatch--up { background: var(--acc); }
+.nb-trace-swatch--down { background: var(--ok); }
+.nb-trace-swatch--shared { background: var(--chart-purple); }
+.nb-trace-card { border: 1px solid var(--line); border-radius: 6px; padding: 6px; background: var(--panel2); }
+.nb-trace-card__head { display: flex; align-items: center; gap: 4px; }
+.nb-trace-card__name { font-weight: 700; font-size: 11px; text-align: left; }
+.nb-trace-card__meta { margin: 2px 0 4px; color: var(--mut); font-size: 9.5px; }
+.nb-trace-card__section { display: flex; flex-direction: column; margin-top: 4px; }
+.nb-trace-card__label { font-size: 8.5px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; }
+.nb-trace-card__label--upstream { color: var(--accTx); }
+.nb-trace-card__label--downstream { color: var(--okTx); }
+.nb-trace-card__row { display: flex; justify-content: space-between; gap: 6px; padding: 2px 4px; border: 0; border-radius: 4px; background: transparent; color: var(--tx2); font: inherit; font-size: 10.5px; text-align: left; cursor: pointer; }
+.nb-trace-card__row:hover { background: var(--rowHover); color: var(--tx1); }
+.nb-trace-card__row em { color: var(--mut); font-style: normal; font-variant-numeric: tabular-nums; }
+.nb-trace-card__empty { color: var(--mut2); font-size: 10px; padding: 2px 4px; }
+
+/* Geo Anchor panel (SWIIMS GeoAnchorPanel) */
+.nb-geo-panel { position: absolute; top: 10px; right: 10px; z-index: 8; display: flex; flex-direction: column; gap: 6px; width: 250px; padding: 8px; border: 1px solid var(--line2); border-radius: 8px; background: var(--panel); box-shadow: var(--shadow-md); color: var(--tx2); font-size: 11px; }
+.nb-geo-panel__head { display: flex; align-items: center; justify-content: space-between; color: var(--tx1); }
+.nb-geo-panel__status { align-self: flex-start; text-transform: none; letter-spacing: 0; }
+.nb-geo-panel__hint, .nb-geo-panel__derived, .nb-geo-panel__count { margin: 0; color: var(--mut); font-size: 10px; }
+.nb-geo-panel__node { display: flex; flex-direction: column; gap: 5px; }
+.nb-geo-panel__name { display: flex; align-items: center; gap: 6px; color: var(--tx1); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nb-geo-panel__field { display: grid; grid-template-columns: 64px 1fr; align-items: center; gap: 6px; color: var(--mut); font-size: 10px; }
+.nb-geo-panel__actions { display: flex; gap: 6px; }
+
+/* Table view (View → Table) */
+.nb-table-overlay { position: absolute; inset: 0; z-index: 9; display: flex; background: var(--bg); }
+.nb-table-view { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0; min-height: 0; padding: 8px 10px; }
+.nb-table-input { height: 22px; min-width: 70px; padding: 0 5px; font-size: 11px; background: transparent; border-color: transparent; }
+.nb-table-input:hover { border-color: var(--line2); }
+.nb-table-input:focus { background: var(--panel2); }
+.nb-table-input--num { text-align: right; font-variant-numeric: tabular-nums; }
+
+
+/* Simulation mode: run bar, read-only notice, bottlenecks list */
+.nb-run-bar { flex: 0 0 auto; display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; border-top: 1px solid var(--line); background: var(--panel); }
+.nb-run-bar__row { display: flex; align-items: center; gap: 6px; }
+.nb-run-bar__legend { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.nb-swatch--gap-binding { background: var(--err); }
+.nb-swatch--gap-spare { background: transparent; border: 2px solid var(--ok); height: 10px; }
+.nb-readonly-notice { flex: 0 0 auto; padding: 5px 10px; border-bottom: 1px solid var(--amber-border); background: var(--amber-soft); color: var(--amberTx); font-size: 11px; font-weight: 600; }
+.nb-bottleneck-float { left: auto; right: 10px; width: 340px; }
+.nb-run-details { overflow: auto; }
+
+/* ── Collapsible toolbar ──────────────────────────────────────────────────
+   The ribbon collapses to its tab row from its own chevron; the side rails
+   are shown and hidden from the status bar's panel toggles. */
+.nb-collapse-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--mut);
+  cursor: pointer;
+}
+.nb-collapse-btn:hover {
+  color: var(--tx1);
+  background: var(--chip);
+  border-color: var(--line);
+}
+.nb-collapse-btn:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 1px;
+}
+
+/* Right panel: however many tabs there are share the row evenly. */
+.ns2-panel-tabs {
+  display: flex;
+  align-items: center;
+}
+.ns2-panel-tabs .ns2-panel-tab {
+  flex: 1 1 0;
+}
+
+/* Ribbon: collapse chevron pinned to the right of the tab row. */
+.nb-ribbon__collapse {
+  align-self: center;
+  margin: 0 0 2px auto;
+}
+.nb-ribbon__contextual-label + .nb-ribbon__collapse {
+  margin-left: 6px;
+}
+.nb-ribbon--collapsed .nb-ribbon__tabs {
+  border-bottom: 0;
+}
+
+/* ── Side rail resize handles (useSidebarResize) ─────────────────────────── */
+.nb-resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 6;
+  width: 7px;
+  cursor: col-resize;
+  touch-action: none;
+}
+.nb-resize-handle--left { right: 0; }
+.nb-resize-handle--right { left: 0; }
+.nb-resize-handle::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: transparent;
+  transition: background-color 0.12s ease;
+}
+.nb-resize-handle--left::after { right: 0; }
+.nb-resize-handle--right::after { left: 0; }
+.nb-resize-handle:hover::after,
+.nb-resize-handle:focus-visible::after,
+body.is-resizing-sidebar .nb-resize-handle:active::after {
+  background: var(--acc);
+}
+.nb-resize-handle:focus-visible {
+  outline: none;
+}
+body.is-resizing-sidebar,
+body.is-resizing-sidebar * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}

@@ -1,0 +1,66 @@
+[
+  {
+    "slide": 1,
+    "title": "WIDispatch IT architecture and readiness"
+  },
+  {
+    "slide": 2,
+    "title": "Current logical architecture"
+  },
+  {
+    "slide": 3,
+    "title": "Proposed deployment and trust boundaries"
+  },
+  {
+    "slide": 4,
+    "title": "Portal role-and-permission matrix"
+  },
+  {
+    "slide": 5,
+    "title": "Permission boundaries to close"
+  },
+  {
+    "slide": 6,
+    "title": "Data ownership and planning inputs"
+  },
+  {
+    "slide": 7,
+    "title": "What publication writes back"
+  },
+  {
+    "slide": 8,
+    "title": "Decision edits and publication integrity"
+  },
+  {
+    "slide": 9,
+    "title": "Integration inventory: existing mechanisms"
+  },
+  {
+    "slide": 10,
+    "title": "Integration inventory: client-specific scope"
+  },
+  {
+    "slide": 11,
+    "title": "Security evidence and remaining controls"
+  },
+  {
+    "slide": 12,
+    "title": "Functional evidence and performance acceptance"
+  },
+  {
+    "slide": 13,
+    "title": "Recovery and service operations"
+  },
+  {
+    "slide": 14,
+    "title": "Capability and delivery register"
+  },
+  {
+    "slide": 15,
+    "title": "Priority actions before production use"
+  },
+  {
+    "slide": 16,
+    "title": "Decisions to capture with the client IT team"
+  }
+]

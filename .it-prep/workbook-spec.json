@@ -1,0 +1,122 @@
+[
+  {
+    "name": "Readiness register",
+    "rows": 32,
+    "headers": [
+      "ID",
+      "Work category",
+      "When needed",
+      "Capability / control",
+      "Current position",
+      "Next action",
+      "Proposed owner",
+      "Acceptance evidence required",
+      "Source IDs",
+      "Action status",
+      "Client decision / named owner",
+      "Evidence link / acceptance date"
+    ],
+    "start": 7,
+    "last": 39
+  },
+  {
+    "name": "Roles",
+    "rows": 6,
+    "headers": [
+      "Role",
+      "View / scope",
+      "Edit / submit",
+      "Approve / reject",
+      "Manage users",
+      "View audit",
+      "Source IDs"
+    ],
+    "start": 6,
+    "last": 12
+  },
+  {
+    "name": "Data ownership",
+    "rows": 10,
+    "headers": [
+      "Data domain",
+      "Business steward / author",
+      "Persistence",
+      "How the platform uses it",
+      "Ownership / validation boundary",
+      "Source IDs"
+    ],
+    "start": 6,
+    "last": 16
+  },
+  {
+    "name": "Publication",
+    "rows": 6,
+    "headers": [
+      "Output",
+      "Source -> target",
+      "Record key / operation",
+      "Fields written",
+      "Fields preserved / behaviour",
+      "Where users see it",
+      "Source IDs"
+    ],
+    "start": 6,
+    "last": 12
+  },
+  {
+    "name": "Integrations",
+    "rows": 11,
+    "headers": [
+      "Interface",
+      "Data direction / mechanism",
+      "Work category",
+      "Evidence available",
+      "Remaining configuration / work",
+      "Proposed owner",
+      "Source IDs"
+    ],
+    "start": 6,
+    "last": 17
+  },
+  {
+    "name": "Evidence",
+    "rows": 16,
+    "headers": [
+      "ID",
+      "Control / topic",
+      "Evidence status",
+      "Available evidence",
+      "What the evidence does not establish",
+      "Next proof / acceptance",
+      "Source IDs"
+    ],
+    "start": 6,
+    "last": 22
+  },
+  {
+    "name": "Deployment",
+    "rows": 11,
+    "headers": [
+      "Area",
+      "Current / proposed position",
+      "Proposed owner",
+      "Configuration / decision needed",
+      "Acceptance / boundary",
+      "Source IDs"
+    ],
+    "start": 6,
+    "last": 17
+  },
+  {
+    "name": "Meeting answers",
+    "rows": 10,
+    "headers": [
+      "Likely client question",
+      "Suggested answer",
+      "Follow-up / boundary",
+      "Source IDs"
+    ],
+    "start": 6,
+    "last": 16
+  }
+]

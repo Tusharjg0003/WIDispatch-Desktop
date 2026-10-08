@@ -8,15 +8,15 @@
   margin-bottom: 12px;
   padding: 8px 12px;
   min-height: 42px;
-  border: 1px solid #d2e0ea;
+  border: 1px solid var(--line);
   border-radius: 2px;
-  background: #ffffff;
+  background: var(--panel);
   box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
 }
 
 .ppl__title {
   margin: 0;
-  color: #111827;
+  color: var(--tx1);
   font-size: 1.15rem;
   font-weight: 700;
   letter-spacing: 0;
@@ -24,7 +24,7 @@
 
 .ppl__subtitle {
   margin: 2px 0 0;
-  color: #6b7280;
+  color: var(--mut);
   font-size: 0.72rem;
 }
 
@@ -32,4 +32,4 @@
   justify-content: flex-start;
 }
 
-.demand-city-gates .ppl__badge--data { background: #dbeafe; color: #1e40af; }
+.demand-city-gates .ppl__badge--data { background: var(--acc-soft); color: var(--accTx); }

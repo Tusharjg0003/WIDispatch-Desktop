@@ -7,45 +7,45 @@
   align-items: stretch;
   width: min(560px, calc(100vw - 32px));
   min-height: 104px;
-  border: 2px solid #000;
+  border: 2px solid var(--tx1);
   border-radius: 2px;
-  background: #a31616;
+  background: var(--err);
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2);
   overflow: hidden;
 }
 
 /* Full outage keeps the default red styling above. Partial outage → amber. */
 .outage-toast--partial {
-  background: #f59e0b;
+  background: var(--amber);
 }
 
 .outage-toast--partial .outage-toast__body {
-  color: #111827;
+  color: var(--tx1);
 }
 
 .outage-toast--partial .outage-toast__icon {
-  border-color: #111827;
-  background: #a32e0b;
-  color: #fff;
+  border-color: var(--tx1);
+  background: var(--warn);
+  color: var(--on-accent);
 }
 
 .outage-toast--partial .outage-toast__title {
-  color: #111827;
+  color: var(--tx1);
 }
 
 .outage-toast--partial .outage-toast__meta {
-  color: #78350f;
+  color: var(--amberTx);
 }
 
 .outage-toast--partial .outage-toast__close {
-  border-left-color: rgba(17, 24, 39, 0.25);
-  background: #c4380f;
-  color: #111827;
+  border-left-color: var(--line);
+  background: var(--warn);
+  color: var(--tx1);
 }
 
 .outage-toast--partial .outage-toast__close:hover {
-  background: #a32e0b;
-  color: #fff;
+  background: var(--warn);
+  color: var(--on-accent);
 }
 
 .outage-toast__body {
@@ -57,7 +57,7 @@
   padding: 18px 20px;
   border: 0;
   background: transparent;
-  color: #fff;
+  color: var(--on-accent);
   text-align: left;
   cursor: pointer;
 }
@@ -69,10 +69,10 @@
   flex: 0 0 auto;
   width: 56px;
   height: 56px;
-  border: 2px solid #fff;
+  border: 2px solid var(--panel);
   border-radius: 2px;
-  background: #7f1d1d;
-  color: #fff;
+  background: var(--err);
+  color: var(--on-accent);
 }
 
 .outage-toast__copy {
@@ -83,7 +83,7 @@
 }
 
 .outage-toast__title {
-  color: #fff;
+  color: var(--on-accent);
   font-size: 1rem;
   font-weight: 800;
   letter-spacing: 0;
@@ -91,7 +91,7 @@
 
 .outage-toast__meta {
   overflow: hidden;
-  color: #fbeaea;
+  color: var(--errTx);
   font-size: 0.86rem;
   font-weight: 700;
   text-overflow: ellipsis;
@@ -104,14 +104,14 @@
   justify-content: center;
   width: 48px;
   border: 0;
-  border-left: 1px solid rgba(254, 226, 226, 0.45);
-  background: #991b1b;
-  color: #fff;
+  border-left: 1px solid var(--err-border);
+  background: var(--err);
+  color: var(--on-accent);
   cursor: pointer;
 }
 
 .outage-toast__close:hover {
-  background: #7f1d1d;
+  background: var(--err);
 }
 
 @media (max-width: 640px) {

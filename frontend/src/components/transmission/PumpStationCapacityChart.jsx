@@ -144,9 +144,9 @@ export default function PumpStationCapacityChart({ station, bundle }) {
   }, [maintenanceRecords, outages, stationId, designCapacity, specifications]);
 
   const legendItems = [
-    { label: "Design Capacity", color: "#8b5cf6", kind: "dashed" },
-    { label: "Effective Capacity", color: "#f59e0b", kind: "line" },
-    { label: "Capacity Lost", color: "#f59e0b", kind: "area" },
+    { label: "Design Capacity", color: "var(--chart-purple)", kind: "dashed" },
+    { label: "Effective Capacity", color: "var(--chart-warning)", kind: "line" },
+    { label: "Capacity Lost", color: "var(--chart-warning)", kind: "area" },
   ];
 
   const yMax = Math.ceil(((designCapacity || 100) * 1.1) / 1000) * 1000 || 100;
@@ -155,14 +155,14 @@ export default function PumpStationCapacityChart({ station, bundle }) {
     <div className="cap-chart">
       <ResponsiveContainer width="100%" height={360}>
         <ComposedChart data={chartData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#d9e4ec" vertical={false} />
-          <XAxis dataKey="date" tick={{ fill: "#607d91", fontSize: 11 }} interval={6} />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
+          <XAxis dataKey="date" tick={{ fill: "var(--chart-axis)", fontSize: 11 }} interval={6} />
           <YAxis
             domain={[0, yMax]}
-            tick={{ fill: "#607d91", fontSize: 11 }}
+            tick={{ fill: "var(--chart-axis)", fontSize: 11 }}
             tickFormatter={(value) => value.toLocaleString()}
             width={80}
-            label={{ value: "Capacity (m³/day)", angle: -90, position: "insideLeft", fill: "#607d91", fontSize: 11 }}
+            label={{ value: "Capacity (m³/day)", angle: -90, position: "insideLeft", fill: "var(--chart-axis)", fontSize: 11 }}
           />
           <Tooltip content={({ active, label }) => {
             if (!active) return null;
@@ -171,11 +171,11 @@ export default function PumpStationCapacityChart({ station, bundle }) {
             return (
               <div className="cap-tip">
                 <p className="cap-tip__title">{label}</p>
-                <p style={{ color: "#7c3aed" }}>Design: {row.designCapacity.toLocaleString()} m³/day</p>
-                <p style={{ color: "#a32e0b", fontWeight: 600 }}>Effective: {row.effectiveCapacity.toLocaleString()} m³/day</p>
-                {row.outaged && <p style={{ color: "#c11b1b" }}>Complete outage: all pumps out of service</p>}
-                {!row.outaged && row.outageLoss > 0 && <p style={{ color: "#c11b1b" }}>Outage Reduction: {row.outageLoss.toLocaleString()} m³/day</p>}
-                {!row.outaged && row.maintenanceLoss > 0 && <p style={{ color: "#c4380f" }}>Maintenance Reduction: {row.maintenanceLoss.toLocaleString()} m³/day</p>}
+                <p style={{ color: "var(--chart-purple)" }}>Design: {row.designCapacity.toLocaleString()} m³/day</p>
+                <p style={{ color: "var(--warnTx)", fontWeight: 600 }}>Effective: {row.effectiveCapacity.toLocaleString()} m³/day</p>
+                {row.outaged && <p style={{ color: "var(--err)" }}>Complete outage: all pumps out of service</p>}
+                {!row.outaged && row.outageLoss > 0 && <p style={{ color: "var(--err)" }}>Outage Reduction: {row.outageLoss.toLocaleString()} m³/day</p>}
+                {!row.outaged && row.maintenanceLoss > 0 && <p style={{ color: "var(--warn)" }}>Maintenance Reduction: {row.maintenanceLoss.toLocaleString()} m³/day</p>}
               </div>
             );
           }} />
@@ -191,15 +191,15 @@ export default function PumpStationCapacityChart({ station, bundle }) {
           )} />
           <ReferenceLine
             x={format(new Date(), "MMM dd")}
-            stroke="#111827"
+            stroke="var(--tx1)"
             strokeWidth={2}
             strokeDasharray="2 4"
-            label={{ value: "Today", fill: "#111827", fontSize: 11, fontWeight: 700, position: "insideTopRight" }}
+            label={{ value: "Today", fill: "var(--tx1)", fontSize: 11, fontWeight: 700, position: "insideTopRight" }}
           />
           <Area type="monotone" dataKey="effectiveCapacity" stackId="cap" stroke="none" fill="none" isAnimationActive={false} legendType="none" activeDot={false} />
-          <Area type="monotone" dataKey="capacityLost" stackId="cap" stroke="#f59e0b" strokeOpacity={0.35} strokeWidth={1} fill="#f59e0b" fillOpacity={0.13} name="Capacity Lost" isAnimationActive={false} activeDot={false} />
-          <Line type="monotone" dataKey="designCapacity" stroke="#8b5cf6" strokeWidth={2} strokeDasharray="6 3" dot={false} name="Design Capacity" isAnimationActive={false} />
-          <Line type="monotone" dataKey="effectiveCapacity" stroke="#f59e0b" strokeWidth={3} dot={{ fill: "#f59e0b", r: 2 }} activeDot={{ r: 5 }} name="Effective Capacity" isAnimationActive={false} />
+          <Area type="monotone" dataKey="capacityLost" stackId="cap" stroke="var(--chart-warning)" strokeOpacity={0.35} strokeWidth={1} fill="var(--chart-warning)" fillOpacity={0.13} name="Capacity Lost" isAnimationActive={false} activeDot={false} />
+          <Line type="monotone" dataKey="designCapacity" stroke="var(--chart-purple)" strokeWidth={2} strokeDasharray="6 3" dot={false} name="Design Capacity" isAnimationActive={false} />
+          <Line type="monotone" dataKey="effectiveCapacity" stroke="var(--chart-warning)" strokeWidth={3} dot={{ fill: "var(--chart-warning)", r: 2 }} activeDot={{ r: 5 }} name="Effective Capacity" isAnimationActive={false} />
         </ComposedChart>
       </ResponsiveContainer>
     </div>

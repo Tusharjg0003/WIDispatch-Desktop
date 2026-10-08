@@ -1,17 +1,17 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Play, Plus, Save, SlidersHorizontal, Trash2 } from "lucide-react";
 import WorkspaceHeader, { WorkspaceHeaderButton, WorkspaceHeaderChip } from "../components/WorkspaceHeader";
 import SimulationTables from "../components/simulation/SimulationTables";
 import ResultsPanel from "../components/simulation/ResultsPanel";
 import DecisionsPanel from "../components/simulation/DecisionsPanel";
-import CanvasPanel from "../components/simulation/CanvasPanel";
+import NetworkCanvasWorkspace from "../networkCanvas/NetworkCanvasWorkspace";
 import { countOverrides, validateConfig } from "../lib/simulationRows";
 import {
   createSimulationConfig, deleteSimulationConfig, fetchDispatchPlan, fetchSimulationConfig,
   fetchSimulationConfigs, publishDispatchPlan, runSimulation, updateDispatchDecisions, updateSimulationConfig,
 } from "../api/simulation";
-import { fetchNetworks } from "../api/networks";
+import { fetchNetwork, fetchNetworks, saveNetwork } from "../api/networks";
 import "../components/MetricDashboard.css";
 import "./SimulationConfigPage.css";
 
@@ -47,6 +47,11 @@ export default function SimulationConfigPage() {
   const [error, setError] = useState(null);
   const [publishError, setPublishError] = useState(null);
   const [published, setPublished] = useState(null);
+  // The network document the Canvas tab edits (SWIIMS controlled snapshot).
+  const [canvasDoc, setCanvasDoc] = useState(null);
+  const [canvasDirty, setCanvasDirty] = useState(false);
+  // Set by "New" so the freshly created config loads its tables straight away.
+  const autoPreviewId = useRef(null);
 
   // ── Load the picker lists once ────────────────────────────────────────────
   useEffect(() => {
@@ -61,6 +66,28 @@ export default function SimulationConfigPage() {
       .finally(() => !cancelled && setLoading(false));
     return () => { cancelled = true; };
   }, []);
+
+  /** Run the stored config so the tables reflect its network, staying on the Configuration tab. */
+  const preview = async (cfg, isCancelled = () => false, { keepTab = false } = {}) => {
+    setRunning(true);
+    setPublished(null);
+    setPublishError(null);
+    try {
+      const result = await runSimulation(cfg.id, {
+        from: cfg.from,
+        to: cfg.to,
+        overrides: cfg.overrides || {},
+        strategicStorageMinPct: cfg.strategicStorageMinPct ?? 70,
+      });
+      if (isCancelled()) return;
+      setPlan(result);
+      if (!keepTab) setTab("configuration");
+    } catch (e) {
+      if (!isCancelled()) setError(e.message);
+    } finally {
+      setRunning(false);
+    }
+  };
 
   // ── Load the selected config, and its last plan if it has one ─────────────
   useEffect(() => {
@@ -79,7 +106,11 @@ export default function SimulationConfigPage() {
         if (cancelled) return;
         setConfig(c);
         setDirty(false);
-        if (c.latestPlanId) {
+        if (autoPreviewId.current === c.id) {
+          autoPreviewId.current = null;
+          setPlan(null);
+          if (c.networkId) await preview(c, () => cancelled);
+        } else if (c.latestPlanId) {
           // A stored plan may have been deleted; a missing one is not an error.
           const last = await fetchDispatchPlan(c.latestPlanId).catch(() => null);
           if (!cancelled) setPlan(last);
@@ -92,6 +123,57 @@ export default function SimulationConfigPage() {
 
     return () => { cancelled = true; };
   }, [id]);
+
+  // Load the configuration's network for the embedded canvas.
+  useEffect(() => {
+    const networkId = config?.networkId;
+    if (!networkId) {
+      setCanvasDoc(null);
+      return undefined;
+    }
+    let cancelled = false;
+    fetchNetwork(networkId)
+      .then((doc) => !cancelled && setCanvasDoc(doc))
+      .catch(() => !cancelled && setCanvasDoc(null));
+    return () => { cancelled = true; };
+  }, [config?.networkId]);
+
+  /**
+   * Save from the embedded canvas (SWIIMS handleControlledCanvasSave): the
+   * edited network is stored as a NEW network, "<config> - Edited Network",
+   * the configuration is re-pointed at it, and the tables/plan re-preview —
+   * so the original network other configurations use is never overwritten.
+   */
+  const handleControlledCanvasSave = useCallback(
+    async (payload) => {
+      if (!config) return;
+      const base = (payload?.name || config.name || "Simulation Network").trim();
+      const name = base.endsWith(" - Edited Network") ? base : `${base} - Edited Network`;
+      const savedNetwork = await saveNetwork({
+        name,
+        description: payload?.description || config.description || "",
+        nodes: payload?.nodes || [],
+        edges: payload?.edges || [],
+      });
+      setNetworks((list) => [{ ...savedNetwork, nodeCount: (payload?.nodes || []).length, edgeCount: (payload?.edges || []).length }, ...list]);
+      const saved = await updateSimulationConfig(config.id, {
+        name: config.name,
+        description: config.description,
+        networkId: savedNetwork.id,
+        from: config.from,
+        to: config.to,
+        overrides: config.overrides || {},
+        strategicStorageMinPct: config.strategicStorageMinPct ?? 70,
+      });
+      setConfig(saved);
+      setConfigs((list) => list.map((c) => (c.id === saved.id ? { ...c, ...saved } : c)));
+      setDirty(false);
+      setCanvasDirty(false);
+      await preview(saved, () => false, { keepTab: true });
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [config]
+  );
 
   const overrides = config?.overrides || {};
   const overrideCount = useMemo(() => countOverrides(overrides), [overrides]);
@@ -129,7 +211,36 @@ export default function SimulationConfigPage() {
         to: plusDays(from, 13),
       });
       setConfigs((list) => [{ ...created }, ...list]);
+      autoPreviewId.current = created.id;
       navigate(`/simulation-config/${encodeURIComponent(created.id)}`);
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+
+  /** Switching network saves it and reloads the tables for the new network. */
+  const handleNetworkChange = async (networkId) => {
+    if (!config) return;
+    setConfig((c) => ({ ...c, networkId }));
+    setError(null);
+    if (!networkId) {
+      setDirty(true);
+      return;
+    }
+    try {
+      const saved = await updateSimulationConfig(config.id, {
+        name: config.name,
+        description: config.description,
+        networkId,
+        from: config.from,
+        to: config.to,
+        overrides: config.overrides || {},
+        strategicStorageMinPct: config.strategicStorageMinPct ?? 70,
+      });
+      setConfig(saved);
+      setConfigs((list) => list.map((c) => (c.id === saved.id ? { ...c, ...saved } : c)));
+      setDirty(false);
+      await preview(saved);
     } catch (e) {
       setError(e.message);
     }
@@ -171,7 +282,7 @@ export default function SimulationConfigPage() {
     }
   };
 
-  const handleRun = async () => {
+  const handleRun = async ({ stayOnTab = false } = {}) => {
     if (!config) return;
     setRunning(true);
     setError(null);
@@ -187,7 +298,7 @@ export default function SimulationConfigPage() {
         strategicStorageMinPct: config.strategicStorageMinPct ?? 70,
       });
       setPlan(result);
-      setTab("results");
+      if (!stayOnTab) setTab("results");
     } catch (e) {
       setError(e.message);
     } finally {
@@ -289,7 +400,7 @@ export default function SimulationConfigPage() {
               </label>
               <label>
                 <span>Network</span>
-                <select value={config.networkId || ""} onChange={(e) => patch({ networkId: e.target.value || null })}>
+                <select value={config.networkId || ""} onChange={(e) => handleNetworkChange(e.target.value || null)}>
                   <option value="">Select a network…</option>
                   {networks.map((n) => (
                     <option key={n.id} value={n.id}>{n.name} ({n.nodeCount} nodes)</option>
@@ -319,7 +430,9 @@ export default function SimulationConfigPage() {
             )}
           </section>
 
-          {!plan && (
+          {!plan && running && <div className="metric__notice">Loading tables for the selected network…</div>}
+
+          {!plan && !running && (
             <div className="metric__notice">
               Run the simulation to pull the portals' approved production, transmission, demand and
               Variable O&amp;M values for this range.
@@ -357,7 +470,30 @@ export default function SimulationConfigPage() {
                   onDecisionSave={handleDecisionSave}
                 />
               )}
-              {tab === "canvas" && <CanvasPanel plan={plan} />}
+              {tab === "canvas" && (
+                <div className="scp__canvas-host">
+                  {canvasDirty && (
+                    <div className="metric__notice metric__notice--warn">
+                      Unsaved canvas edits. Save (Home → Save) stores them as a new "{config.name} - Edited Network" and re-runs the tables against it.
+                    </div>
+                  )}
+                  <NetworkCanvasWorkspace
+                    workspaceMode="simulation"
+                    controlledDocument={canvasDoc}
+                    controlledName={config.name}
+                    controlledDescription={config.description}
+                    plan={plan}
+                    horizonStart={config.from}
+                    horizonEnd={config.to}
+                    readOnly={Boolean(published)}
+                    readOnlyNotice="This plan has been published, so its network is frozen here. Run again to edit the network for a new plan."
+                    onControlledSave={handleControlledCanvasSave}
+                    onDirtyChange={setCanvasDirty}
+                    onRun={() => handleRun({ stayOnTab: true })}
+                    running={running}
+                  />
+                </div>
+              )}
             </>
           )}
         </>

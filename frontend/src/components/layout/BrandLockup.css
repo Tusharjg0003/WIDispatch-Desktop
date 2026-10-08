@@ -1,0 +1,18 @@
+.brand-lockup { display: flex; align-items: center; gap: 8px; min-width: 0; flex-shrink: 0; }
+.brand-lockup__swiims { display: block; height: 26px; width: 132px; max-width: 100%; object-fit: cover; object-position: center; flex-shrink: 1; }
+.brand-lockup__divider { width: 1px; height: 20px; flex-shrink: 0; background: var(--line2); }
+.brand-lockup__wtco { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.brand-lockup__wtco-logo { display: block; height: 36px; width: auto; flex-shrink: 0; filter: var(--wtco-filter); }
+.brand-lockup__name { display: flex; flex-direction: column; min-width: 0; line-height: 1.05; }
+.brand-lockup__name-en { color: var(--tx1); font-size: 10px; font-weight: 700; letter-spacing: .2px; white-space: nowrap; }
+.brand-lockup__name-ar { color: var(--mut); font-size: 9px; white-space: nowrap; }
+.brand-lockup--compact .brand-lockup__swiims { height: 22px; width: 110px; }
+.brand-lockup--compact .brand-lockup__wtco-logo { height: 28px; }
+
+@media (max-width: 1180px) {
+  .brand-lockup__name { display: none; }
+}
+@media (max-width: 640px) {
+  .brand-lockup__divider,
+  .brand-lockup__wtco { display: none; }
+}

@@ -4,11 +4,11 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 const STATUS_COLOR = {
-  operational: "#6fa300",
-  maintenance: "#f59e0b",
-  under_construction: "#3b82f6",
-  planned: "#3b82f6",
-  decommissioned: "#ef4444",
+  operational: "var(--ok)",
+  maintenance: "var(--chart-warning)",
+  under_construction: "var(--chart-design)",
+  planned: "var(--chart-design)",
+  decommissioned: "var(--chart-danger)",
 };
 const statusLabel = (s) => (s ? s.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase()) : "Unknown");
 const gov = (a) => (a.governorate && a.governorate !== "NULL" ? a.governorate : "Unknown");
@@ -18,7 +18,7 @@ const gov = (a) => (a.governorate && a.governorate !== "NULL" ? a.governorate : 
 const triangleIcon = (color) =>
   L.divIcon({
     className: "asset-triangle-marker",
-    html: `<svg width="18" height="18" viewBox="0 0 18 18"><polygon points="9,1 17,16 1,16" fill="${color}" stroke="#ffffff" stroke-width="1.5" /></svg>`,
+    html: `<svg width="18" height="18" viewBox="0 0 18 18"><polygon points="9,1 17,16 1,16" fill="${color}" stroke="var(--panel)" stroke-width="1.5" /></svg>`,
     iconSize: [18, 18],
     iconAnchor: [9, 11],
   });
@@ -26,7 +26,7 @@ const triangleIcon = (color) =>
 const diamondIcon = (color) =>
   L.divIcon({
     className: "asset-diamond-marker",
-    html: `<svg width="18" height="18" viewBox="0 0 18 18"><rect x="4" y="4" width="10" height="10" transform="rotate(45 9 9)" fill="${color}" stroke="#ffffff" stroke-width="1.5" /></svg>`,
+    html: `<svg width="18" height="18" viewBox="0 0 18 18"><rect x="4" y="4" width="10" height="10" transform="rotate(45 9 9)" fill="${color}" stroke="var(--panel)" stroke-width="1.5" /></svg>`,
     iconSize: [18, 18],
     iconAnchor: [9, 9],
   });
@@ -34,7 +34,7 @@ const diamondIcon = (color) =>
 const squareIcon = (color) =>
   L.divIcon({
     className: "asset-square-marker",
-    html: `<svg width="16" height="16" viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" fill="${color}" stroke="#ffffff" stroke-width="1.5" /></svg>`,
+    html: `<svg width="16" height="16" viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" fill="${color}" stroke="var(--panel)" stroke-width="1.5" /></svg>`,
     iconSize: [16, 16],
     iconAnchor: [8, 8],
   });
@@ -75,7 +75,7 @@ export default function AssetMapView({ assets, onView, onEdit }) {
             />
             <FitBounds points={points} />
             {located.map((a) => {
-              const color = STATUS_COLOR[a.status] || "#3b82f6";
+              const color = STATUS_COLOR[a.status] || "var(--chart-design)";
               const body = (
                 <>
                   <Tooltip direction="top" offset={[0, -6]} sticky>

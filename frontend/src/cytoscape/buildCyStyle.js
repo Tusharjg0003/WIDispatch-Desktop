@@ -40,9 +40,78 @@ const INACTIVE_STATUSES = new Set(["decommissioned", "inactive"]);
 
 export const isInactiveStatus = (status) => INACTIVE_STATUSES.has(status);
 
-const ACCENT = "#1d4f91";
+// Canvas palettes per theme. Cytoscape paints to <canvas> and cannot resolve
+// CSS custom properties, so the Control Room tokens (index.css) are mirrored
+// here as solid colours. The light palette is the original canvas look.
+export const CY_PALETTES = {
+  light: {
+    surface: "#ffffff",
+    text: "#111827",
+    edge: "#5b7ca3",
+    edgeLabel: "#8aa5b8",
+    junction: "#6b7280",
+    accent: "#1d4f91",
+    select: "#0969da",
+    ok: "#22c55e",
+    okStrong: "#6fa300",
+    amber: "#f59e0b",
+    purple: "#7c3aed",
+    red: "#c11b1b",
+    neutral: "#94a3b8",
+    idle: "#cbd5e1",
+    full: "#0ea5e9",
+    edgeIdle: "#6b7280",
+    overrideBg: "#fdeee7",
+    noteBg: "#fef9e7",
+    noteBorder: "#c4380f",
+    noteText: "#78350f",
+  },
+  dark: {
+    surface: "#0b2137",
+    text: "#eef6fb",
+    edge: "#7d9cb3",
+    edgeLabel: "#7d9cb3",
+    junction: "#7d9cb3",
+    accent: "#00a3e0",
+    select: "#6fd0f5",
+    ok: "#97d700",
+    okStrong: "#b4e34d",
+    amber: "#fbbf24",
+    purple: "#c084fc",
+    red: "#f5908f",
+    neutral: "#5c7d95",
+    idle: "#21496f",
+    full: "#38bdf8",
+    edgeIdle: "#5c7d95",
+    overrideBg: "#3a2216",
+    noteBg: "#2a2410",
+    noteBorder: "#fa4616",
+    noteText: "#ffd166",
+  },
+};
 
-export function buildCyStyle() {
+/** Palette for the theme currently applied to <html> (light outside a browser). */
+export function currentCyPalette() {
+  if (typeof document === "undefined") return CY_PALETTES.light;
+  return document.documentElement.dataset.theme === "light" ? CY_PALETTES.light : CY_PALETTES.dark;
+}
+
+/**
+ * Re-apply the stylesheet whenever ThemeContext switches the theme.
+ * Returns an unsubscribe function; call it before destroying `cy`.
+ */
+export function bindCyTheme(cy, build = buildCyStyle) {
+  if (typeof window === "undefined" || !cy) return () => {};
+  const handler = () => {
+    if (!cy.destroyed()) cy.style(build());
+  };
+  window.addEventListener("widispatch:themechange", handler);
+  return () => window.removeEventListener("widispatch:themechange", handler);
+}
+
+export function buildCyStyle(palette = currentCyPalette()) {
+  const P = palette;
+  const ACCENT = P.accent;
   return [
     // ── Entity symbol ────────────────────────────────────────────────────
     // An asset is a 44px map symbol, not a card: white body, a generated SVG
@@ -54,7 +123,7 @@ export function buildCyStyle() {
         shape: "ellipse",
         width: 44,
         height: 44,
-        "background-color": "#ffffff",
+        "background-color": P.surface,
         "background-opacity": 1,
         "background-image": "data(cardIcon)",
         "background-fit": "none",
@@ -70,7 +139,7 @@ export function buildCyStyle() {
         "text-valign": "bottom",
         "text-halign": "center",
         "text-margin-y": 5,
-        color: "#111827",
+        color: P.text,
         "font-size": 9.5,
         "font-family": '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
         "font-weight": "bold",
@@ -79,7 +148,7 @@ export function buildCyStyle() {
         "text-max-width": 120,
         "text-overflow-wrap": "anywhere",
         // Keeps a label legible where it crosses a pipe underneath it.
-        "text-background-color": "#ffffff",
+        "text-background-color": P.surface,
         "text-background-opacity": 0.78,
         "text-background-padding": 2,
         "text-background-shape": "roundrectangle",
@@ -90,6 +159,8 @@ export function buildCyStyle() {
       selector: 'node[status="decommissioned"], node[status="inactive"]',
       style: { "border-style": "dashed" },
     },
+    // Box symbols (View → Symbol): rounded square body instead of a disc.
+    { selector: 'node[symbolShape="box"]', style: { shape: "round-rectangle" } },
     // Labels toggle (View → Labels).
     { selector: "node.hide-labels", style: { label: "" } },
     { selector: "edge.hide-labels", style: { label: "" } },
@@ -100,12 +171,12 @@ export function buildCyStyle() {
         shape: "ellipse",
         width: 18,
         height: 18,
-        "background-color": "#ffffff",
+        "background-color": P.surface,
         "background-image": "none",
         label: "",
         "text-margin-y": 0,
         "border-width": 2,
-        "border-color": "#6b7280",
+        "border-color": P.junction,
       },
     },
     // ── Level of detail ──────────────────────────────────────────────────
@@ -141,16 +212,16 @@ export function buildCyStyle() {
       selector: "edge",
       style: {
         width: 2.5,
-        "line-color": "#5b7ca3",
-        "target-arrow-color": "#5b7ca3",
+        "line-color": P.edge,
+        "target-arrow-color": P.edge,
         "target-arrow-shape": "triangle",
         "curve-style": "bezier",
         label: "data(displayLabel)",
         "font-size": 9,
-        color: "#8aa5b8",
+        color: P.edgeLabel,
         "font-family": '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
         "text-rotation": "autorotate",
-        "text-background-color": "#ffffff",
+        "text-background-color": P.surface,
         "text-background-opacity": 0.9,
         "text-background-padding": 2,
       },
@@ -191,12 +262,12 @@ export function buildCyStyle() {
     { selector: "edge[simWidth]", style: { width: "data(simWidth)" } },
     {
       selector: "edge.sim-edge--idle",
-      style: { "line-color": "#6b7280", "target-arrow-color": "#6b7280", "line-style": "solid", opacity: 0.55 },
+      style: { "line-color": P.edgeIdle, "target-arrow-color": P.edgeIdle, "line-style": "solid", opacity: 0.55 },
     },
     {
       selector: "edge.sim-edge--low",
       style: {
-        "line-color": "#22c55e", "target-arrow-color": "#22c55e",
+        "line-color": P.ok, "target-arrow-color": P.ok,
         "line-style": "dashed", "line-dash-pattern": [10, 6],
       },
     },
@@ -206,86 +277,101 @@ export function buildCyStyle() {
     {
       selector: "edge.sim-edge--unconstrained",
       style: {
-        "line-color": "#22c55e", "target-arrow-color": "#22c55e",
+        "line-color": P.ok, "target-arrow-color": P.ok,
         "line-style": "dashed", "line-dash-pattern": [4, 4],
       },
     },
     {
       selector: "edge.sim-edge--medium",
       style: {
-        "line-color": "#f59e0b", "target-arrow-color": "#f59e0b",
+        "line-color": P.amber, "target-arrow-color": P.amber,
         "line-style": "dashed", "line-dash-pattern": [10, 6],
       },
     },
     {
       selector: "edge.sim-edge--high",
       style: {
-        "line-color": "#7c3aed", "target-arrow-color": "#7c3aed",
+        "line-color": P.purple, "target-arrow-color": P.purple,
         "line-style": "dashed", "line-dash-pattern": [10, 6],
       },
     },
     {
       selector: "edge.sim-edge--bottleneck",
       style: {
-        "line-color": "#c11b1b", "target-arrow-color": "#c11b1b",
+        "line-color": P.red, "target-arrow-color": P.red,
         "line-style": "dashed", "line-dash-pattern": [10, 6], "z-index": 950,
       },
     },
     // Plants: how hard the solver ran them.
-    { selector: "node.sim-plant--idle", style: { "border-color": "#cbd5e1", "border-width": 2 } },
-    { selector: "node.sim-plant--partial", style: { "border-color": "#22c55e", "border-width": 3 } },
-    { selector: "node.sim-plant--at-capacity", style: { "border-color": "#7c3aed", "border-width": 4 } },
+    { selector: "node.sim-plant--idle", style: { "border-color": P.idle, "border-width": 2 } },
+    { selector: "node.sim-plant--partial", style: { "border-color": P.ok, "border-width": 3 } },
+    { selector: "node.sim-plant--at-capacity", style: { "border-color": P.purple, "border-width": 4 } },
     {
       selector: "node.sim-plant--binding",
       style: {
-        "border-color": "#c11b1b", "border-width": 4,
-        "overlay-color": "#c11b1b", "overlay-padding": 5, "overlay-opacity": 0.12,
+        "border-color": P.red, "border-width": 4,
+        "overlay-color": P.red, "overlay-padding": 5, "overlay-opacity": 0.12,
       },
     },
     {
       selector: "node.sim-plant--no-capacity",
-      style: { "border-color": "#94a3b8", "border-width": 3, "border-style": "dotted", opacity: 0.7 },
+      style: { "border-color": P.neutral, "border-width": 3, "border-style": "dotted", opacity: 0.7 },
     },
     // City gates: whether they were served.
-    { selector: "node.sim-gate--no-demand", style: { "border-color": "#cbd5e1", "border-width": 2, opacity: 0.7 } },
-    { selector: "node.sim-gate--met", style: { "border-color": "#22c55e", "border-width": 3 } },
-    { selector: "node.sim-gate--adjusted", style: { "border-color": "#f59e0b", "border-width": 4 } },
+    { selector: "node.sim-gate--no-demand", style: { "border-color": P.idle, "border-width": 2, opacity: 0.7 } },
+    { selector: "node.sim-gate--met", style: { "border-color": P.ok, "border-width": 3 } },
+    { selector: "node.sim-gate--adjusted", style: { "border-color": P.amber, "border-width": 4 } },
     {
       selector: "node.sim-gate--shortfall",
       style: {
-        "border-color": "#c11b1b", "border-width": 4,
-        "overlay-color": "#c11b1b", "overlay-padding": 5, "overlay-opacity": 0.12,
+        "border-color": P.red, "border-width": 4,
+        "overlay-color": P.red, "overlay-padding": 5, "overlay-opacity": 0.12,
       },
     },
     // Pump stations.
-    { selector: "node.sim-pump--normal", style: { "border-color": "#cbd5e1", "border-width": 2 } },
-    { selector: "node.sim-pump--unconstrained", style: { "border-color": "#94a3b8", "border-width": 2, "border-style": "dotted" } },
-    { selector: "node.sim-pump--offline", style: { "border-color": "#94a3b8", "border-width": 3, "border-style": "dashed", opacity: 0.6 } },
+    { selector: "node.sim-pump--normal", style: { "border-color": P.idle, "border-width": 2 } },
+    { selector: "node.sim-pump--unconstrained", style: { "border-color": P.neutral, "border-width": 2, "border-style": "dotted" } },
+    { selector: "node.sim-pump--offline", style: { "border-color": P.neutral, "border-width": 3, "border-style": "dashed", opacity: 0.6 } },
     {
       selector: "node.sim-pump--binding",
       style: {
-        "border-color": "#c11b1b", "border-width": 4,
-        "overlay-color": "#c11b1b", "overlay-padding": 5, "overlay-opacity": 0.12,
+        "border-color": P.red, "border-width": 4,
+        "overlay-color": P.red, "overlay-padding": 5, "overlay-opacity": 0.12,
       },
     },
     // Storage tanks: end-of-day inventory relative to reserve and maximum.
-    { selector: "node.sim-tank--empty", style: { "border-color": "#c11b1b", "border-width": 4 } },
-    { selector: "node.sim-tank--reserve", style: { "border-color": "#f59e0b", "border-width": 4 } },
-    { selector: "node.sim-tank--available", style: { "border-color": "#22c55e", "border-width": 3 } },
-    { selector: "node.sim-tank--full", style: { "border-color": "#0ea5e9", "border-width": 4 } },
+    { selector: "node.sim-tank--empty", style: { "border-color": P.red, "border-width": 4 } },
+    { selector: "node.sim-tank--reserve", style: { "border-color": P.amber, "border-width": 4 } },
+    { selector: "node.sim-tank--available", style: { "border-color": P.ok, "border-width": 3 } },
+    { selector: "node.sim-tank--full", style: { "border-color": P.full, "border-width": 4 } },
     // An element the displayed run never saw, because the canvas was edited
     // after the plan was produced.
     { selector: "edge.sim-stale", style: { opacity: 0.25, "line-style": "dotted", width: 1.5 } },
     { selector: "node.sim-stale", style: { opacity: 0.25, "border-style": "dotted" } },
     // A per-run override is operator input, not portal data — always visible.
-    { selector: "node.sim-overridden", style: { "background-color": "#fdeee7" } },
+    { selector: "node.sim-overridden", style: { "background-color": P.overrideBg } },
+    // Simulation View → Bottlenecks: binding elements stand out, the rest dims.
+    { selector: ".sim-focus-dim", style: { opacity: 0.15 } },
+    { selector: "node.sim-focus", style: { "border-width": 5, "z-index": 950 } },
+    { selector: "edge.sim-focus", style: { width: 6, "z-index": 950 } },
+    // Show Gap: binding pipes upstream of a short delivery point, and the
+    // plants upstream that still had spare capacity.
+    {
+      selector: "edge.sim-gap-binding",
+      style: { "line-color": P.red, "target-arrow-color": P.red, width: 6, "z-index": 960, "line-style": "solid" },
+    },
+    { selector: "node.sim-gap-spare", style: { "border-color": P.ok, "border-width": 6, "z-index": 960 } },
+    {
+      selector: "node.sim-gap-root",
+      style: { "border-color": P.red, "border-width": 6, "overlay-color": P.red, "overlay-opacity": 0.12, "overlay-padding": 6 },
+    },
     // Selection highlight.
     {
       selector: "node:selected",
       style: {
-        "border-color": "#0969da",
+        "border-color": P.select,
         "border-width": 4,
-        "overlay-color": "#0969da",
+        "overlay-color": P.select,
         "overlay-padding": 5,
         "overlay-opacity": 0.15,
       },
@@ -317,17 +403,19 @@ export function buildCyStyle() {
         shape: "round-rectangle",
         width: 200,
         height: 90,
-        "background-color": "#fef9e7",
+        "background-color": P.noteBg,
         "background-opacity": 1,
+        // The note's text is drawn by its HTML overlay editor (rich text).
+        "text-opacity": 0,
         "background-image": "none",
         "border-width": 1,
         "border-style": "dashed",
-        "border-color": "#c4380f",
+        "border-color": P.noteBorder,
         label: "data(displayLabel)",
         "text-valign": "top",
         "text-halign": "center",
         "text-margin-x": 0,
-        color: "#78350f",
+        color: P.noteText,
         "font-size": 11,
         // The base rule styles an entity label sitting under a symbol; inside
         // a note the text is the content, and bold is a per-note toggle.
@@ -386,13 +474,26 @@ export function buildCyStyle() {
         "overlay-opacity": 0.12,
       },
     },
+    // Pipe whose end is being moved (right-click → Change Source/Destination).
+    {
+      selector: "edge.reconnect-source",
+      style: {
+        "line-color": P.amber,
+        "target-arrow-color": P.amber,
+        "line-style": "dashed",
+        width: 4,
+        "overlay-color": P.amber,
+        "overlay-padding": 6,
+        "overlay-opacity": 0.14,
+      },
+    },
     {
       selector: "edge.insert-target",
       style: {
-        "line-color": "#f59e0b",
-        "target-arrow-color": "#f59e0b",
+        "line-color": P.amber,
+        "target-arrow-color": P.amber,
         width: 4,
-        "overlay-color": "#f59e0b",
+        "overlay-color": P.amber,
         "overlay-padding": 6,
         "overlay-opacity": 0.18,
       },
@@ -400,9 +501,9 @@ export function buildCyStyle() {
     {
       selector: "node.trace-root",
       style: {
-        "border-color": "#0969da",
+        "border-color": P.select,
         "border-width": 6,
-        "overlay-color": "#0969da",
+        "overlay-color": P.select,
         "overlay-padding": 6,
         "overlay-opacity": 0.2,
         "z-index": 1000,
@@ -411,7 +512,7 @@ export function buildCyStyle() {
     {
       selector: "node.trace-up",
       style: {
-        "border-color": "#1d4f91",
+        "border-color": ACCENT,
         "border-width": 4,
         "z-index": 900,
       },
@@ -419,7 +520,7 @@ export function buildCyStyle() {
     {
       selector: "node.trace-down",
       style: {
-        "border-color": "#6fa300",
+        "border-color": P.okStrong,
         "border-width": 4,
         "z-index": 900,
       },
@@ -427,9 +528,9 @@ export function buildCyStyle() {
     {
       selector: "edge.trace-up-edge",
       style: {
-        "line-color": "#1d4f91",
-        "target-arrow-color": "#1d4f91",
-        "source-arrow-color": "#1d4f91",
+        "line-color": ACCENT,
+        "target-arrow-color": ACCENT,
+        "source-arrow-color": ACCENT,
         width: 5,
         opacity: 1,
         "z-index": 900,
@@ -438,9 +539,25 @@ export function buildCyStyle() {
     {
       selector: "edge.trace-down-edge",
       style: {
-        "line-color": "#6fa300",
-        "target-arrow-color": "#6fa300",
-        "source-arrow-color": "#6fa300",
+        "line-color": P.okStrong,
+        "target-arrow-color": P.okStrong,
+        "source-arrow-color": P.okStrong,
+        width: 5,
+        opacity: 1,
+        "z-index": 900,
+      },
+    },
+    // Reached by more than one traced root, or both upstream and downstream.
+    {
+      selector: "node.trace-shared",
+      style: { "border-color": P.purple, "border-width": 4, "z-index": 900 },
+    },
+    {
+      selector: "edge.trace-shared-edge",
+      style: {
+        "line-color": P.purple,
+        "target-arrow-color": P.purple,
+        "source-arrow-color": P.purple,
         width: 5,
         opacity: 1,
         "z-index": 900,

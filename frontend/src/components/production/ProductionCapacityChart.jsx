@@ -8,17 +8,17 @@ import "./ProductionCapacityChart.css";
 
 const getStatusColor = (status) => {
   switch (status) {
-    case "approved": return "#6fa300";
+    case "approved": return "var(--ok)";
     case "submitted":
-    case "revised": return "#3b82f6";
-    case "under_revision": return "#f59e0b";
-    case "rejected": return "#ef4444";
+    case "revised": return "var(--chart-design)";
+    case "under_revision": return "var(--chart-warning)";
+    case "rejected": return "var(--chart-danger)";
     case "adjusted":
-    case "conditional": return "#f59e0b";
+    case "conditional": return "var(--chart-warning)";
     case "shortfall":
-    case "postponed": return "#ef4444";
-    case "draft": return "#94a3b8";
-    default: return "#6366f1";
+    case "postponed": return "var(--chart-danger)";
+    case "draft": return "var(--chart-reference)";
+    default: return "var(--chart-indigo)";
   }
 };
 
@@ -48,19 +48,19 @@ export default function ProductionCapacityChart({ plant, plantId, bundle }) {
     const key = `${dataKey || "dot"}-${payload?.isoDate || index}`;
     if (cx == null || cy == null) return <circle key={key} cx={0} cy={0} r={0} fill="none" />;
     const status = dataKey === "actual" ? payload.actualStatus : payload.requiredStatus;
-    return <circle key={key} cx={cx} cy={cy} r={4} fill={getStatusColor(status) || fallbackColor} stroke="#fff" strokeWidth={1.5} />;
+    return <circle key={key} cx={cx} cy={cy} r={4} fill={getStatusColor(status) || fallbackColor} stroke="var(--panel)" strokeWidth={1.5} />;
   };
 
   const showCapacityLine = !!plantId && !!contractedCapacity;
   const legendItems = [
-    { label: "Delivered", color: "#6fa300", kind: "line" },
-    { label: "Requested", color: "#6366f1", kind: "dashed" },
-    ...(showCapacityLine ? [{ label: "Available Capacity", color: "#f59e0b", kind: "line" }] : []),
-    ...(showCapacityLine ? [{ label: "Capacity Lost", color: "#f59e0b", kind: "area" }] : []),
-    ...(showCapacityLine ? [{ label: "Contracted", color: "#f59e0b", kind: "dashed" }] : []),
-    ...(!!plantId && !!designCapacity ? [{ label: "Design", color: "#8b5cf6", kind: "dashed" }] : []),
-    ...(!!plantId && !!maximumCapacity ? [{ label: "Maximum", color: "#06b6d4", kind: "dashed" }] : []),
-    { label: "Out-of-Spec Quality", color: "#ef4444", kind: "diamond" },
+    { label: "Delivered", color: "var(--ok)", kind: "line" },
+    { label: "Requested", color: "var(--chart-indigo)", kind: "dashed" },
+    ...(showCapacityLine ? [{ label: "Available Capacity", color: "var(--chart-warning)", kind: "line" }] : []),
+    ...(showCapacityLine ? [{ label: "Capacity Lost", color: "var(--chart-warning)", kind: "area" }] : []),
+    ...(showCapacityLine ? [{ label: "Contracted", color: "var(--chart-warning)", kind: "dashed" }] : []),
+    ...(!!plantId && !!designCapacity ? [{ label: "Design", color: "var(--chart-purple)", kind: "dashed" }] : []),
+    ...(!!plantId && !!maximumCapacity ? [{ label: "Maximum", color: "var(--chart-cyan)", kind: "dashed" }] : []),
+    { label: "Out-of-Spec Quality", color: "var(--chart-danger)", kind: "diamond" },
   ];
 
   const yTicks = (() => {
@@ -81,10 +81,10 @@ export default function ProductionCapacityChart({ plant, plantId, bundle }) {
     <div className="cap-chart">
       <ResponsiveContainer width="100%" height={400}>
         <ComposedChart data={chartData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#d9e4ec" vertical={false} />
-          <XAxis dataKey="date" tick={{ fill: "#607d91", fontSize: 11 }} interval={6} />
-          <YAxis ticks={yTicks} tick={{ fill: "#607d91", fontSize: 11 }} tickFormatter={(v) => v.toLocaleString()} width={80}
-            label={{ value: "Production (m³)", angle: -90, position: "insideLeft", fill: "#607d91", fontSize: 11 }} />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
+          <XAxis dataKey="date" tick={{ fill: "var(--chart-axis)", fontSize: 11 }} interval={6} />
+          <YAxis ticks={yTicks} tick={{ fill: "var(--chart-axis)", fontSize: 11 }} tickFormatter={(v) => v.toLocaleString()} width={80}
+            label={{ value: "Production (m³)", angle: -90, position: "insideLeft", fill: "var(--chart-axis)", fontSize: 11 }} />
           <Tooltip content={({ active, label }) => {
             if (!active) return null;
             const d = chartData.find((p) => p.date === label);
@@ -92,14 +92,14 @@ export default function ProductionCapacityChart({ plant, plantId, bundle }) {
             return (
               <div className="cap-tip">
                 <p className="cap-tip__title">{label}</p>
-                {d.effectiveCapacity !== undefined && <p style={{ color: "#a32e0b", fontWeight: 600 }}>Available Capacity: {d.effectiveCapacity.toLocaleString()} m³</p>}
+                {d.effectiveCapacity !== undefined && <p style={{ color: "var(--warnTx)", fontWeight: 600 }}>Available Capacity: {d.effectiveCapacity.toLocaleString()} m³</p>}
                 {d.required !== null && <p style={{ color: getStatusColor(d.requiredStatus) }}>Requested: {d.required.toLocaleString()} m³ ({d.requiredStatus || "pending"})</p>}
                 {d.actual !== null && <p style={{ color: getStatusColor(d.actualStatus) }}>Delivered: {d.actual.toLocaleString()} m³ ({d.actualStatus || "pending"})</p>}
-                {contractedCapacity && <p style={{ color: "#a32e0b", opacity: 0.85 }}>Contracted: {contractedCapacity.toLocaleString()} m³</p>}
-                {designCapacity && <p style={{ color: "#7c3aed" }}>Design: {designCapacity.toLocaleString()} m³</p>}
-                {maximumCapacity && <p style={{ color: "#0891b2" }}>Maximum: {maximumCapacity.toLocaleString()} m³</p>}
-                {d.maintenanceLoss > 0 && <p style={{ color: "#c4380f" }}>Maintenance Loss: {d.maintenanceLoss.toLocaleString()} m³</p>}
-                {d.outageLoss > 0 && <p style={{ color: "#c11b1b" }}>Outage Loss ({d.outageIsActual ? "actual" : "estimated"}): {d.outageLoss.toLocaleString()} m³</p>}
+                {contractedCapacity && <p style={{ color: "var(--warnTx)", opacity: 0.85 }}>Contracted: {contractedCapacity.toLocaleString()} m³</p>}
+                {designCapacity && <p style={{ color: "var(--chart-purple)" }}>Design: {designCapacity.toLocaleString()} m³</p>}
+                {maximumCapacity && <p style={{ color: "var(--chart-cyan)" }}>Maximum: {maximumCapacity.toLocaleString()} m³</p>}
+                {d.maintenanceLoss > 0 && <p style={{ color: "var(--warn)" }}>Maintenance Loss: {d.maintenanceLoss.toLocaleString()} m³</p>}
+                {d.outageLoss > 0 && <p style={{ color: "var(--err)" }}>Outage Loss ({d.outageIsActual ? "actual" : "estimated"}): {d.outageLoss.toLocaleString()} m³</p>}
                 {d.qualityMarker !== null && <p className="cap-tip__flag">⚠ Out-of-spec quality recorded</p>}
               </div>
             );
@@ -112,20 +112,20 @@ export default function ProductionCapacityChart({ plant, plantId, bundle }) {
             </div>
           )} />
 
-          <ReferenceLine x={format(new Date(), "MMM dd")} stroke="#111827" strokeWidth={2} strokeDasharray="2 4"
-            label={{ value: "Today", fill: "#111827", fontSize: 11, fontWeight: 700, position: "insideTopRight" }} />
+          <ReferenceLine x={format(new Date(), "MMM dd")} stroke="var(--tx1)" strokeWidth={2} strokeDasharray="2 4"
+            label={{ value: "Today", fill: "var(--tx1)", fontSize: 11, fontWeight: 700, position: "insideTopRight" }} />
 
-          {showCapacityLine && <ReferenceLine y={contractedCapacity} stroke="#f59e0b" strokeWidth={2} strokeDasharray="6 3" label={{ value: "Contracted", fill: "#a32e0b", fontSize: 11, position: "insideTopRight" }} />}
-          {!!plantId && !!designCapacity && <ReferenceLine y={designCapacity} stroke="#8b5cf6" strokeWidth={2} strokeDasharray="3 3" label={{ value: "Design", fill: "#7c3aed", fontSize: 11, position: "insideTopRight" }} />}
-          {!!plantId && !!maximumCapacity && <ReferenceLine y={maximumCapacity} stroke="#06b6d4" strokeWidth={2} strokeDasharray="3 3" label={{ value: "Maximum", fill: "#0891b2", fontSize: 11, position: "insideTopRight" }} />}
+          {showCapacityLine && <ReferenceLine y={contractedCapacity} stroke="var(--chart-warning)" strokeWidth={2} strokeDasharray="6 3" label={{ value: "Contracted", fill: "var(--warnTx)", fontSize: 11, position: "insideTopRight" }} />}
+          {!!plantId && !!designCapacity && <ReferenceLine y={designCapacity} stroke="var(--chart-purple)" strokeWidth={2} strokeDasharray="3 3" label={{ value: "Design", fill: "var(--chart-purple)", fontSize: 11, position: "insideTopRight" }} />}
+          {!!plantId && !!maximumCapacity && <ReferenceLine y={maximumCapacity} stroke="var(--chart-cyan)" strokeWidth={2} strokeDasharray="3 3" label={{ value: "Maximum", fill: "var(--chart-cyan)", fontSize: 11, position: "insideTopRight" }} />}
 
           {showCapacityLine && <Area type="monotone" dataKey="effectiveCapacity" stackId="cap" stroke="none" fill="none" isAnimationActive={false} legendType="none" activeDot={false} />}
-          {showCapacityLine && <Area type="monotone" dataKey="capacityLost" stackId="cap" stroke="#f59e0b" strokeOpacity={0.35} strokeWidth={1} fill="#f59e0b" fillOpacity={0.13} name="Capacity Lost" isAnimationActive={false} activeDot={false} />}
-          {showCapacityLine && <Line type="monotone" dataKey="effectiveCapacity" stroke="#f59e0b" strokeWidth={3} dot={{ fill: "#f59e0b", r: 3 }} activeDot={{ r: 5 }} name="Available Capacity" isAnimationActive={false} />}
+          {showCapacityLine && <Area type="monotone" dataKey="capacityLost" stackId="cap" stroke="var(--chart-warning)" strokeOpacity={0.35} strokeWidth={1} fill="var(--chart-warning)" fillOpacity={0.13} name="Capacity Lost" isAnimationActive={false} activeDot={false} />}
+          {showCapacityLine && <Line type="monotone" dataKey="effectiveCapacity" stroke="var(--chart-warning)" strokeWidth={3} dot={{ fill: "var(--chart-warning)", r: 3 }} activeDot={{ r: 5 }} name="Available Capacity" isAnimationActive={false} />}
 
-          <Line type="monotone" dataKey="required" stroke="#6366f1" strokeWidth={2} strokeDasharray="5 3" dot={renderStatusDot("#6366f1")} activeDot={{ r: 5 }} name="Requested" connectNulls={false} />
-          <Line type="monotone" dataKey="actual" stroke="#6fa300" strokeWidth={2} dot={renderStatusDot("#6fa300")} activeDot={{ r: 5 }} name="Delivered" connectNulls={false} />
-          <Scatter dataKey="qualityMarker" fill="#ef4444" shape="diamond" name="Out-of-Spec Quality" isAnimationActive={false} />
+          <Line type="monotone" dataKey="required" stroke="var(--chart-indigo)" strokeWidth={2} strokeDasharray="5 3" dot={renderStatusDot("var(--chart-indigo)")} activeDot={{ r: 5 }} name="Requested" connectNulls={false} />
+          <Line type="monotone" dataKey="actual" stroke="var(--ok)" strokeWidth={2} dot={renderStatusDot("var(--ok)")} activeDot={{ r: 5 }} name="Delivered" connectNulls={false} />
+          <Scatter dataKey="qualityMarker" fill="var(--chart-danger)" shape="diamond" name="Out-of-Spec Quality" isAnimationActive={false} />
         </ComposedChart>
       </ResponsiveContainer>
     </div>

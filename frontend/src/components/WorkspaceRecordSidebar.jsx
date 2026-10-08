@@ -1,14 +1,21 @@
 import React, { useCallback, useEffect, useState } from "react";
-import SidebarActionToolbar, { applyRangeFilter, applySort } from "./SidebarActionToolbar";
-import "./WorkspaceRecordSidebar.css";
+import { Plus, Search, Trash2, Waypoints } from "lucide-react";
+import { applyRangeFilter, applySort } from "./SidebarActionToolbar";
+import "./SidebarList.css";
 
-const EXPAND_ICON = "/All Icons Zipped/15 UI Utility Icons (System-Level)/Expand/SVG/Expand_20px.svg";
+const RANGES = [
+  { value: "all", label: "Any time" },
+  { value: "today", label: "Today" },
+  { value: "week", label: "This week" },
+  { value: "month", label: "This month" },
+];
 
 /* WorkspaceRecordSidebar
    --------------------------------------------------------------------------
-   Generic "saved records" sidebar: collapsible section header, a full action
-   toolbar (new / search / range filter / sort / delete-mode), and a list of
-   records with a per-row #index and a meta line, click-to-open.
+   Generic "saved records" sidebar: search + New, date filter / sort /
+   select-to-delete, then the records as rows (icon, name, meta line, last
+   update; the open one highlighted), click-to-open. Styled with the shared
+   left-rail list styles (SidebarList.css).
 
    Adapted from a reference implementation built for an app with multi-tab
    page instances, auth/ownership (locked/shared/mine), and a legacy-data
@@ -44,7 +51,6 @@ export default function WorkspaceRecordSidebar({
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [searchOpen, setSearchOpen] = useState(false);
   const [filterRange, setFilterRange] = useState("all");
   const [sortKey, setSortKey] = useState("updated");
   const [sortOrder, setSortOrder] = useState("desc");
@@ -132,77 +138,148 @@ export default function WorkspaceRecordSidebar({
     (r) => r.updated_at || r.updatedAt || r.created_at || r.createdAt
   );
 
+  const updatedLabel = (r) => {
+    const t = r.updated_at || r.updatedAt || r.created_at || r.createdAt;
+    if (!t) return null;
+    const d = new Date(t);
+    return Number.isNaN(d.getTime()) ? null : d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  };
+  const exitDeleteMode = () => {
+    setDeleteMode(false);
+    setSelectedIds(new Set());
+  };
+  const plural = `${recordLabel.toLowerCase()}s`;
+
   return (
-    <div className="sidebar-content">
-      <div className="sidebar-content__section-content">
-        <SidebarActionToolbar
-          createTitle={newTitle}
-          onCreate={onNew}
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
-          searchOpen={searchOpen}
-          setSearchOpen={setSearchOpen}
-          filterRange={filterRange}
-          setFilterRange={setFilterRange}
-          sortKey={sortKey}
-          sortOrder={sortOrder}
-          setSort={(key, order) => { setSortKey(key); setSortOrder(order); }}
-          inDeleteMode={deleteMode}
-          setInDeleteMode={(next) => { setDeleteMode(next); if (!next) setSelectedIds(new Set()); }}
-          selectedCount={selectedIds.size}
-          deleting={deleting}
-          onConfirmDelete={handleBulkDelete}
-        />
+    <div className="sl-panel">
+      <div className="sl-tools">
+        <div className="sl-tools__row">
+          <label className="sl-search">
+            <Search size={13} aria-hidden="true" />
+            <input
+              type="search"
+              placeholder={`Search ${plural}`}
+              aria-label={`Search ${plural}`}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </label>
+          <button type="button" className="sl-btn sl-btn--primary" onClick={onNew} title={newTitle}>
+            <Plus size={14} aria-hidden="true" /> New
+          </button>
+        </div>
+        <div className="sl-tools__row">
+          <select
+            className="sl-select"
+            value={filterRange}
+            onChange={(e) => setFilterRange(e.target.value)}
+            aria-label="Filter by last update"
+          >
+            {RANGES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+          </select>
+          <select
+            className="sl-select"
+            value={`${sortKey}:${sortOrder}`}
+            onChange={(e) => {
+              const [key, order] = e.target.value.split(":");
+              setSortKey(key);
+              setSortOrder(order);
+            }}
+            aria-label={`Sort ${plural}`}
+          >
+            <option value="updated:desc">Newest</option>
+            <option value="updated:asc">Oldest</option>
+            <option value="name:asc">A–Z</option>
+            <option value="name:desc">Z–A</option>
+          </select>
+          <button
+            type="button"
+            className={`sl-btn sl-btn--icon${deleteMode ? " is-active" : ""}`}
+            onClick={() => (deleteMode ? exitDeleteMode() : setDeleteMode(true))}
+            title={deleteMode ? "Cancel selecting" : `Select ${plural} to delete`}
+            aria-label={deleteMode ? "Cancel selecting" : `Select ${plural} to delete`}
+            aria-pressed={deleteMode}
+          >
+            <Trash2 size={14} aria-hidden="true" />
+          </button>
+        </div>
       </div>
 
-      {loading ? (
-        <div className="sidebar-content__empty-msg">Loading…</div>
-      ) : (
-        <div className="sidebar-content__tree-list">
-          {filtered.length === 0 ? (
-            <div className="sidebar-content__empty-msg">
-              {searchTerm ? `No ${recordLabel.toLowerCase()}s found` : `No saved ${recordLabel.toLowerCase()}s`}
+      {deleteMode && (
+        <div className="sl-bar sl-bar--danger" role="status">
+          <span className="sl-bar__text">
+            {selectedIds.size ? `${selectedIds.size} selected` : `Tick the ${plural} to delete`}
+          </span>
+          <button type="button" className="sl-link" onClick={exitDeleteMode} disabled={deleting}>Cancel</button>
+          <button
+            type="button"
+            className="sl-btn sl-btn--danger sl-btn--sm"
+            onClick={handleBulkDelete}
+            disabled={!selectedIds.size || deleting}
+          >
+            <Trash2 size={12} aria-hidden="true" /> {deleting ? "Deleting…" : "Delete"}
+          </button>
+        </div>
+      )}
+
+      <div className="sl-body">
+        {loading ? (
+          <div className="sl-empty">Loading…</div>
+        ) : filtered.length === 0 ? (
+          <div className="sl-empty">
+            {searchTerm || filterRange !== "all" ? `No ${plural} match these filters.` : `No saved ${plural} yet. Use New to start one.`}
+          </div>
+        ) : (
+          <>
+            <div className="sl-group">
+              <span className="sl-group__label">Saved {plural}</span>
+              <span className="sl-group__count">{filtered.length}</span>
             </div>
-          ) : (
-            filtered.map((record) => {
-              const isSelected = selectedIds.has(record.id);
+            {filtered.map((record) => {
+              const marked = selectedIds.has(record.id);
+              const active = record.id === activeId;
               const meta = metaFor(record);
+              const updated = updatedLabel(record);
+              const open = () => (deleteMode ? toggleSelection(record.id) : onSelect(record.id));
               return (
                 <div
                   key={record.id}
                   role="button"
                   tabIndex={0}
-                  className={`sidebar-content__tree-type sidebar-content__tree-type--record ${record.id === activeId ? "is-active" : ""}`}
-                  onClick={() => (deleteMode ? toggleSelection(record.id) : onSelect(record.id))}
+                  aria-current={active ? "true" : undefined}
+                  className={`sl-row${active ? " is-active" : ""}${marked ? " is-marked" : ""}`}
+                  onClick={open}
                   onKeyDown={(e) => {
                     if (e.key !== "Enter" && e.key !== " ") return;
                     e.preventDefault();
-                    deleteMode ? toggleSelection(record.id) : onSelect(record.id);
+                    open();
                   }}
                   title={record.description || record.name}
-                  style={{ backgroundColor: isSelected ? "#fbeaea" : undefined }}
                 >
-                  {deleteMode ? (
+                  {deleteMode && (
                     <input
+                      className="sl-row__check"
                       type="checkbox"
-                      checked={isSelected}
+                      checked={marked}
                       onChange={() => toggleSelection(record.id)}
                       onClick={(e) => e.stopPropagation()}
-                      style={{ width: 14, height: 14, flexShrink: 0 }}
+                      aria-label={`Select ${record.name || recordLabel}`}
                     />
-                  ) : (
-                    <img src={EXPAND_ICON} alt="" aria-hidden="true" />
                   )}
-                  <span>
-                    {record.name || `Unnamed ${recordLabel}`}
-                    {meta && <small>{meta}</small>}
+                  <span className="sl-row__icon" aria-hidden="true"><Waypoints size={15} /></span>
+                  <span className="sl-row__text">
+                    <span className="sl-row__name">{record.name || `Unnamed ${recordLabel.toLowerCase()}`}</span>
+                    {meta && <span className="sl-row__sub">{meta}</span>}
+                  </span>
+                  <span className="sl-row__aside">
+                    {active ? <span className="sl-tag sl-tag--acc">Open</span> : updated && <span className="sl-row__sub">{updated}</span>}
                   </span>
                 </div>
               );
-            })
-          )}
-        </div>
-      )}
+            })}
+          </>
+        )}
+      </div>
     </div>
   );
 }

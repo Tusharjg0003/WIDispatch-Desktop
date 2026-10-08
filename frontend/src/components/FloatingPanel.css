@@ -1,0 +1,217 @@
+/* Floating, draggable, non-blocking window for canvas forms (FloatingPanel).
+   Uses only global theme tokens, and declares the --ink / --surface family
+   the shared form styles (assetFormFields.css) read, so it renders the same
+   inside the app and in a popped-out window. */
+
+.fp {
+  --ink: var(--tx1);
+  --ink-dim: var(--mut);
+  --accent: var(--acc);
+  --accent-soft: var(--acc-soft);
+  --accent-border: var(--acc-border);
+  --good: var(--ok);
+  --bad: var(--err);
+  --surface: var(--panel);
+  --surface-subtle: var(--panel2);
+
+  position: fixed;
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  min-width: 320px;
+  max-width: calc(100vw - 16px);
+  min-height: 160px;
+  max-height: calc(100vh - 24px);
+  overflow: hidden;
+  resize: both;
+  border: 1px solid var(--line2);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--tx1);
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.28), 0 3px 10px rgba(15, 23, 42, 0.12);
+  animation: fp-in 0.16s ease-out;
+}
+.fp.is-dragging {
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.34), 0 4px 12px rgba(15, 23, 42, 0.14);
+  user-select: none;
+}
+@keyframes fp-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.99); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ── Title bar (drag handle) ────────────────────────────────────────────── */
+.fp__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  height: 38px;
+  padding: 0 6px 0 10px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel2);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.fp.is-dragging .fp__head {
+  cursor: grabbing;
+}
+.fp__head:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: -2px;
+}
+.fp__grip {
+  flex-shrink: 0;
+  color: var(--mut2);
+}
+.fp__title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--tx1);
+  font-size: 13px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fp__actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.fp__icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--mut);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.fp__icon-btn--text {
+  padding: 0 8px;
+}
+.fp__icon-btn:hover {
+  background: color-mix(in srgb, var(--acc) 12%, transparent);
+  color: var(--tx1);
+}
+.fp__icon-btn:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 1px;
+}
+
+/* ── Body: scrolls; the form footer sticks to the bottom ─────────────────── */
+.fp__body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  container-type: inline-size;
+}
+
+/* Compact form layout inside the window (overrides the roomier page form). */
+.fp .af__body {
+  padding: 2px 14px 0;
+}
+.fp .af__section {
+  margin: 14px 0 8px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+}
+.fp .af__body > .af__section:first-child {
+  margin-top: 10px;
+}
+.fp .af__grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+  margin-top: 10px;
+}
+.fp .af__section + .af__grid {
+  margin-top: 0;
+}
+@container (max-width: 440px) {
+  .fp .af__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.fp .af__field {
+  gap: 4px;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+.fp .af__field input,
+.fp .af__field select,
+.fp .af__field textarea {
+  height: 30px;
+  padding: 0 9px;
+  border-width: 1px;
+  border-radius: 5px;
+  font-size: 12px;
+}
+.fp .af__field textarea {
+  height: auto;
+  min-height: 56px;
+  padding: 6px 9px;
+}
+.fp .af__field input[type="checkbox"],
+.fp .af__field input[type="radio"] {
+  height: auto;
+}
+.fp .af__error {
+  margin-top: 12px;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+.fp .af__footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  gap: 8px;
+  margin: 16px -14px 0;
+  padding: 10px 14px;
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+}
+.fp .af__btn {
+  height: 30px;
+  padding: 0 14px;
+  border-radius: 5px;
+  font-size: 12px;
+}
+
+/* ── Popped out into its own browser window ─────────────────────────────── */
+body.fp-popout-body {
+  margin: 0;
+  background: var(--panel);
+  color: var(--tx1);
+}
+.fp--popout {
+  position: static;
+  width: 100%;
+  height: 100vh;
+  max-width: none;
+  max-height: none;
+  min-width: 0;
+  resize: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  animation: none;
+}
+.fp--popout .fp__head {
+  cursor: default;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fp { animation: none; }
+}

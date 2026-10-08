@@ -13,11 +13,11 @@ const DOCUMENT_ICON = `${ICON_ROOT}/12 File & Document Management/Document/SVG/D
 const HELP_ICON = `${ICON_ROOT}/01 Core Navigation-System/Help - Support/SVG/Help - Support_20px.svg`;
 
 const STATUS_DOT = {
-  operational: "#6fa300",
-  maintenance: "#f59e0b",
-  under_construction: "#3b82f6",
-  planned: "#3b82f6",
-  decommissioned: "#ef4444",
+  operational: "var(--ok)",
+  maintenance: "var(--chart-warning)",
+  under_construction: "var(--chart-design)",
+  planned: "var(--chart-design)",
+  decommissioned: "var(--chart-danger)",
 };
 
 const formatTypeLabel = (type) =>
@@ -140,11 +140,11 @@ export default function AssetRegistrySidebar({ view, onShowMap, onShowList, onCr
                           onClick={() => navigate(`/asset-registry/view/${encodeURIComponent(asset.id)}`)}
                         >
                           <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-                            <span style={{ fontSize: 9, lineHeight: 1, fontFamily: "var(--mono)", color: "#94a3b8", flexShrink: 0 }}>
+                            <span style={{ fontSize: 9, lineHeight: 1, fontFamily: "var(--mono)", color: "var(--chart-reference)", flexShrink: 0 }}>
                               #{index + 1}
                             </span>
                             <span style={{
-                              fontWeight: 500, fontSize: 11, lineHeight: 1.15, color: "#0f172a",
+                              fontWeight: 500, fontSize: 11, lineHeight: 1.15, color: "var(--tx1)",
                               overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                             }}>
                               {asset.name || asset.id}
@@ -153,7 +153,7 @@ export default function AssetRegistrySidebar({ view, onShowMap, onShowList, onCr
                           <div className="sidebar-content__list-item-meta" style={{ display: "flex", alignItems: "center", gap: 6, paddingLeft: 18 }}>
                             <span style={{
                               width: 6, height: 6, borderRadius: 999, flexShrink: 0,
-                              background: STATUS_DOT[asset.status] || "#94a3b8",
+                              background: STATUS_DOT[asset.status] || "var(--chart-reference)",
                             }} />
                             <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                               ID: {asset.id}

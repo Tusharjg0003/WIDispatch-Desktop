@@ -1,0 +1,336 @@
+/* Canvas ribbon command area (the tab row lives in NetworkCanvasWorkspace.css).
+   Office layout: groups separated by hairlines, each a row of columns; a
+   column is one large button or three stacked rows of small controls. Uses
+   the global theme tokens only, so it works in both themes and inside the
+   <body> portals (menus, hover tips). */
+
+.rb-body {
+  --rb-row: 24px;
+  --rb-gap: 2px;
+  --rb-hover: color-mix(in srgb, var(--acc) 10%, transparent);
+  --rb-pressed: color-mix(in srgb, var(--acc) 17%, transparent);
+
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  padding: 4px 4px 2px;
+  background: var(--panel);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line2) transparent;
+}
+
+/* ── Group ──────────────────────────────────────────────────────────────── */
+.rb-group {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  padding: 0 6px;
+  position: relative;
+}
+.rb-group + .rb-group::before,
+.rb-contextual::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 6px;
+  width: 1px;
+  background: var(--line);
+}
+.rb-contextual {
+  position: relative;
+  display: flex;
+  margin-left: 2px;
+  border-radius: 6px;
+  background: var(--amber-soft);
+}
+.rb-group__content {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  height: calc(var(--rb-row) * 3 + var(--rb-gap) * 2);
+}
+.rb-group__label {
+  margin-top: 3px;
+  color: var(--mut);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 13px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Column of up to three rows of small controls. */
+.rb-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rb-gap);
+}
+.rb-row {
+  display: flex;
+  align-items: center;
+  gap: var(--rb-gap);
+  height: var(--rb-row);
+}
+
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+.rb-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--tx1);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.15;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+.rb-btn__icon {
+  flex-shrink: 0;
+  color: var(--acc);
+  stroke-width: 1.75;
+}
+img.rb-btn__icon {
+  object-fit: contain;
+}
+.rb-btn__chevron {
+  flex-shrink: 0;
+  color: var(--mut);
+  margin-left: -1px;
+}
+
+.rb-btn:hover:not(:disabled) {
+  background: var(--rb-hover);
+  border-color: color-mix(in srgb, var(--acc) 22%, transparent);
+}
+.rb-btn:active:not(:disabled),
+.rb-btn.is-active {
+  background: var(--rb-pressed);
+  border-color: color-mix(in srgb, var(--acc) 38%, transparent);
+  color: var(--accTx, var(--acc));
+}
+.rb-btn:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 1px;
+}
+.rb-btn:disabled {
+  cursor: default;
+  color: var(--mut2);
+}
+.rb-btn:disabled .rb-btn__icon,
+.rb-btn:disabled .rb-btn__chevron {
+  color: var(--mut2);
+  opacity: 0.6;
+}
+
+/* Small: icon + label on one row. */
+.rb-btn--small {
+  height: var(--rb-row);
+  padding: 0 7px 0 5px;
+}
+/* Icon-only: square. */
+.rb-btn--small.rb-btn--icon {
+  width: var(--rb-row);
+  padding: 0;
+  justify-content: center;
+}
+.rb-btn--small.rb-btn--icon.rb-btn--menu {
+  width: auto;
+  padding: 0 3px 0 4px;
+  gap: 1px;
+}
+
+/* Large: icon over a label of up to two lines, full column height. */
+.rb-btn--large {
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 3px;
+  min-width: 50px;
+  max-width: 76px;
+  height: 100%;
+  padding: 6px 5px 4px;
+  white-space: normal;
+  text-align: center;
+}
+.rb-btn--large .rb-btn__label {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.rb-btn--large.rb-btn--menu .rb-btn__chevron {
+  margin: -2px 0 0;
+}
+
+/* Primary (Save / Run): filled accent. */
+.rb-btn--primary:not(:disabled) {
+  background: var(--acc);
+  border-color: var(--acc);
+  color: var(--on-accent, #fff);
+}
+.rb-btn--primary:not(:disabled) .rb-btn__icon {
+  color: var(--on-accent, #fff);
+}
+.rb-btn--primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--acc) 86%, #000);
+  border-color: color-mix(in srgb, var(--acc) 86%, #000);
+}
+
+/* Destructive (Delete). */
+.rb-btn--danger:not(:disabled) .rb-btn__icon {
+  color: var(--err);
+}
+.rb-btn--danger:hover:not(:disabled) {
+  background: var(--err-soft);
+  border-color: var(--err-border);
+  color: var(--errTx);
+}
+
+/* ── Checkbox (View → Show) ─────────────────────────────────────────────── */
+.rb-check {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--rb-row);
+  padding: 0 7px 0 5px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--tx1);
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+}
+.rb-check:hover:not(.is-disabled) {
+  background: var(--rb-hover);
+}
+.rb-check input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.rb-check__box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--line2);
+  border-radius: 3px;
+  background: var(--panel);
+  color: transparent;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+.rb-check input:checked + .rb-check__box {
+  background: var(--acc);
+  border-color: var(--acc);
+  color: var(--on-accent, #fff);
+}
+.rb-check input:focus-visible + .rb-check__box {
+  outline: 2px solid var(--acc);
+  outline-offset: 1px;
+}
+.rb-check.is-disabled {
+  color: var(--mut2);
+  cursor: default;
+}
+
+/* ── Dropdown menu (portal) ─────────────────────────────────────────────── */
+.rb-menu {
+  position: fixed;
+  z-index: 1000;
+  min-width: 170px;
+  max-width: 260px;
+  padding: 4px;
+  border: 1px solid var(--line2);
+  border-radius: 7px;
+  background: var(--panel);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.18), 0 2px 6px rgba(15, 23, 42, 0.08);
+}
+.rb-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 28px;
+  padding: 4px 10px 4px 8px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--tx1);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+.rb-menu__item:hover,
+.rb-menu__item:focus-visible {
+  outline: none;
+  background: color-mix(in srgb, var(--acc) 12%, transparent);
+}
+.rb-menu__check {
+  flex-shrink: 0;
+  color: var(--acc);
+  visibility: hidden;
+}
+.rb-menu__item.is-checked .rb-menu__check {
+  visibility: visible;
+}
+
+/* ── Hover tip (portal) ─────────────────────────────────────────────────── */
+.rb-tip {
+  position: fixed;
+  z-index: 1001;
+  max-width: 260px;
+  padding: 7px 10px 8px;
+  border: 1px solid var(--line2);
+  border-radius: 6px;
+  background: var(--panel);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.16);
+  color: var(--tx1);
+  font-size: 11.5px;
+  line-height: 1.4;
+  pointer-events: none;
+  animation: rb-tip-in 0.12s ease-out;
+}
+.rb-tip__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.rb-tip__name {
+  font-weight: 700;
+}
+.rb-tip__keys {
+  padding: 1px 5px;
+  border: 1px solid var(--line2);
+  border-radius: 4px;
+  background: var(--panel2);
+  color: var(--tx2);
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 10px;
+  white-space: nowrap;
+}
+.rb-tip__desc {
+  margin-top: 3px;
+  color: var(--mut);
+}
+@keyframes rb-tip-in {
+  from { opacity: 0; transform: translateY(-2px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rb-tip { animation: none; }
+  .rb-btn, .rb-check__box { transition: none; }
+}
