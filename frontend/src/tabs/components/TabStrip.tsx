@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { Plus } from "lucide-react";
 import {
   DndContext,
   PointerSensor,
@@ -151,7 +152,7 @@ export default function TabStrip({
           aria-label={newTabLabel}
           onClick={onCreate}
         >
-          +
+          <Plus size={15} aria-hidden="true" />
         </button>
       )}
 

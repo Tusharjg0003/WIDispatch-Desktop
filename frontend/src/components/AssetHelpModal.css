@@ -1,0 +1,162 @@
+/* SWA tagging help (AssetHelpModal) inside the FloatingPanel window. Same
+   language as the side panels: uppercase section titles with a count, and
+   bordered two-column lists. Each ID part has its own tone, used in the
+   worked example and on its section's code pills. */
+
+.swa-help {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 12px 14px 16px;
+}
+
+/* Tones per ID part. */
+.swa-help--region { --swa-tone: #3b82f6; }
+.swa-help--activity { --swa-tone: #6fa300; }
+.swa-help--type { --swa-tone: #ec4899; }
+.swa-help--seq { --swa-tone: #f59e0b; }
+
+/* ── ID format ──────────────────────────────────────────────────────────── */
+.swa-help__format {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel2);
+}
+.swa-help__eyebrow {
+  color: var(--mut);
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.swa-help__id {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 4px;
+}
+.swa-help__dash {
+  padding-top: 6px;
+  color: var(--mut2);
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 14px;
+}
+.swa-help__part {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.swa-help__part code {
+  padding: 4px 8px;
+  border: 1px solid color-mix(in srgb, var(--swa-tone) 45%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--swa-tone) 14%, transparent);
+  color: color-mix(in srgb, var(--swa-tone) 75%, var(--tx1));
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+.swa-help__part small {
+  color: var(--mut);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.swa-help__note {
+  margin: 0;
+  color: var(--mut);
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+/* ── Code sections ──────────────────────────────────────────────────────── */
+.swa-help__section {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.swa-help__section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.swa-help__section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--mut);
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.swa-help__swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--swa-tone);
+}
+.swa-help__count {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--panel2);
+  color: var(--tx2);
+  font-size: 10px;
+  font-weight: 650;
+}
+.swa-help__list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  list-style: none;
+}
+.swa-help__item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line);
+}
+.swa-help__item:nth-child(odd) { border-right: 1px solid var(--line); }
+.swa-help__item:last-child,
+.swa-help__item:nth-last-child(2):nth-child(odd) { border-bottom: 0; }
+.swa-help__code {
+  flex-shrink: 0;
+  min-width: 30px;
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--swa-tone) 14%, transparent);
+  color: color-mix(in srgb, var(--swa-tone) 75%, var(--tx1));
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 11.5px;
+  font-weight: 700;
+  text-align: center;
+}
+.swa-help__label {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--tx1);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@container (max-width: 360px) {
+  .swa-help__list { grid-template-columns: minmax(0, 1fr); }
+  .swa-help__item:nth-child(odd) { border-right: 0; }
+  .swa-help__item:nth-last-child(2):nth-child(odd) { border-bottom: 1px solid var(--line); }
+}

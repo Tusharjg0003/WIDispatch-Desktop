@@ -11,6 +11,9 @@ import {
   AlignVerticalDistributeCenter,
   Bold,
   CircleDot,
+  Cylinder,
+  Droplets,
+  Factory,
   CircleX,
   ClipboardPaste,
   Copy,
@@ -62,7 +65,7 @@ import {
   Minus,
   Type,
 } from "lucide-react";
-import { EmptyIcon } from "../../components/IconAssets";
+import { ENTITY_TYPE_COLORS } from "../../cytoscape/buildCyStyle";
 
 // Ribbon definition (Home / Insert / Edit / View / Tools), laid out the way
 // Office lays out its ribbon: each group is a row of columns, and a column is
@@ -92,8 +95,17 @@ export const NOTE_FONTS = [
 
 const when = (cond, item) => (cond ? item : null);
 
-// Fallback glyphs for entity types whose asset icon is a blank placeholder.
-const ENTITY_FALLBACK_ICONS = { node: CircleDot, filling_station: Fuel };
+// Insert → Assets: one icon and colour per type, the same ones the Library
+// rows, the Details card and the legend use, so a type reads the same
+// everywhere.
+const ENTITY_ICONS = {
+  plant: Factory,
+  pump: Droplets,
+  tank: Cylinder,
+  handover_point: MapPinned,
+  filling_station: Fuel,
+  node: CircleDot,
+};
 
 export function buildCanvasRibbon(ctx) {
   const { cmd = {}, workspaceMode = "builder", readOnly = false } = ctx;
@@ -192,11 +204,12 @@ export function buildCanvasRibbon(ctx) {
 
   // ── Insert: things you add to the canvas ─────────────────────────────────
   const entityColumns = edit
-    ? (ctx.entityButtons || []).map(({ type, label, shortLabel, icon }) => ({
+    ? (ctx.entityButtons || []).map(({ type, label, shortLabel }) => ({
         large: {
           id: `insert-${type}`,
           label: shortLabel || label,
-          icon: icon && icon !== EmptyIcon ? icon : ENTITY_FALLBACK_ICONS[type] || CircleDot,
+          icon: ENTITY_ICONS[type] || CircleDot,
+          colour: ENTITY_TYPE_COLORS[type],
           active: modeIs("place-entity") && ctx.pendingEntity === type,
           onClick: () => cmd.insertEntity(type),
           tip: `Click the canvas to place a new ${label}. Press Esc when you're done.`,

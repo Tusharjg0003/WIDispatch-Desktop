@@ -61,20 +61,21 @@ export function setEntitySymbolShape(shape) {
   return currentSymbolShape;
 }
 
-// lucide glyph interiors, drawn in a 24×24 box and scaled into the symbol.
+// Glyphs: the same lucide icons the side panels, toolbar and legend use for
+// each type (Factory, Droplets, Cylinder, MapPinned, Fuel), copied from
+// lucide-react so a type looks identical everywhere. Drawn in a 24×24 box.
+const FACTORY =
+  '<path d="M12 16h.01"/><path d="M16 16h.01"/><path d="M3 19a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.5a.5.5 0 0 0-.769-.422l-4.462 2.844A.5.5 0 0 1 15 10.5v-2a.5.5 0 0 0-.769-.422L9.77 10.922A.5.5 0 0 1 9 10.5V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2z"/><path d="M8 16h.01"/>';
 const GLYPH = {
-  plant:
-    '<path d="M12 16h.01"/><path d="M16 16h.01"/><path d="M3 19a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.5a.5.5 0 0 0-.769-.422l-4.462 2.844A.5.5 0 0 1 15 10.5v-2a.5.5 0 0 0-.769-.422L9.77 10.922A.5.5 0 0 1 9 10.5V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2z"/><path d="M8 16h.01"/>',
+  plant: FACTORY,
+  stp: FACTORY,
   pump:
-    '<path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/>',
-  tank:
-    '<path d="M5 6c0-1.7 3.1-3 7-3s7 1.3 7 3-3.1 3-7 3-7-1.3-7-3z"/><path d="M5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6"/><path d="M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3"/>',
+    '<path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"/><path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"/>',
+  tank: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/>',
   handover_point:
-    '<path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/>',
-  stp:
-    '<path d="M4 8h16v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M7 8V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v3"/><path d="M8 13h8"/><path d="M8 17h8"/>',
+    '<path d="M18 8c0 3.613-3.869 7.429-5.393 8.795a1 1 0 0 1-1.214 0C9.87 15.429 6 11.613 6 8a6 6 0 0 1 12 0"/><circle cx="12" cy="8" r="2"/><path d="M8.714 14h-3.71a1 1 0 0 0-.948.683l-2.004 6A1 1 0 0 0 3 22h18a1 1 0 0 0 .948-1.316l-2-6a1 1 0 0 0-.949-.684h-3.712"/>',
   filling_station:
-    '<path d="M4 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16"/><path d="M4 21h12"/><path d="M7 7h6v5H7z"/><path d="M14 10h3l3 3v6a1.5 1.5 0 0 1-3 0v-4"/>',
+    '<path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 4 0v-6.998a2 2 0 0 0-.59-1.42L18 5"/><path d="M14 21V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v16"/><path d="M2 21h13"/><path d="M3 9h11"/>',
 };
 
 const DEFAULT_GLYPH = '<rect x="5" y="5" width="14" height="14" rx="3"/>';
@@ -102,12 +103,12 @@ export function makeEntitySymbol({ type, typeColor, hasCapacityLimit = false, sy
 
   const tint =
     symbolShape === "box"
-      ? `<rect x="2" y="2" width="${size - 4}" height="${size - 4}" rx="10" ry="10" fill="${color}" opacity="0.18"/>`
-      : `<circle cx="${c}" cy="${c}" r="${c - 2}" fill="${color}" opacity="0.18"/>`;
+      ? `<rect x="3" y="3" width="${size - 6}" height="${size - 6}" rx="9" ry="9" fill="${color}" fill-opacity="0.16" stroke="${color}" stroke-opacity="0.32" stroke-width="1"/>`
+      : `<circle cx="${c}" cy="${c}" r="${c - 3}" fill="${color}" fill-opacity="0.16" stroke="${color}" stroke-opacity="0.32" stroke-width="1"/>`;
 
   // The glyph is authored in a 24×24 box; centre it and scale it to ~22px.
   const body =
-    `<g transform="translate(${c} ${c}) scale(0.92) translate(-12 -12)" fill="none" stroke="${color}" ` +
+    `<g transform="translate(${c} ${c}) scale(0.84) translate(-12 -12)" fill="none" stroke="${color}" ` +
     `stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${glyph}</g>`;
 
   // Kept inside the disc: the node clips its background to its own shape, so a

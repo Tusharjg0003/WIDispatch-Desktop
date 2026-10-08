@@ -65,6 +65,7 @@ export const CY_PALETTES = {
     noteBg: "#fef9e7",
     noteBorder: "#c4380f",
     noteText: "#78350f",
+    labelBorder: "#d6dee6",
   },
   dark: {
     surface: "#0b2137",
@@ -87,8 +88,12 @@ export const CY_PALETTES = {
     noteBg: "#2a2410",
     noteBorder: "#fa4616",
     noteText: "#ffd166",
+    labelBorder: "#21496f",
   },
 };
+
+// The app's own typeface (index.css), so canvas labels read like the panels.
+const APP_FONT = '"Wtt", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
 
 /** Palette for the theme currently applied to <html> (light outside a browser). */
 export function currentCyPalette() {
@@ -138,20 +143,25 @@ export function buildCyStyle(palette = currentCyPalette()) {
         label: "data(displayLabel)",
         "text-valign": "bottom",
         "text-halign": "center",
-        "text-margin-y": 5,
+        "text-margin-y": 6,
         color: P.text,
-        "font-size": 9.5,
-        "font-family": '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+        "font-size": 10,
+        "font-family": APP_FONT,
         "font-weight": "bold",
-        "line-height": 1.22,
+        "line-height": 1.25,
         "text-wrap": "wrap",
-        "text-max-width": 120,
-        "text-overflow-wrap": "anywhere",
-        // Keeps a label legible where it crosses a pipe underneath it.
+        "text-max-width": 130,
+        // Break between words only; "anywhere" split names mid-word.
+        "text-overflow-wrap": "whitespace",
+        // Label sits on a bordered pill, like the tags in the side panels,
+        // and stays legible where it crosses a pipe underneath it.
         "text-background-color": P.surface,
-        "text-background-opacity": 0.78,
-        "text-background-padding": 2,
+        "text-background-opacity": 0.94,
+        "text-background-padding": 3,
         "text-background-shape": "roundrectangle",
+        "text-border-width": 1,
+        "text-border-color": P.labelBorder,
+        "text-border-opacity": 1,
       },
     },
     // Inactive assets read as "not in service" via a dashed border.
@@ -169,13 +179,13 @@ export function buildCyStyle(palette = currentCyPalette()) {
       selector: 'node[type="node"]',
       style: {
         shape: "ellipse",
-        width: 18,
-        height: 18,
+        width: 16,
+        height: 16,
         "background-color": P.surface,
         "background-image": "none",
         label: "",
         "text-margin-y": 0,
-        "border-width": 2,
+        "border-width": 3,
         "border-color": P.junction,
       },
     },
@@ -213,17 +223,23 @@ export function buildCyStyle(palette = currentCyPalette()) {
       style: {
         width: 2.5,
         "line-color": P.edge,
+        "line-cap": "round",
         "target-arrow-color": P.edge,
         "target-arrow-shape": "triangle",
+        "arrow-scale": 0.85,
         "curve-style": "bezier",
         label: "data(displayLabel)",
         "font-size": 9,
+        "font-family": APP_FONT,
         color: P.edgeLabel,
-        "font-family": '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
         "text-rotation": "autorotate",
         "text-background-color": P.surface,
-        "text-background-opacity": 0.9,
+        "text-background-opacity": 0.94,
         "text-background-padding": 2,
+        "text-background-shape": "roundrectangle",
+        "text-border-width": 1,
+        "text-border-color": P.labelBorder,
+        "text-border-opacity": 1,
       },
     },
     // Bent pipes: cytoscape-edge-editing stores the bends as weight/distance
@@ -370,11 +386,21 @@ export function buildCyStyle(palette = currentCyPalette()) {
       selector: "node:selected",
       style: {
         "border-color": P.select,
-        "border-width": 4,
-        "overlay-color": P.select,
-        "overlay-padding": 5,
-        "overlay-opacity": 0.15,
+        "border-width": 3.5,
+        // A halo behind the symbol (like the accent tint on selected rows in
+        // the panels) rather than an overlay that would wash out the glyph.
+        "underlay-color": P.select,
+        "underlay-padding": 6,
+        "underlay-opacity": 0.22,
+        "underlay-shape": "ellipse",
+        "text-border-color": P.select,
       },
+    },
+    { selector: 'node[symbolShape="box"]:selected', style: { "underlay-shape": "round-rectangle" } },
+    // Pressed feedback in the accent colour rather than Cytoscape's grey.
+    {
+      selector: "node:active, edge:active",
+      style: { "overlay-color": P.select, "overlay-opacity": 0.1, "overlay-padding": 4 },
     },
     // Isolation mode hides everything outside the focused selection/scope.
     {
@@ -469,9 +495,11 @@ export function buildCyStyle(palette = currentCyPalette()) {
         "line-color": ACCENT,
         "target-arrow-color": ACCENT,
         width: 3.5,
-        "overlay-color": ACCENT,
-        "overlay-padding": 4,
-        "overlay-opacity": 0.12,
+        "underlay-color": ACCENT,
+        "underlay-padding": 4,
+        "underlay-opacity": 0.2,
+        "text-border-color": ACCENT,
+        color: P.text,
       },
     },
     // Pipe whose end is being moved (right-click → Change Source/Destination).

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Minimize2 } from "lucide-react";
+import { Map as MapIcon, X } from "lucide-react";
 import { ENTITY_TYPE_COLORS } from "../cytoscape/buildCyStyle";
 import "./CanvasMinimap.css";
 
@@ -8,8 +8,11 @@ import "./CanvasMinimap.css";
 // straight from the live cy instance (cy.extent() for the viewport, node
 // positions for the dots), so it needs no separate coordinate model.
 const MINIMAP_W = 200;
-const MINIMAP_H = 150;
-const PAD = 8;
+const MINIMAP_H = 140;
+const PAD = 10;
+const PIPE_COLOUR = "#5b7ca3";
+// Notes and group boxes are canvas furniture, not network: leave them off.
+const ANNOTATION_TYPES = new Set(["note", "group-box"]);
 
 export default function CanvasMinimap({ cyRef, visible = true, onToggle }) {
   const [, force] = useState(0);
@@ -47,7 +50,8 @@ export default function CanvasMinimap({ cyRef, visible = true, onToggle }) {
   const cy = cyRef.current;
   if (!cy || cy.destroyed?.()) return null;
 
-  const nodes = cy.nodes().filter((n) => n.isNode());
+  const nodes = cy.nodes().filter((n) => !ANNOTATION_TYPES.has(n.data("type")));
+  const edges = cy.edges();
   const bb = nodes.length ? nodes.boundingBox() : { x1: 0, y1: 0, x2: 100, y2: 100 };
   const modelW = Math.max(1, bb.x2 - bb.x1);
   const modelH = Math.max(1, bb.y2 - bb.y1);
@@ -101,12 +105,14 @@ export default function CanvasMinimap({ cyRef, visible = true, onToggle }) {
   const dotColor = (n) => ENTITY_TYPE_COLORS[n.data("type")] || "#6b7280";
 
   return (
-    <div className="nb-minimap">
+    <div className="nb-minimap" role="region" aria-label="Minimap">
       <div className="nb-minimap__head">
-        <span>Mini map</span>
+        <MapIcon size={12} className="nb-minimap__head-icon" aria-hidden="true" />
+        <span className="nb-minimap__title">Overview</span>
+        <span className="nb-minimap__count">{nodes.length}</span>
         {onToggle && (
           <button type="button" className="nb-minimap__toggle" onClick={onToggle} title="Hide minimap" aria-label="Hide minimap">
-            <Minimize2 size={12} />
+            <X size={13} />
           </button>
         )}
       </div>
@@ -118,7 +124,24 @@ export default function CanvasMinimap({ cyRef, visible = true, onToggle }) {
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
       >
-        <rect x={0} y={0} width={MINIMAP_W} height={MINIMAP_H} className="nb-minimap__bg" />
+        <rect x={0} y={0} width={MINIMAP_W} height={MINIMAP_H} rx={6} className="nb-minimap__bg" />
+        {/* Pipes as straight source→target strokes (bends are too small to
+            matter at this scale), under the asset dots. */}
+        {edges.map((e) => {
+          const a = e.source().position();
+          const b = e.target().position();
+          return (
+            <line
+              key={e.id()}
+              x1={toMiniX(a.x)}
+              y1={toMiniY(a.y)}
+              x2={toMiniX(b.x)}
+              y2={toMiniY(b.y)}
+              className="nb-minimap__pipe"
+              stroke={PIPE_COLOUR}
+            />
+          );
+        })}
         {nodes.map((n) => {
           const p = n.position();
           const isJunction = n.data("type") === "node";
@@ -127,8 +150,9 @@ export default function CanvasMinimap({ cyRef, visible = true, onToggle }) {
               key={n.id()}
               cx={toMiniX(p.x)}
               cy={toMiniY(p.y)}
-              r={isJunction ? 1.4 : 2.4}
+              r={isJunction ? 1.8 : 3.2}
               fill={dotColor(n)}
+              className="nb-minimap__dot"
             />
           );
         })}
@@ -138,6 +162,7 @@ export default function CanvasMinimap({ cyRef, visible = true, onToggle }) {
           y={vp.y}
           width={Math.max(3, vp.w)}
           height={Math.max(3, vp.h)}
+          rx={3}
         />
       </svg>
     </div>

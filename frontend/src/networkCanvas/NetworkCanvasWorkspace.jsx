@@ -20,8 +20,11 @@ import GeoAnchorPanel from "./components/GeoAnchorPanel";
 import CanvasTableView from "./components/CanvasTableView";
 import CapacityRequiredModal from "./modals/CapacityRequiredModal";
 import KmzReviewModal from "./modals/KmzReviewModal";
+import { Keyboard, Map as MapIcon, Maximize2, Minimize2, PanelLeft, PanelRight } from "lucide-react";
 import CanvasLegend from "./components/CanvasLegend";
 import SelectionInspector from "./components/SelectionInspector";
+import ValidationPanel from "./components/ValidationPanel";
+import IsolationPanel from "./components/IsolationPanel";
 import useSimulationLayer, { BOTTLENECK_MODE } from "./hooks/useSimulationLayer";
 import { BottleneckPanel, SimulationRunBar } from "./components/SimulationPanels";
 import NodeInsightPopover from "../components/simulation/NodeInsightPopover";
@@ -54,7 +57,6 @@ import "cytoscape-context-menus/cytoscape-context-menus.css";
 import {
   EmptyIcon,
   IconActive,
-  IconAlertTriangle,
   IconAlignCenter,
   IconAlignJustify,
   IconAlignLeft,
@@ -63,7 +65,6 @@ import {
   IconArrowUp,
   IconBold,
   IconBriefcase,
-  IconCheckSquare,
   IconChevronLeft,
   IconChevronRight,
   IconClipboard,
@@ -73,17 +74,13 @@ import {
   IconDownload,
   IconDroplet,
   IconEdit2,
-  IconFileText,
   IconFolder,
   IconGitBranch,
-  IconHelpCircle,
   IconGrid,
   IconItalic,
   IconMap,
   IconMapPin,
   IconMaximize,
-  IconMaximize2,
-  IconMinimize2,
   IconMinus,
   IconPipe,
   IconPlant,
@@ -209,14 +206,6 @@ const writeFlag = (key, value) => {
   }
 };
 
-// Footer toggle glyphs: a frame with the left / right region filled.
-const PanelGlyph = ({ side }) => (
-  <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true">
-    <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.3" />
-    {side === "left" && <rect x="1.5" y="2.5" width="4.5" height="11" fill="currentColor" opacity="0.55" />}
-    {side === "right" && <rect x="10" y="2.5" width="4.5" height="11" fill="currentColor" opacity="0.55" />}
-  </svg>
-);
 
 const rid = (p) => `${p}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 const cloneData = (value) => {
@@ -477,11 +466,6 @@ const pipeFormFromEdge = (edge) => {
 };
 
 const toolbarEntityLabel = (type) => INSERT_TOOL_LABELS[type] || ENTITY_TYPE_LABELS[type] || type;
-const pipeIdsForLine = (line) => (line?.pipes || []).map((pipe) => pipe.id);
-const pipeIdsForSystem = (system) => [
-  ...(system?.pipes || []).map((pipe) => pipe.id),
-  ...(system?.lines || []).flatMap((line) => pipeIdsForLine(line)),
-];
 const matchesText = (needle, ...values) =>
   values.some((value) => value && String(value).toLowerCase().includes(needle));
 
@@ -697,7 +681,6 @@ export default function NetworkCanvasWorkspace({
   const [traceMode, setTraceMode] = useState("reachable");
   const [histTick, setHistTick] = useState(0); // forces undo/redo enable refresh
   const [ribbonTab, setRibbonTab] = useState("home");
-  const [inlineChrome, setInlineChrome] = useState(null);
 
   // ── Right panel: assets, filters and insights ──────────────────────────────
   // The panel reads the live graph as plain records once, then counts, charts
@@ -3933,7 +3916,7 @@ export default function NetworkCanvasWorkspace({
       id: "left-panel",
       label: "Left panel",
       title: leftRailVisible ? "Hide the left sidebar" : "Show the left sidebar",
-      icon: <PanelGlyph side="left" />,
+      icon: PanelLeft,
       pressed: leftRailVisible,
       onClick: () => {
         if (canvasFocusMode) { setCanvasFocusMode(false); setShowRail(true); }
@@ -3944,7 +3927,7 @@ export default function NetworkCanvasWorkspace({
       id: "right-panel",
       label: "Right panel",
       title: inspectorVisible ? "Hide the right sidebar" : "Show the right sidebar",
-      icon: <PanelGlyph side="right" />,
+      icon: PanelRight,
       pressed: inspectorVisible,
       onClick: () => {
         if (canvasFocusMode) { setCanvasFocusMode(false); setShowInspector(true); }
@@ -4449,22 +4432,19 @@ export default function NetworkCanvasWorkspace({
         onToggleCollapsed={() => (canvasFocusMode ? setFocusRibbonOpen((v) => !v) : setShowRibbon((v) => !v))}
       />
     );
-    // The builder keeps its workspace tab bar full-width in the app-wide
-    // toolbar slot, and squeezes the ribbon between the two sidebars (at the
-    // top of .nb-workspace) so both rails run up to the tab bar. The embedded
-    // simulation canvas still puts its ribbon in the app-wide slot.
-    if (isBuilder) {
-      setInlineChrome(<div className="nb-chrome">{ribbon}</div>);
-      setToolbar(
-        <div className="nb-chrome">
+    // The workspace tab bar (builder only) and the ribbon both live in the
+    // app-wide toolbar slot, so they span the page and the side rails start
+    // underneath them.
+    setToolbar(
+      <div className="nb-chrome">
+        {isBuilder && (
           <TabStripBoundary>
             <WorkspaceTabs />
           </TabStripBoundary>
-        </div>
-      );
-    } else {
-      setToolbar(<div className="nb-chrome">{ribbon}</div>);
-    }
+        )}
+        {ribbon}
+      </div>
+    );
   }, [
     setToolbar, isBuilder, workspaceMode, readOnly, ribbonTab, mode, pendingEntity, saveStatus, canUndo, canRedo,
     hasSelection, hasPipeSelection, hasDeletableSelection, selectedEl, isNoteSel, realNodeCount, counts.edges,
@@ -4586,7 +4566,6 @@ export default function NetworkCanvasWorkspace({
       )}
 
       <div className="nb-workspace">
-        {isBuilder && inlineChrome}
 
         {readOnly && readOnlyNotice && <div className="nb-readonly-notice">{readOnlyNotice}</div>}
 
@@ -4665,7 +4644,7 @@ export default function NetworkCanvasWorkspace({
             </svg>
           )}
 
-          <div className="nb-canvas-controls">
+          <div className="nb-canvas-controls" role="toolbar" aria-label="Canvas view">
             <button
               type="button"
               className={`nb-canvas-ctl${shortcutsOpen ? " is-active" : ""}`}
@@ -4673,11 +4652,10 @@ export default function NetworkCanvasWorkspace({
               aria-expanded={shortcutsOpen}
               aria-controls="nb-shortcut-guide"
               aria-label="Keyboard shortcuts"
-              title="Show every keyboard shortcut (?)"
+              title="Keyboard shortcuts (?)"
             >
-              <IconHelpCircle size={13} />
+              <Keyboard size={15} aria-hidden="true" />
             </button>
-
             <button
               type="button"
               className={`nb-canvas-ctl${canvasFocusMode ? " is-active" : ""}`}
@@ -4686,9 +4664,8 @@ export default function NetworkCanvasWorkspace({
               aria-pressed={canvasFocusMode}
               title={canvasFocusMode ? "Exit full screen (Ctrl+Shift+F)" : "Full screen: hide the sidebars and collapse the toolbar (Ctrl+Shift+F)"}
             >
-              {canvasFocusMode ? <IconMinimize2 size={13} /> : <IconMaximize2 size={13} />}
+              {canvasFocusMode ? <Minimize2 size={15} aria-hidden="true" /> : <Maximize2 size={15} aria-hidden="true" />}
             </button>
-
             <button
               type="button"
               className={`nb-canvas-ctl${showMinimap ? " is-active" : ""}`}
@@ -4697,7 +4674,7 @@ export default function NetworkCanvasWorkspace({
               aria-pressed={showMinimap}
               title={showMinimap ? "Hide minimap" : "Show minimap"}
             >
-              <IconMap size={13} />
+              <MapIcon size={15} aria-hidden="true" />
             </button>
           </div>
 
@@ -4964,212 +4941,27 @@ export default function NetworkCanvasWorkspace({
 
             {rightPanelTab === "issues" && (
               <div className="ns2-panel-body ns2-panel-body--issues">
-                <div className="ns2-issues-panel">
-                  <div className="ns2-issues-summary">
-                    <div>
-                      <div className="ns2-issues-title">Network Validation</div>
-                      <div className="ns2-issues-subtitle">
-                        {validationIssues.length
-                          ? `${issueCounts.error || 0} errors, ${issueCounts.warning || 0} warnings, ${issueCounts.info || 0} notes`
-                          : "Run validation to check the current canvas."}
-                      </div>
-                    </div>
-                    <button className="ns2-btn ns2-btn--sm" onClick={handleValidateNetwork}>
-                      <IconCheckSquare size={12} /> Validate
-                    </button>
-                  </div>
-
-                  {validationIssues.length === 0 ? (
-                    <div className="ns2-panel-hint">No validation results yet.</div>
-                  ) : (
-                    <div className="ns2-issue-list">
-                      {validationIssues.map((issue) => {
-                        const IssueIcon =
-                          issue.severity === "error"
-                            ? IconAlertTriangle
-                            : issue.severity === "success"
-                            ? IconCheckSquare
-                            : issue.severity === "info"
-                            ? IconFileText
-                            : IconAlertTriangle;
-                        return (
-                          <button
-                            key={issue.id}
-                            type="button"
-                            className={`ns2-issue-row ns2-issue-row--${issue.severity}`}
-                            onClick={() => issue.elementId && focusCanvasElement(issue.elementId)}
-                            disabled={!issue.elementId}
-                            title={issue.elementId ? "Focus on canvas" : undefined}
-                          >
-                            <span className="ns2-issue-icon"><IssueIcon size={14} /></span>
-                            <span className="ns2-issue-copy">
-                              <span className="ns2-issue-title">{issue.title}</span>
-                              <span className="ns2-issue-detail">{issue.detail}</span>
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
+                <ValidationPanel
+                  issues={validationIssues}
+                  counts={issueCounts}
+                  onValidate={handleValidateNetwork}
+                  onFocus={focusCanvasElement}
+                />
               </div>
             )}
 
             {rightPanelTab === "isolation" && (
               <div className="ns2-panel-body ns2-panel-body--issues">
-                <div className="ns2-isolation-tools">
-                  <label className="ns2-label">Filter Isolation</label>
-                  <input
-                    className="ns2-input"
-                    value={isolationQuery}
-                    onChange={(e) => setIsolationQuery(e.target.value)}
-                    placeholder="Search system, branch, line, pipe..."
-                  />
-                  <div className="ns2-isolation-status">
-                    {isolationActive
-                      ? `Showing ${activeIsolationLabel || "isolated scope"} only`
-                      : "Click a system, line, branch, or pipe to isolate it."}
-                  </div>
-                  {isolationActive && (
-                    <button type="button" className="ns2-btn ns2-btn--sm" onClick={() => clearIsolation()}>
-                      Clear Isolation
-                    </button>
-                  )}
-                </div>
-                <div className="ns2-isolation-tree">
-                  <div className="ns2-isolation-tree__title">Transmission Systems</div>
-                  {filteredIsolationGroups.systems.length === 0 ? (
-                    <div className="ns2-panel-hint">No transmission systems loaded yet.</div>
-                  ) : (
-                    filteredIsolationGroups.systems.map((system) => {
-                      const systemPipeIds = pipeIdsForSystem(system);
-                      return (
-                      <div className="ns2-isolation-tree__system" key={system.id}>
-                        <div className="ns2-isolation-tree__row ns2-isolation-tree__row--system">
-	                          <button
-	                            type="button"
-	                            className={`ns2-isolation-tree__focus${activeIsolationKey === `system:${system.id}` ? " ns2-isolation-tree__focus--active" : ""}`}
-	                            onClick={() => isolatePipeIds(systemPipeIds, `system ${system.name || system.id}`, `system:${system.id}`)}
-	                            disabled={systemPipeIds.length === 0}
-	                          >
-                            <span className="ns2-isolation-tree__level">SYSTEM</span>
-                            <strong>{system.name}</strong>
-                            <small>{system.lines.length} lines, {systemPipeIds.length} pipe{systemPipeIds.length === 1 ? "" : "s"}</small>
-                          </button>
-                        </div>
-                        <div className="ns2-isolation-tree__children">
-                          {system.lines.length === 0 && system.pipes.length === 0 ? (
-                            <div className="ns2-isolation-tree__empty">No canvas pipes assigned to this system.</div>
-                          ) : (
-                            <>
-                              {system.pipes.map((pipe) => (
-                                <div className="ns2-isolation-tree__row ns2-isolation-tree__row--segment" key={`${system.id}-${pipe.id}`}>
-                                  <span className="ns2-isolation-tree__branch-mark">-</span>
-	                                  <button
-	                                    type="button"
-	                                    className={`ns2-isolation-tree__focus${activeIsolationKey === `pipe:${pipe.id}` ? " ns2-isolation-tree__focus--active" : ""}`}
-	                                    onClick={() => isolatePipeIds([pipe.id], `pipe ${pipe.name}`, `pipe:${pipe.id}`)}
-	                                  >
-                                    <span className="ns2-isolation-tree__level">PIPE</span>
-                                    <strong>{pipe.name}</strong>
-                                    <small>{pipe.source} to {pipe.target}</small>
-                                  </button>
-                                </div>
-                              ))}
-                              {system.lines.map((line) => {
-                                const linePipeIds = pipeIdsForLine(line);
-                                return (
-                                <div className="ns2-isolation-tree__line" key={line.id}>
-                                  <div className="ns2-isolation-tree__row ns2-isolation-tree__row--line">
-                                    <button
-                                      type="button"
-	                                      className={`ns2-isolation-tree__focus${activeIsolationKey === `line:${line.id}` ? " ns2-isolation-tree__focus--active" : ""}`}
-	                                      onClick={() => isolatePipeIds(linePipeIds, `${line.isBranch ? "branch" : "line"} ${lineDisplayName(line)}`, `line:${line.id}`)}
-	                                      disabled={linePipeIds.length === 0}
-                                    >
-                                      <span className="ns2-isolation-tree__level">{line.isBranch ? "BRANCH" : "LINE"}</span>
-                                      <strong>{lineDisplayName(line)}</strong>
-                                      <small>
-                                        {line.isBranch && (line.parentLineName || line.parentLineId)
-                                          ? `Branch of ${line.parentLineName || line.parentLineId} - `
-                                          : ""}
-                                        {line.pipes.length} segment{line.pipes.length === 1 ? "" : "s"}
-                                      </small>
-                                    </button>
-                                  </div>
-                                  {line.pipes.map((pipe) => (
-                                    <div className="ns2-isolation-tree__row ns2-isolation-tree__row--segment" key={`${line.id}-${pipe.id}`}>
-                                      <span className="ns2-isolation-tree__branch-mark">-</span>
-	                                      <button
-	                                        type="button"
-	                                        className={`ns2-isolation-tree__focus${activeIsolationKey === `pipe:${pipe.id}` ? " ns2-isolation-tree__focus--active" : ""}`}
-	                                        onClick={() => isolatePipeIds([pipe.id], `pipe ${pipe.name}`, `pipe:${pipe.id}`)}
-	                                      >
-                                        <span className="ns2-isolation-tree__level">PIPE</span>
-                                        <strong>{pipe.name}</strong>
-                                        <small>{pipe.source} to {pipe.target}</small>
-                                      </button>
-                                    </div>
-                                  ))}
-                                </div>
-                                );
-                              })}
-                            </>
-                          )}
-                        </div>
-                      </div>
-                      );
-                    })
-                  )}
-
-                  <div className="ns2-isolation-tree__ungrouped">
-                    <div className="ns2-isolation-tree__title">Lines Without System</div>
-                    {filteredIsolationGroups.standaloneLines.length === 0 ? (
-                      <div className="ns2-isolation-tree__empty">Every line with canvas pipes is assigned to a system.</div>
-                    ) : (
-                      filteredIsolationGroups.standaloneLines.map((line) => {
-                        const linePipeIds = pipeIdsForLine(line);
-                        return (
-                          <div className="ns2-isolation-tree__line" key={line.id}>
-                            <div className="ns2-isolation-tree__row ns2-isolation-tree__row--line">
-                              <button
-                                type="button"
-	                                className={`ns2-isolation-tree__focus${activeIsolationKey === `line:${line.id}` ? " ns2-isolation-tree__focus--active" : ""}`}
-	                                onClick={() => isolatePipeIds(linePipeIds, `${line.isBranch ? "branch" : "line"} ${lineDisplayName(line)}`, `line:${line.id}`)}
-	                                disabled={linePipeIds.length === 0}
-                              >
-                                <span className="ns2-isolation-tree__level">{line.isBranch ? "BRANCH" : "LINE"}</span>
-                                <strong>{lineDisplayName(line)}</strong>
-                                <small>{line.pipes.length} segment{line.pipes.length === 1 ? "" : "s"}</small>
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-
-                  <div className="ns2-isolation-tree__ungrouped">
-                    <div className="ns2-isolation-tree__title">Ungrouped Pipes</div>
-                    {filteredIsolationGroups.ungroupedPipes.length === 0 ? (
-                      <div className="ns2-isolation-tree__empty">Every canvas pipe is assigned to a line.</div>
-                    ) : (
-                      filteredIsolationGroups.ungroupedPipes.map((pipe) => (
-                        <div className="ns2-isolation-tree__row ns2-isolation-tree__row--segment" key={pipe.id}>
-	                          <button
-	                            type="button"
-	                            className={`ns2-isolation-tree__focus${activeIsolationKey === `pipe:${pipe.id}` ? " ns2-isolation-tree__focus--active" : ""}`}
-	                            onClick={() => isolatePipeIds([pipe.id], `pipe ${pipe.name}`, `pipe:${pipe.id}`)}
-	                          >
-                            <span className="ns2-isolation-tree__level">PIPE</span>
-                            <strong>{pipe.name}</strong>
-                            <small>{pipe.source} to {pipe.target}</small>
-                          </button>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
+                <IsolationPanel
+                  groups={filteredIsolationGroups}
+                  query={isolationQuery}
+                  onQueryChange={setIsolationQuery}
+                  active={isolationActive}
+                  activeLabel={activeIsolationLabel}
+                  activeKey={activeIsolationKey}
+                  onIsolate={isolatePipeIds}
+                  onClear={() => clearIsolation()}
+                />
               </div>
             )}
           </div>

@@ -120,7 +120,7 @@ function formFromAsset(asset) {
   };
 }
 
-export default function AssetForm({ mode = "create", defaultCategory = "plant", initialAsset = null, onSaved }) {
+export default function AssetForm({ mode = "create", defaultCategory = "plant", initialAsset = null, onSaved, onCancel }) {
   const isEdit = mode === "edit";
   const [form, setForm] = useState(
     isEdit && initialAsset ? formFromAsset(initialAsset) : { ...EMPTY_FORM, ...defaultsForCategory(defaultCategory) }
@@ -247,25 +247,25 @@ export default function AssetForm({ mode = "create", defaultCategory = "plant", 
       <div className="form-container">
         <div className="generated-id-section view-asset-meta">
           <div className="generated-id-header">
-            <h3>Generated Asset ID</h3>
+            <h3>Generated asset ID</h3>
           </div>
           <div className="generated-id-display view-asset-meta__row view-asset-meta__row--single">
             <div className="view-asset-meta__field">
               {generatedAssetId ? (
                 <code className="generated-id-code">{generatedAssetId}</code>
               ) : (
-                <div className="form-display">Fill in Region, Activity and Asset Type to generate</div>
+                <div className="form-display form-display--pending">Fill in Region, Activity and Asset type to generate it</div>
               )}
             </div>
           </div>
           <p className="view-asset-meta__caption">
-            The Generated ID follows the SWA tagging structure and is automatically assigned when the required fields are filled in.
+            Follows the SWA tagging structure and is assigned automatically once the required fields are filled in.
           </p>
         </div>
 
         <div className="view-asset-top-row view-asset-top-row--single">
           <aside className="form-section view-asset-top-row__map">
-            <h2>Geographic Location</h2>
+            <h2>Location</h2>
             <div className="form-grid af__grid">
               {isLinearAsset ? (
                 <>
@@ -299,7 +299,6 @@ export default function AssetForm({ mode = "create", defaultCategory = "plant", 
               onChange={setCoords}
               className="map-section"
               canvasClassName="map-container view-asset-top-row__map-canvas"
-              showInstructionHeader
             />
           </aside>
         </div>
@@ -307,7 +306,7 @@ export default function AssetForm({ mode = "create", defaultCategory = "plant", 
         <div className="view-asset-split">
           <div className="view-asset-split__main">
             <div className="form-content">
-              <h3>General Information</h3>
+              <h3>General information</h3>
               <div className="form-grid af__grid">
                 <Field label="Category *">
                   {isEdit ? (
@@ -382,7 +381,7 @@ export default function AssetForm({ mode = "create", defaultCategory = "plant", 
         </div>
 
         <div className="swa-info-section">
-          <h3>Saudi Water Authority Tagging System</h3>
+          <h3>SWA tagging system</h3>
           <div className="info-grid">
             <div className="info-card">
               <h4>Region Code</h4>
@@ -407,6 +406,11 @@ export default function AssetForm({ mode = "create", defaultCategory = "plant", 
         {success && <div className="af__success">{success}</div>}
 
         <footer className="af__footer">
+          {onCancel && (
+            <button type="button" className="af__btn af__btn--ghost" onClick={onCancel} disabled={saving}>
+              Cancel
+            </button>
+          )}
           <button type="submit" className="af__btn af__btn--primary" disabled={saving}>
             {saving ? "Saving…" : isEdit ? "Save changes" : "Create asset"}
           </button>

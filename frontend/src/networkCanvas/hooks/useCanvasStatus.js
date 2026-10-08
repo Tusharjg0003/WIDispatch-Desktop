@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Grid3x3, Minus, Plus, RotateCcw } from "lucide-react";
 import { useStatusItems } from "../../components/StatusBar";
 import { nextZoomStop, prevZoomStop } from "../../cytoscape/canvasGeometry";
 
@@ -72,16 +73,16 @@ export default function useCanvasStatus({
     () => ({
       left: [
         ...(assetCounts.length ? assetCounts : [{ label: "Assets", value: 0, tone: "neutral" }]),
-        { label: "State", value: saveState.label, tone: saveState.tone },
+        { label: "State", value: saveState.label, tone: saveState.tone, pill: true },
         ...(selectedCount > 0 ? [{ label: "Selected", value: selectedCount, tone: "warn" }] : []),
       ],
       actions: [
-        { id: "zoom-out", label: "−", title: "Zoom out", onClick: zoomOut },
-        { id: "zoom-readout", type: "readout", label: `${zoomPercent}%` },
-        { id: "zoom-in", label: "+", title: "Zoom in", onClick: zoomIn },
-        { id: "zoom-reset", label: "Reset zoom", title: "Reset zoom to 100%", onClick: zoomReset },
+        { id: "zoom-out", group: "Zoom", label: "Zoom out", icon: Minus, title: "Zoom out", onClick: zoomOut },
+        { id: "zoom-readout", group: "Zoom", type: "readout", label: `${zoomPercent}%` },
+        { id: "zoom-in", group: "Zoom", label: "Zoom in", icon: Plus, title: "Zoom in", onClick: zoomIn },
+        { id: "zoom-reset", label: "Reset", icon: RotateCcw, showLabel: true, title: "Reset zoom to 100%", onClick: zoomReset },
       ],
-      right: [{ label: "Grid", value: "40m" }],
+      right: [{ label: "Grid", value: "40m", icon: Grid3x3 }],
       leading,
       trailing,
     }),

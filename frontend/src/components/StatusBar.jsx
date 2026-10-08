@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { isValidElement, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useLayout } from "../contexts/LayoutContext";
 
@@ -35,8 +35,10 @@ const TONE_VAR = {
 /**
  * Publish status-bar metrics for the current page. `items` should be memoised
  * by the caller: { left: [{ label, value, tone }], right: [{ label, value }],
- * actions: [{ id, label, title, onClick } | { id, type: "readout", label }],
+ * actions: [{ id, label, title, onClick, icon?, group? } | { id, type: "readout", label, group? }],
  * leading / trailing: [{ id, label, title, icon, pressed, onClick }] }.
+ * `left` items take an optional `pill: true` (rendered as a status pill);
+ * `right` items an optional `icon`. Icons are lucide components.
  */
 export function useStatusItems(items) {
   const { setStatusItems } = useLayout();
@@ -46,26 +48,102 @@ export function useStatusItems(items) {
   useEffect(() => () => setStatusItems(null), [setStatusItems]);
 }
 
-function Indicator({ label, value, tone = "neutral" }) {
+function Indicator({ label, value, tone = "neutral", pill = false }) {
+  const colour = TONE_VAR[tone] || tone;
+  if (pill) {
+    return (
+      <span className="sb-pill" style={{ "--sb-tone": colour }} title={label}>
+        <span className="sb-dot" aria-hidden="true" />
+        {value}
+      </span>
+    );
+  }
   return (
-    <span className="app-status-bar__item">
-      <span className="app-status-bar__dot" style={{ background: TONE_VAR[tone] || tone }} aria-hidden="true" />
-      {label}: <strong>{value}</strong>
+    <span className="sb-metric">
+      <span className="sb-dot" style={{ background: colour }} aria-hidden="true" />
+      <span className="sb-metric__label">{label}</span>
+      <strong className="sb-metric__value">{value}</strong>
+    </span>
+  );
+}
+
+function Readout({ label, value, icon: Icon }) {
+  return (
+    <span className="sb-metric" title={`${label}: ${value}`}>
+      {Icon && <Icon size={12} className="sb-metric__icon" aria-hidden="true" />}
+      <span className="sb-metric__label">{label}</span>
+      <strong className="sb-metric__value">{value}</strong>
+    </span>
+  );
+}
+
+function ActionButton({ action }) {
+  const Icon = action.icon;
+  return (
+    <button
+      type="button"
+      className={`sb-btn${Icon && !action.showLabel ? " sb-btn--icon" : ""}`}
+      onClick={action.onClick}
+      title={action.title}
+      aria-label={action.title || action.label}
+      disabled={action.disabled}
+    >
+      {Icon && <Icon size={12} aria-hidden="true" />}
+      {(!Icon || action.showLabel) && <span>{action.label}</span>}
+    </button>
+  );
+}
+
+// Consecutive actions sharing a `group` render as one segmented control
+// (e.g. zoom − 100% +); the rest stand alone.
+function Actions({ actions }) {
+  const blocks = [];
+  actions.forEach((action) => {
+    const last = blocks[blocks.length - 1];
+    if (action.group && last && last.group === action.group) last.items.push(action);
+    else blocks.push({ group: action.group, items: [action] });
+  });
+  return (
+    <span className="sb-actions">
+      {blocks.map((block, index) =>
+        block.group ? (
+          <span key={block.group} className="sb-segment" role="group" aria-label={block.group}>
+            {block.items.map((action) =>
+              action.type === "readout" ? (
+                <span key={action.id} className="sb-segment__readout" aria-live="polite">{action.label}</span>
+              ) : (
+                <ActionButton key={action.id} action={action} />
+              )
+            )}
+          </span>
+        ) : (
+          block.items.map((action) =>
+            action.type === "readout" ? (
+              <span key={action.id} className="sb-segment__readout">{action.label}</span>
+            ) : (
+              <ActionButton key={action.id || index} action={action} />
+            )
+          )
+        )
+      )}
     </span>
   );
 }
 
 // On/off button for a collapsible page region (sidebar, toolbar).
 function PanelToggle({ label, title, icon, pressed, onClick }) {
+  // `icon` is either a ready element or a component type (lucide icons are
+  // forwardRef objects, so test for an element rather than a function).
+  const Icon = icon && !isValidElement(icon) ? icon : null;
   return (
     <button
       type="button"
-      className={`app-status-bar__toggle${pressed ? " app-status-bar__toggle--on" : ""}`}
+      className={`sb-toggle${pressed ? " is-on" : ""}`}
       aria-pressed={pressed}
       title={title || label}
       onClick={onClick}
     >
-      {icon}
+      {Icon ? <Icon size={13} aria-hidden="true" /> : icon}
       <span>{label}</span>
     </button>
   );
@@ -85,11 +163,11 @@ export default function StatusBar() {
   return (
     <footer className="app-status-bar" role="contentinfo">
       {leading.length > 0 && (
-        <div className="app-status-bar__toggles">
+        <div className="sb-toggles">
           {leading.map((toggle) => <PanelToggle key={toggle.id} {...toggle} />)}
         </div>
       )}
-      <div className="app-status-bar__left">
+      <div className="sb-left">
         {left.length > 0 ? (
           left.map((item) => <Indicator key={item.label} {...item} />)
         ) : (
@@ -99,36 +177,12 @@ export default function StatusBar() {
           </>
         )}
       </div>
-      <div className="app-status-bar__right">
-        {actions.length > 0 && (
-          <span className="app-status-bar__actions">
-            {actions.map((action) =>
-              action.type === "readout" ? (
-                <span key={action.id} className="app-status-bar__readout">{action.label}</span>
-              ) : (
-                <button
-                  key={action.id}
-                  type="button"
-                  className="app-status-bar__action"
-                  onClick={action.onClick}
-                  title={action.title}
-                  aria-label={action.title || action.label}
-                  disabled={action.disabled}
-                >
-                  {action.label}
-                </button>
-              )
-            )}
-          </span>
-        )}
-        {right.map((item) => (
-          <span key={item.label}>
-            {item.label}: <strong>{item.value}</strong>
-          </span>
-        ))}
-        {right.length === 0 && <span>WIDispatch · Operator Workspace</span>}
+      <div className="sb-right">
+        {actions.length > 0 && <Actions actions={actions} />}
+        {right.map((item) => <Readout key={item.label} {...item} />)}
+        {right.length === 0 && actions.length === 0 && <span className="sb-brand">WIDispatch · Operator Workspace</span>}
         {trailing.length > 0 && (
-          <span className="app-status-bar__toggles">
+          <span className="sb-toggles">
             {trailing.map((toggle) => <PanelToggle key={toggle.id} {...toggle} />)}
           </span>
         )}

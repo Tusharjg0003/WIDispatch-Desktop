@@ -224,7 +224,7 @@ export default function FloatingPanel({
       className={`fp${popped ? " fp--popout" : ""} ${className}`.trim()}
       role="dialog"
       aria-label={typeof title === "string" ? title : undefined}
-      style={popped ? undefined : { left: pos.x, top: pos.y, width }}
+      style={popped ? undefined : { left: pos.x, top: pos.y, width, maxHeight: `calc(100vh - ${Math.max(pos.y, 0) + 12}px)` }}
       onKeyDown={onKeyDown}
     >
       <header

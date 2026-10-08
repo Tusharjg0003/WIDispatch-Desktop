@@ -1,1023 +1,430 @@
-/* Create Asset Page Styles */
+/* Asset Registry create / edit form (AssetForm.jsx).
 
-.create-asset-page {
-  font-family: 'Segoe UI', Roboto, sans-serif;
-  padding: 12px;
-  background: var(--panel2);
-  min-height: 100vh;
-  position: relative;
-}
+   Same language as the rest of the app: bordered 8px cards with an uppercase
+   header row (like the side panels), 32px fields with a thin border and an
+   accent focus ring (like the floating forms), 2-column layout on wide
+   screens — the form on the left, Generated ID / Location / SWA reference
+   on the right; the action bar sticks to the bottom.
 
-.create-asset-page.af__body,
-.create-asset-page.af__body--page {
-  padding: 12px;
-}
+   Every rule is rooted at `.app-shell .create-asset-page.asset-form-roomy` so it outranks compact.css's density
+   overrides without !important. The per-type sections (PlantFields,
+   PumpStationFields, TankFields, HandoverPointFields) are shared with the
+   Network Builder's floating form, so they are styled from here rather than
+   changed. */
 
-.create-asset-page.view-mode {
-  padding: 12px;
-  background: var(--panel2);
-  min-height: 100vh;
-  position: relative;
-}
-
-/* Page Header - Neutral Styling */
-.create-asset-page .page-header {
-  background: var(--panel);
-  color: var(--tx1);
-  padding: 12px;
-  box-shadow: none;
-  position: relative;
-  overflow: visible;
-  margin-bottom: 12px;
-  border-bottom: 1px solid var(--line);
-  border-radius: 2px;
-}
-
-.create-asset-page .page-header__content {
-  position: relative;
-  z-index: 2;
-  max-width: 1400px;
-  margin: 0 auto;
-  display: flex;
-  align-items: left;
-  justify-content: space-between;
-  gap: 2rem;
-}
-
-.create-asset-page .page-header__info {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  flex: 1;
-}
-
-.create-asset-page .back-button {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  color: var(--mut2);
-  padding: 12px;
-  border-radius: 2px;
-  cursor: pointer;
-  transition: background 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.create-asset-page .back-button:hover {
-  background: var(--panel2);
-  border-color: var(--line2);
-}
-
-.create-asset-page .page-header__title-section {
-  flex: 1;
-}
-
-.create-asset-page .page-header__title {
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin: 0 0 0.5rem 0;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  color: var(--tx1);
-}
-
-.create-asset-page .page-header__title-icon {
-  font-size: 1.25rem;
-  color: var(--mut);
-}
-
-.create-asset-page .page-header__subtitle {
-  font-size: 0.875rem;
-  color: var(--mut);
-  margin: 0;
-  line-height: 1.6;
-  max-width: 600px;
-}
-
-.create-asset-page .page-header__actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.create-asset-page .header-action-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-decoration: none;
-}
-
-.create-asset-page .header-action-btn.primary {
-  background: var(--accGrad);
-  color: var(--on-accent);
-  box-shadow: none;
-}
-
-.create-asset-page .header-action-btn.primary:hover:not(:disabled) {
-  filter: brightness(1.08);
-}
-
-.create-asset-page .header-action-btn.primary:disabled {
-  background: var(--mut2);
-  cursor: not-allowed;
-}
-
-.create-asset-page .header-action-btn.secondary {
-  background: var(--panel);
-  color: var(--mut2);
-  border: 1px solid var(--line);
-}
-
-.create-asset-page .header-action-btn.secondary:hover {
-  background: var(--panel2);
-  border-color: var(--line2);
-  color: var(--tx2);
-}
-
-.create-asset-page .header-action-btn.danger {
-  background: var(--err);
-  color: var(--on-accent);
-  border: 1px solid var(--err);
-}
-
-.create-asset-page .header-action-btn.danger:hover {
-  background: var(--err);
-  border-color: var(--err);
-}
-
-/* Success Banner */
-.create-asset-page .success-banner,
-.create-asset-page .af__success {
-  background: var(--panel);
-  color: var(--tx1);
-  padding: 16px 24px;
-  border-radius: 8px;
-  margin-bottom: 24px;
-  border: 1px solid var(--line);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.create-asset-page .success-content {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-weight: 500;
-}
-
-/* Form Container */
-.create-asset-page .form-container {
-  max-width: 100%;
-  margin: 0;
-  width: 100%;
-  padding: 0 12px;
-}
-
-.create-asset-page .form-content {
-  background: var(--panel);
-  border-radius: 2px;
-  box-shadow: none;
-  border: 1px solid var(--line);
-  padding: 12px;
-  margin-bottom: 12px;
-}
-
-.create-asset-page .form-content > h3,
-.create-asset-page .form-section > h2,
-.create-asset-page .form-section > h3 {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--tx1);
-  margin: 0 0 6px 0;
-  padding: 8px;
-  background: var(--panel2);
-  border-radius: 2px;
-  border-left: 2px solid var(--acc);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.create-asset-page .form-grid,
-.create-asset-page .form-grid.af__grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  margin-bottom: 12px;
-}
-
-.create-asset-page .form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.create-asset-page .form-group.full-width {
-  grid-column: 1 / -1;
-}
-
-/* Historical Production import (CreateAssetPage only) */
-.create-asset-page .production-import {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.create-asset-page .production-import__hint {
-  margin: 0;
-  font-size: 0.6875rem;
-  color: var(--mut);
-}
-
-.create-asset-page .production-import__hint code {
-  background: var(--panel2);
-  padding: 1px 4px;
-  border-radius: 2px;
-  font-size: 0.625rem;
-}
-
-.create-asset-page .production-import__button {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  align-self: flex-start;
-  padding: 6px 10px;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  color: var(--accTx);
-  background: var(--panel);
-  border: 1px solid var(--acc);
-  border-radius: 2px;
-  cursor: pointer;
-  transition: background 0.12s ease;
-}
-
-.create-asset-page .production-import__button:hover {
-  background: var(--panel2);
-}
-
-.create-asset-page .production-import__chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  align-self: flex-start;
-  padding: 6px 10px;
-  font-size: 0.6875rem;
-  color: var(--tx1);
-  background: var(--panel2);
-  border: 1px solid var(--line);
-  border-radius: 2px;
-}
-
-.create-asset-page .production-import__name {
-  font-weight: 600;
-  max-width: 240px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.create-asset-page .production-import__size {
-  color: var(--mut);
-}
-
-.create-asset-page .production-import__clear {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2px;
-  color: var(--errTx);
+.app-shell .create-asset-page.asset-form-roomy {
+  --asf-gap: 12px;
+  min-height: 0;
+  padding: 0;
   background: transparent;
-  border: 0;
-  cursor: pointer;
-  border-radius: 2px;
-}
-
-.create-asset-page .production-import__clear:hover {
-  background: var(--err-soft);
-}
-
-.create-asset-page .form-group label {
-  font-size: 0.6875rem;
-  font-weight: 600;
   color: var(--tx1);
-  margin-bottom: 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.25px;
+  font-family: inherit;
 }
 
-.create-asset-page .form-input,
-.create-asset-page .form-select,
-.create-asset-page .form-textarea,
-.create-asset-page .form-group > input,
-.create-asset-page .form-group > select,
-.create-asset-page .form-group > textarea {
-  padding: 4px 6px;
-  border: 2px solid var(--line);
-  border-radius: 2px;
-  font-size: 0.75rem;
-  color: var(--tx1);
-  background: var(--panel);
-  transition: all 0.2s ease;
-  height: 28px;
-  box-shadow: inset 0 1px 0 rgba(0,0,0,0.02);
-  min-width: 0;
+/* ── Layout ─────────────────────────────────────────────────────────────── */
+.app-shell .create-asset-page.asset-form-roomy .form-container {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
+  grid-template-rows: auto auto 1fr auto;
+  grid-template-areas:
+    "main id"
+    "main location"
+    "main swa"
+    "foot foot";
+  gap: var(--asf-gap);
+  align-items: start;
   width: 100%;
-  text-transform: none;
-  letter-spacing: 0;
-  color-scheme: light;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+.app-shell .create-asset-page.asset-form-roomy .generated-id-section { grid-area: id; }
+.app-shell .create-asset-page.asset-form-roomy .view-asset-top-row { grid-area: location; }
+.app-shell .create-asset-page.asset-form-roomy .view-asset-split { grid-area: main; display: flex; flex-direction: column; gap: var(--asf-gap); }
+.app-shell .create-asset-page.asset-form-roomy .view-asset-split__main { display: flex; flex-direction: column; gap: var(--asf-gap); }
+.app-shell .create-asset-page.asset-form-roomy .swa-info-section { grid-area: swa; }
+.app-shell .create-asset-page.asset-form-roomy .af__error,
+.app-shell .create-asset-page.asset-form-roomy .af__success { grid-column: 1 / -1; }
+.app-shell .create-asset-page.asset-form-roomy .af__footer { grid-area: foot; }
+
+@media (max-width: 1100px) {
+  .app-shell .create-asset-page.asset-form-roomy .form-container {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-template-areas: "id" "location" "main" "swa" "foot";
+  }
 }
 
-.create-asset-page .form-input:focus,
-.create-asset-page .form-select:focus,
-.create-asset-page .form-textarea:focus,
-.create-asset-page .form-group > input:focus,
-.create-asset-page .form-group > select:focus,
-.create-asset-page .form-group > textarea:focus {
+/* ── Cards ──────────────────────────────────────────────────────────────── */
+.app-shell .create-asset-page.asset-form-roomy .generated-id-section,
+.app-shell .create-asset-page.asset-form-roomy .form-section,
+.app-shell .create-asset-page.asset-form-roomy .form-content,
+.app-shell .create-asset-page.asset-form-roomy .swa-info-section {
+  margin: 0;
+  padding: 0 12px 12px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: none;
+}
+.app-shell .create-asset-page.asset-form-roomy .view-asset-split__main > .form-section,
+.app-shell .create-asset-page.asset-form-roomy .view-asset-split__main > .form-content { margin: 0; }
+
+/* Card header row: uppercase, muted, hairline under it. */
+.app-shell .create-asset-page.asset-form-roomy .generated-id-header h3,
+.app-shell .create-asset-page.asset-form-roomy .form-section > h2,
+.app-shell .create-asset-page.asset-form-roomy .form-section > h3,
+.app-shell .create-asset-page.asset-form-roomy .form-content > h3,
+.app-shell .create-asset-page.asset-form-roomy .swa-info-section > h3 {
+  margin: 0 -12px 12px;
+  padding: 10px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--mut);
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+
+/* ── Fields ─────────────────────────────────────────────────────────────── */
+.app-shell .create-asset-page.asset-form-roomy .form-grid,
+.app-shell .create-asset-page.asset-form-roomy .form-grid.af__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 12px 14px;
+  margin: 0;
+}
+.app-shell .create-asset-page.asset-form-roomy .view-asset-top-row .form-grid.af__grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.app-shell .create-asset-page.asset-form-roomy .form-group,
+.app-shell .create-asset-page.asset-form-roomy .af__field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  margin: 0;
+}
+.app-shell .create-asset-page.asset-form-roomy .form-group > label,
+.app-shell .create-asset-page.asset-form-roomy .af__field > label {
+  margin: 0;
+  color: var(--mut);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+.app-shell .create-asset-page.asset-form-roomy .form-group > input,
+.app-shell .create-asset-page.asset-form-roomy .form-group > select,
+.app-shell .create-asset-page.asset-form-roomy .form-group > textarea,
+.app-shell .create-asset-page.asset-form-roomy .af__field input:not([type="checkbox"]):not([type="radio"]),
+.app-shell .create-asset-page.asset-form-roomy .af__field select,
+.app-shell .create-asset-page.asset-form-roomy .af__field textarea,
+.app-shell .create-asset-page.asset-form-roomy .af__pump-name,
+.app-shell .create-asset-page.asset-form-roomy .af__pump-capacity {
+  width: 100%;
+  min-width: 0;
+  height: 32px;
+  padding: 0 10px;
+  box-sizing: border-box;
+  border: 1px solid var(--line2);
+  border-radius: 6px;
+  background: var(--panel);
+  box-shadow: none;
+  color: var(--tx1);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color-scheme: light dark;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+.app-shell .create-asset-page.asset-form-roomy .form-group > textarea,
+.app-shell .create-asset-page.asset-form-roomy .af__field textarea {
+  height: auto;
+  min-height: 64px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+.app-shell .create-asset-page.asset-form-roomy .form-group > input:hover:not(:disabled),
+.app-shell .create-asset-page.asset-form-roomy .form-group > select:hover:not(:disabled),
+.app-shell .create-asset-page.asset-form-roomy .af__field input:hover:not(:disabled),
+.app-shell .create-asset-page.asset-form-roomy .af__field select:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--acc) 45%, var(--line2));
+}
+.app-shell .create-asset-page.asset-form-roomy .form-group > input:focus,
+.app-shell .create-asset-page.asset-form-roomy .form-group > select:focus,
+.app-shell .create-asset-page.asset-form-roomy .form-group > textarea:focus,
+.app-shell .create-asset-page.asset-form-roomy .af__field input:focus,
+.app-shell .create-asset-page.asset-form-roomy .af__field select:focus,
+.app-shell .create-asset-page.asset-form-roomy .af__field textarea:focus,
+.app-shell .create-asset-page.asset-form-roomy .af__pump-name:focus,
+.app-shell .create-asset-page.asset-form-roomy .af__pump-capacity:focus {
   outline: none;
   border-color: var(--acc);
-  box-shadow: inset 0 1px 0 rgba(0,0,0,0.02);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--acc) 22%, transparent);
 }
-
-.create-asset-page .form-input:disabled,
-.create-asset-page .form-select:disabled,
-.create-asset-page .form-group > input:disabled,
-.create-asset-page .form-group > select:disabled {
-  color: var(--mut);
-  background: var(--panel2);
-}
-
-.create-asset-page .form-textarea,
-.create-asset-page .form-group > textarea {
-  resize: vertical;
-  min-height: 60px;
-  height: auto;
-}
-
-/* Generated ID Section */
-.create-asset-page .generated-id-section {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 2px;
-  padding: 12px;
-  margin-bottom: 12px;
-}
-
-.create-asset-page .generated-id-header h3 {
-  margin: 0 0 4px 0;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--tx1);
-  padding: 8px;
-  background: var(--panel2);
-  border-radius: 2px;
-  border-left: 2px solid var(--acc);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.create-asset-page .generated-id-header p {
-  margin: 0 0 6px 0;
-  color: var(--tx1);
-  font-size: 0.6875rem;
-}
-
-.create-asset-page .view-asset-meta__caption {
-  margin: 6px 0 0;
-  color: var(--tx1);
-  font-size: 0.6875rem;
-  line-height: 1.4;
-}
-
-.create-asset-page .generated-id-display {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 4px;
-}
-
-.create-asset-page .generated-id-display .view-asset-meta__field {
-  flex: 1;
-}
-
-.create-asset-page .generated-id-code {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 2px;
-  padding: 4px 6px;
-  font-family: 'Segoe UI', Roboto, sans-serif;
-  font-size: 0.75rem;
-  font-weight: 400;
-  color: var(--tx1);
-  text-align: center;
-  letter-spacing: 0;
-  box-shadow: inset 0 1px 0 rgba(0,0,0,0.02);
-  display: block;
-  width: 100%;
-  height: 28px;
-  line-height: 18px;
-}
-
-.create-asset-page .generating-indicator {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--mut);
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.create-asset-page .spinning {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* SWA Info Section */
-.create-asset-page .swa-info-section {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 2px;
-  padding: 12px;
-  margin-bottom: 12px;
-}
-
-.create-asset-page .swa-info-section h3 {
-  margin: 0 0 8px 0;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--tx1);
-  padding: 8px;
-  background: var(--panel2);
-  border-radius: 2px;
-  border-left: 2px solid var(--acc);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.create-asset-page .info-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 6px;
-}
-
-.create-asset-page .info-card {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 1.5rem;
-  margin-bottom: 1rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.create-asset-page .info-card h4 {
-  margin: 0 0 4px 0;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  color: var(--tx1);
-  text-transform: uppercase;
-  letter-spacing: 0.25px;
-}
-
-.create-asset-page .info-card p {
-  margin: 0;
-  font-size: 0.6875rem;
-  color: var(--mut);
-  line-height: 1.4;
-}
-
-/* Map Section */
-.create-asset-page .map-section {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 2px;
-  padding: 12px;
-  margin-bottom: 12px;
-}
-
-.create-asset-page .map-header h3,
-.create-asset-page .map-header h4 {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--tx1);
-  margin: 0 0 4px 0;
-  padding: 8px;
-  background: var(--panel2);
-  border-radius: 2px;
-  border-left: 2px solid var(--acc);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.create-asset-page .map-header p {
-  font-size: 0.6875rem;
-  color: var(--tx1);
-  margin: 0 0 6px 0;
-}
-
-.create-asset-page .map-container {
-  border-radius: 2px;
-  overflow: hidden;
-  box-shadow: none;
-  margin-bottom: 6px;
-  height: 400px !important;
-  min-height: 400px;
-  width: 100%;
-  position: relative;
-  z-index: 1;
-  border: 1px solid var(--line);
-}
-
-.create-asset-page .selected-coordinates {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: var(--panel);
-  border: 1px solid var(--ok);
-  border-radius: 6px;
-  font-size: 14px;
-  color: var(--okTx);
-  margin-top: 16px;
-}
-
-.create-asset-page .selected-coordinates strong {
-  font-weight: 600;
-}
-
-/* Leaflet Map Overrides */
-.create-asset-page .leaflet-container {
-  font-family: inherit !important;
-  height: 100% !important;
-  width: 100% !important;
-}
-
-.create-asset-page .leaflet-tile-container {
-  opacity: 1 !important;
-}
-
-.create-asset-page .leaflet-popup-content-wrapper {
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.create-asset-page .leaflet-popup-content {
-  margin: 12px;
-  font-size: 14px;
-  line-height: 1.4;
-}
-
-.create-asset-page .leaflet-popup-content strong {
-  font-weight: 600;
-  color: var(--tx1);
-}
-
-.create-asset-page .leaflet-control-zoom {
-  border-radius: 6px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-/* View Asset Page / shared badges */
-.create-asset-page .form-display {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 2px;
-  padding: 4px 6px;
-  font-size: 0.6875rem;
-  color: var(--tx1);
-  min-height: 26px;
-  display: flex;
-  align-items: center;
-  word-break: break-word;
-  box-shadow: inset 0 1px 0 rgba(0,0,0,0.02);
-}
-
-.create-asset-page .form-display.asset-uuid {
-  font-family: 'Courier New', monospace;
-  font-size: 0.8rem;
+.app-shell .create-asset-page.asset-form-roomy .form-group > input:disabled,
+.app-shell .create-asset-page.asset-form-roomy .form-group > select:disabled,
+.app-shell .create-asset-page.asset-form-roomy .af__field input:disabled,
+.app-shell .create-asset-page.asset-form-roomy .af__field select:disabled {
   background: var(--panel2);
   color: var(--mut);
-}
-
-.create-asset-page .form-display.code-badge {
-  background: var(--acc);
-  color: var(--on-accent);
-  font-weight: 600;
-  text-align: center;
-  justify-content: center;
-}
-
-.create-asset-page .status-badge {
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: 2px;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  background: var(--panel2);
-  color: var(--tx1);
-  border: 1px solid var(--line);
-}
-
-.create-asset-page .status-badge.operational,
-.create-asset-page .status-badge.in-operation {
-  background: var(--ok-soft);
-  color: var(--okTx);
-  border-color: var(--ok-border);
-}
-
-.create-asset-page .status-badge.maintenance {
-  background: var(--warn-soft);
-  color: var(--amberTx);
-  border-color: var(--amber-border);
-}
-
-.create-asset-page .status-badge.planned {
-  background: var(--warn-soft);
-  color: var(--amberTx);
-  border-color: var(--amber-border);
-}
-
-.create-asset-page .status-badge.under-construction,
-.create-asset-page .status-badge.under_construction {
-  background: var(--acc-soft);
-  color: var(--accTx);
-  border-color: var(--acc-border);
-}
-
-.create-asset-page .status-badge.decommissioned {
-  background: var(--err-soft);
-  color: var(--errTx);
-  border-color: var(--err-border);
-}
-
-.create-asset-page .code-badge {
-  background: var(--panel2);
-  color: var(--tx1);
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-family: 'Courier New', monospace;
-  font-weight: 600;
-  font-size: 0.9rem;
-  border: 1px solid var(--line);
-}
-
-/* Loading and Error States */
-.create-asset-page .loading-container,
-.create-asset-page .error-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 400px;
-  text-align: center;
-}
-
-.create-asset-page .loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid var(--line);
-  border-top: 4px solid var(--acc);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 1rem;
-}
-
-.create-asset-page .error-container h2 {
-  color: var(--errTx);
-  margin-bottom: 1rem;
-}
-
-.create-asset-page .error-container p {
-  color: var(--mut);
-  margin-bottom: 2rem;
-}
-
-/* View Asset Page - Mega Projects Style */
-.create-asset-page .view-header {
-  background: var(--panel);
-  border-radius: 1px;
-  padding: 0;
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: nowrap;
-  gap: 0.125rem;
-  border: 1px solid var(--line);
-  height: 40px;
-  overflow: hidden;
-  position: relative;
-  z-index: 10;
-  margin-bottom: 0.375rem;
-}
-
-.create-asset-page .view-header .breadcrumb {
-  font-size: 0.75rem;
-  color: var(--tx2);
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  font-weight: 500;
-  padding: 0 0.5rem;
-  line-height: 1.2;
-  height: 100%;
-  text-transform: uppercase;
-  letter-spacing: 0.025em;
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-}
-
-.create-asset-page .view-header .breadcrumb span {
-  cursor: pointer;
-  transition: color 0.2s;
-  padding: 0.25rem 0.375rem;
-  border-radius: 2px;
-  line-height: 1.2;
-  display: flex;
-  align-items: center;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.create-asset-page .view-header .breadcrumb span:last-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 200px;
-}
-
-.create-asset-page .view-header .breadcrumb span:hover {
-  color: var(--accTx);
-  background: var(--panel2);
-}
-
-.create-asset-page .view-actions {
-  display: flex;
-  gap: 0.125rem;
-  align-items: center;
-  padding: 0 0.375rem;
-  height: 100%;
-  flex-shrink: 0;
-}
-
-.create-asset-page .view-actions button {
-  padding: 0.25rem;
-  border-radius: 2px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: 1px solid var(--acc);
-  background: var(--panel);
-  color: var(--tx2);
-  min-width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.create-asset-page .view-actions button:hover {
-  background: var(--panel2);
-  border-color: var(--acc);
-  transform: translateY(-1px);
-}
-
-.create-asset-page .view-actions button svg {
-  width: 14px;
-  height: 14px;
-}
-
-/* Form Section - Mega Projects Style */
-.create-asset-page .form-section {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 2px;
-  padding: 12px;
-  margin-bottom: 12px;
-  box-shadow: none;
-  transition: none;
-}
-
-.create-asset-page .view-asset-top-row,
-.create-asset-page .view-asset-split {
-  display: block;
-}
-
-.create-asset-page .view-asset-top-row__map .map-section {
-  height: auto;
-}
-
-.create-asset-page .view-asset-top-row__map-canvas {
-  height: 400px !important;
-  min-height: 400px;
-  width: 100%;
-}
-
-.create-asset-page .af__map-hint {
-  margin: 0;
-  color: var(--mut);
-  font-size: 0.6875rem;
-}
-
-/* Action buttons styling */
-.create-asset-page .view-actions-container {
-  display: flex;
-  justify-content: flex-end;
-  gap: 6px;
-  margin-bottom: 12px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--line);
-}
-
-.create-asset-page .view-actions-container button {
-  padding: 4px 8px;
-  border-radius: 2px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: 1px solid var(--line);
-  background: var(--panel);
-  color: var(--tx1);
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.create-asset-page .view-actions-container button:hover {
-  background: var(--panel2);
-  border-color: var(--tx1);
-}
-
-.create-asset-page .view-actions-container button.danger {
-  background: var(--err);
-  color: var(--on-accent);
-  border-color: var(--err);
-}
-
-.create-asset-page .view-actions-container button.danger:hover {
-  background: var(--err);
-  border-color: var(--err);
-}
-
-/* Create Asset Button - Mega Projects Style */
-.create-asset-page .form-actions,
-.create-asset-page .af__footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 24px;
-  padding-top: 12px;
-  border-top: 1px solid var(--line);
-}
-
-.create-asset-page .form-action-btn,
-.create-asset-page .af__btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 32px;
-  border: none;
-  border-radius: 10px;
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  letter-spacing: -0.01em;
-  height: auto;
-}
-
-.create-asset-page .form-action-btn.primary,
-.create-asset-page .af__btn--primary {
-  background: var(--acc);
-  color: var(--on-accent);
-  box-shadow: 0 4px 12px var(--acc-border), 0 2px 4px var(--acc-border);
-}
-
-.create-asset-page .form-action-btn.primary:hover:not(:disabled),
-.create-asset-page .af__btn--primary:hover:not(:disabled) {
-  background: var(--acc);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px var(--acc-border), 0 4px 8px var(--acc-border);
-}
-
-.create-asset-page .form-action-btn.primary:active:not(:disabled),
-.create-asset-page .af__btn--primary:active:not(:disabled) {
-  transform: translateY(0);
-  box-shadow: 0 2px 8px var(--acc-border);
-}
-
-.create-asset-page .form-action-btn:disabled,
-.create-asset-page .af__btn:disabled {
-  opacity: 0.6;
   cursor: not-allowed;
 }
+.app-shell .create-asset-page.asset-form-roomy .form-group > input::placeholder,
+.app-shell .create-asset-page.asset-form-roomy .af__field input::placeholder { color: var(--mut2); }
 
-.create-asset-page .form-action-btn svg,
-.create-asset-page .af__btn svg {
-  width: 16px;
-  height: 16px;
+/* Read-only display box (tank volume etc.). */
+.app-shell .create-asset-page.asset-form-roomy .form-display {
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 6px 10px;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel2);
+  box-shadow: none;
+  color: var(--tx1);
+  font-size: 12.5px;
 }
 
-.create-asset-page .form-action-btn svg.spinning,
-.create-asset-page .af__btn svg.spinning {
-  animation: spin 1s linear infinite;
+/* Toggle and radio rows. */
+.app-shell .create-asset-page.asset-form-roomy .af__field--toggle {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  align-self: end;
+}
+.app-shell .create-asset-page.asset-form-roomy .af__radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 32px;
+  align-items: center;
+}
+.app-shell .create-asset-page.asset-form-roomy .af__radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--line2);
+  border-radius: 6px;
+  color: var(--tx1);
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+.app-shell .create-asset-page.asset-form-roomy .af__radio:has(input:checked) {
+  border-color: color-mix(in srgb, var(--acc) 45%, transparent);
+  background: color-mix(in srgb, var(--acc) 12%, transparent);
+  color: var(--accTx, var(--acc));
+}
+.app-shell .create-asset-page.asset-form-roomy .af__radio input { accent-color: var(--acc); }
+
+/* Pump list (pump stations). */
+.app-shell .create-asset-page.asset-form-roomy .af__pump-list {
+  overflow: hidden;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.app-shell .create-asset-page.asset-form-roomy .af__pump-row {
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+}
+.app-shell .create-asset-page.asset-form-roomy .af__pump-row:last-child { border-bottom: 0; }
+.app-shell .create-asset-page.asset-form-roomy .af__pump-empty { padding: 14px 10px; color: var(--mut); font-size: 12px; }
+.app-shell .create-asset-page.asset-form-roomy .af__pump-add { margin-top: 10px; }
+.app-shell .create-asset-page.asset-form-roomy .af__pump-remove {
+  width: 28px;
+  height: 28px;
+  border-color: transparent;
+  border-radius: 6px;
+  background: transparent;
 }
 
-.create-asset-page .af__error {
-  margin-bottom: 12px;
-  padding: 12px;
+/* ── Generated ID ──────────────────────────────────────────────────────── */
+.app-shell .create-asset-page.asset-form-roomy .generated-id-display { display: block; }
+.app-shell .create-asset-page.asset-form-roomy .generated-id-code {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: auto;
+  min-height: 40px;
+  padding: 8px 12px;
+  box-sizing: border-box;
+  border: 1px solid color-mix(in srgb, var(--acc) 40%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--acc) 10%, transparent);
+  box-shadow: none;
+  color: var(--accTx, var(--acc));
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+}
+.app-shell .create-asset-page.asset-form-roomy .form-display--pending {
+  justify-content: center;
+  min-height: 40px;
+  border-style: dashed;
+  background: transparent;
+  color: var(--mut);
+  font-size: 12px;
+  text-align: center;
+}
+.app-shell .create-asset-page.asset-form-roomy .view-asset-meta__caption {
+  margin: 8px 0 0;
+  color: var(--mut);
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+
+/* ── Location + map ────────────────────────────────────────────────────── */
+.app-shell .create-asset-page.asset-form-roomy .view-asset-top-row { display: block; }
+.app-shell .create-asset-page.asset-form-roomy .map-section {
+  margin: 12px 0 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.app-shell .create-asset-page.asset-form-roomy .map-container,
+.app-shell .create-asset-page.asset-form-roomy .view-asset-top-row__map-canvas {
+  height: 280px !important;
+  min-height: 280px;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: none;
+}
+.app-shell .create-asset-page.asset-form-roomy .af__map-hint {
+  margin: 6px 0 0;
+  color: var(--mut);
+  font-size: 11.5px;
+}
+.app-shell .create-asset-page.asset-form-roomy .leaflet-container { font-family: inherit; }
+
+/* ── SWA tagging reference ─────────────────────────────────────────────── */
+.app-shell .create-asset-page.asset-form-roomy .info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.app-shell .create-asset-page.asset-form-roomy .info-card {
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel2);
+  box-shadow: none;
+}
+.app-shell .create-asset-page.asset-form-roomy .info-card h4 {
+  margin: 0 0 2px;
+  color: var(--tx1);
+  font-size: 11.5px;
+  font-weight: 650;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.app-shell .create-asset-page.asset-form-roomy .info-card p {
+  margin: 0;
+  color: var(--mut);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+/* ── Messages ──────────────────────────────────────────────────────────── */
+.app-shell .create-asset-page.asset-form-roomy .af__error,
+.app-shell .create-asset-page.asset-form-roomy .af__success {
+  margin: 0;
+  padding: 9px 12px;
+  border-radius: 8px;
+  box-shadow: none;
+  font-size: 12px;
+}
+.app-shell .create-asset-page.asset-form-roomy .af__error {
   border: 1px solid var(--err-border);
-  border-radius: 2px;
   background: var(--err-soft);
   color: var(--errTx);
-  font-size: 0.75rem;
+}
+.app-shell .create-asset-page.asset-form-roomy .af__success {
+  border: 1px solid var(--ok-border);
+  background: var(--ok-soft);
+  color: var(--okTx);
 }
 
-.create-asset-page .af__toggle {
-  min-height: 28px;
+/* ── Footer: sticky action bar ─────────────────────────────────────────── */
+.app-shell .create-asset-page.asset-form-roomy .af__footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 -6px 18px rgba(15, 23, 42, 0.12);
 }
-
-.create-asset-page .af__radio-group {
+.app-shell .create-asset-page.asset-form-roomy .af__btn {
+  display: inline-flex;
   align-items: center;
-  min-height: 28px;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 16px;
+  border: 1px solid var(--line2);
+  border-radius: 6px;
+  background: var(--panel);
+  box-shadow: none;
+  color: var(--tx1);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+  cursor: pointer;
+  transform: none;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
 }
-
-.create-asset-page .af__pump-list {
-  margin-top: 0;
+.app-shell .create-asset-page.asset-form-roomy .af__btn:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--acc) 40%, var(--line2));
+  background: color-mix(in srgb, var(--acc) 10%, transparent);
+  transform: none;
+  box-shadow: none;
 }
-
-/* Responsive Design */
-@media (max-width: 768px) {
-  .create-asset-page .page-header__content {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 1rem;
-  }
-
-  .create-asset-page .page-header__info {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .create-asset-page .page-header__title {
-    font-size: 2rem;
-  }
-
-  .create-asset-page .form-grid,
-  .create-asset-page .form-grid.af__grid {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
-  .create-asset-page .generated-id-display {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .create-asset-page .info-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .create-asset-page .header-action-btn {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .create-asset-page .selected-coordinates {
-    justify-content: center;
-  }
+.app-shell .create-asset-page.asset-form-roomy .af__btn--primary {
+  border-color: var(--acc);
+  background: var(--acc);
+  color: var(--on-accent, #fff);
 }
-
-@media (max-width: 480px) {
-  .create-asset-page {
-    padding: 1rem;
-  }
-
-  .create-asset-page .form-content {
-    padding: 1.5rem;
-  }
-
-  .create-asset-page .page-header {
-    padding: 1.5rem 1rem;
-  }
-
-  .create-asset-page .page-header__title {
-    font-size: 1.75rem;
-  }
+.app-shell .create-asset-page.asset-form-roomy .af__btn--primary:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--acc) 86%, #000);
+  background: color-mix(in srgb, var(--acc) 86%, #000);
+}
+.app-shell .create-asset-page.asset-form-roomy .af__btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.app-shell .create-asset-page.asset-form-roomy .af__btn:focus-visible,
+.app-shell .create-asset-page.asset-form-roomy .af__radio:focus-within {
+  outline: 2px solid var(--acc);
+  outline-offset: 1px;
 }

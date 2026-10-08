@@ -343,8 +343,27 @@
   width: 14px;
   height: 14px;
   margin: 0;
-  accent-color: var(--acc);
+  border: 1.5px solid var(--line2);
+  border-radius: 3px;
+  background: var(--panel);
+  appearance: none;
   cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+.sl-row__check:hover:not(:disabled) {
+  border-color: var(--acc);
+}
+.sl-row__check:checked {
+  border-color: var(--acc);
+  background: var(--acc) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / 10px no-repeat;
+}
+.sl-row__check:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.sl-row__check:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 1px;
 }
 .sl-row__icon {
   display: inline-flex;

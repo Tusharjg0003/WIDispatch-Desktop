@@ -1,56 +1,94 @@
+/* Canvas minimap (CanvasMinimap.jsx): a floating card in the same language
+   as the side panels — small uppercase header with an icon button, then an
+   inset rounded map with pipes, asset dots and the draggable viewport box. */
 .nb-minimap {
   position: absolute;
-  right: 12px;
-  bottom: 12px;
-  width: 200px;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
-  overflow: hidden;
+  right: 10px;
+  bottom: 10px;
   z-index: 6;
+  width: 214px;
+  overflow: hidden;
+  border: 1px solid var(--line2);
+  border-radius: 10px;
+  background: var(--panel);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.14);
   user-select: none;
 }
 
 .nb-minimap__head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 4px 8px;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  gap: 6px;
+  height: 28px;
+  padding: 0 4px 0 9px;
+}
+.nb-minimap__head-icon {
+  flex-shrink: 0;
+  color: var(--acc);
+}
+.nb-minimap__title {
+  flex: 1;
   color: var(--mut);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.nb-minimap__count {
+  padding: 0 6px;
+  border-radius: 999px;
   background: var(--panel2);
-  border-bottom: 1px solid var(--line);
+  color: var(--tx2);
+  font-size: 10px;
+  font-weight: 650;
 }
 
 .nb-minimap__toggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 2px;
-  border: none;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
   background: transparent;
   color: var(--mut);
   cursor: pointer;
-  border-radius: 4px;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
-
 .nb-minimap__toggle:hover {
-  background: var(--line);
+  border-color: color-mix(in srgb, var(--acc) 40%, var(--line2));
+  background: color-mix(in srgb, var(--acc) 10%, transparent);
   color: var(--tx1);
+}
+.nb-minimap__toggle:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 1px;
 }
 
 .nb-minimap__svg {
   display: block;
+  margin: 0 6px 6px;
   cursor: crosshair;
   touch-action: none;
 }
 
 .nb-minimap__bg {
   fill: var(--panel2);
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.nb-minimap__pipe {
+  stroke-width: 1.2;
+  stroke-linecap: round;
+  opacity: 0.75;
+}
+
+.nb-minimap__dot {
+  stroke: var(--panel);
+  stroke-width: 1;
 }
 
 .nb-minimap__vp {

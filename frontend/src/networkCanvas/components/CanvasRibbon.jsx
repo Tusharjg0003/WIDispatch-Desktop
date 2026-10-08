@@ -11,7 +11,7 @@ import "./CanvasRibbon.css";
 // way Office shows one; icon-only buttons rely on it for their name.
 
 const TIP_DELAY_MS = 450;
-const LARGE_ICON = 22;
+const LARGE_ICON = 18;
 const SMALL_ICON = 15;
 
 // ── Shared hover tip ─────────────────────────────────────────────────────────
@@ -80,9 +80,12 @@ const buttonClass = (item, size) =>
 function ButtonContent({ item, size, withChevron = false }) {
   const Icon = item.icon;
   const showLabel = size === "large" || !item.iconOnly || !Icon;
+  // Large buttons carry their icon in a tinted tile, like the type tiles in
+  // the side panels; small ones use the bare icon.
+  const icon = Icon && <Icon size={size === "large" ? LARGE_ICON : SMALL_ICON} aria-hidden="true" className="rb-btn__icon" />;
   return (
     <>
-      {Icon && <Icon size={size === "large" ? LARGE_ICON : SMALL_ICON} aria-hidden="true" className="rb-btn__icon" />}
+      {icon && (size === "large" ? <span className="rb-btn__tile" style={item.colour ? { "--rb-tone": item.colour } : undefined} aria-hidden="true">{icon}</span> : icon)}
       {showLabel && <span className="rb-btn__label">{item.label}</span>}
       {withChevron && <ChevronDown size={11} aria-hidden="true" className="rb-btn__chevron" />}
     </>

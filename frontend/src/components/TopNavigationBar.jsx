@@ -126,7 +126,7 @@ export default function TopNavigationBar() {
                       go(item.path);
                     }}
                   >
-                    <Icon size={12} />
+                    <Icon size={14} className="top-navigation-bar__item-icon" aria-hidden="true" />
                     <span>{item.label}</span>
                     {item.children && <ChevronDown className="top-navigation-bar__item-chevron" size={12} />}
                   </button>
@@ -162,7 +162,7 @@ export default function TopNavigationBar() {
               aria-expanded={modulesOpen}
               onClick={() => { setModulesOpen((value) => !value); setUserOpen(false); setOpenNavGroup(null); }}
             >
-              {modulesOpen ? <X size={14} /> : <Menu size={14} />}
+              {modulesOpen ? <X size={15} /> : <Menu size={15} />}
               <span>Modules</span>
               <ChevronDown className="top-navigation-bar__module-chevron" size={13} />
             </button>
@@ -189,13 +189,13 @@ export default function TopNavigationBar() {
 
           <div className="top-navigation-bar__utilities">
             <button type="button" className="top-navigation-bar__search cr-hide-sm" onClick={() => setSearchOpen(true)} aria-label="Search WIDispatch" title="Search (Ctrl K)">
-              <Search size={12} strokeWidth={2} /><span>Search…</span><kbd>Ctrl K</kbd>
+              <Search size={13} aria-hidden="true" /><span>Search…</span><kbd>Ctrl K</kbd>
             </button>
             <span className="top-navigation-bar__clock">{clock}</span>
-            <button type="button" className={`top-navigation-bar__icon-btn ${isActive("/") ? "active" : ""}`} onClick={() => go("/")} title="Operations" aria-label="Operations"><Home size={13} /></button>
-            <button type="button" className="top-navigation-bar__icon-btn" onClick={() => setHelpOpen(true)} title="Help" aria-label="Help"><CircleHelp size={13} /></button>
+            <button type="button" className={`top-navigation-bar__icon-btn ${isActive("/") ? "active" : ""}`} onClick={() => go("/")} title="Operations" aria-label="Operations"><Home size={15} /></button>
+            <button type="button" className="top-navigation-bar__icon-btn" onClick={() => setHelpOpen(true)} title="Help" aria-label="Help"><CircleHelp size={15} /></button>
             <button type="button" className="top-navigation-bar__icon-btn" onClick={toggleTheme} title="Toggle light / dark" aria-label="Toggle light / dark">
-              {theme === "dark" ? <Sun size={13} /> : <Moon size={13} />}
+              {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
             </button>
             <div className="top-navigation-bar__user-menu">
               <button type="button" className="top-navigation-bar__user-btn" onClick={() => { setUserOpen((value) => !value); setModulesOpen(false); setOpenNavGroup(null); }} aria-haspopup="menu" aria-expanded={userOpen}>

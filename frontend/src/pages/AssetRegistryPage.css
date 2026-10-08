@@ -57,90 +57,7 @@
   font-weight: 700;
 }
 
-/* KPI cards — ported as closely as possible from the AssetsTaggingPage
-   reference's "view-kpis" strip: a per-category total + a status-breakdown
-   ribbon with square colored dots. Deliberately kept as the reference's
-   stark black-bordered "boxy" look rather than blended into this page's
-   softer palette, since matching that reference exactly is the point. */
-.ar-page .view-kpis {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 10px;
-  margin-bottom: 20px;
-}
-.ar-page .view-kpis .card {
-  background: var(--panel);
-  border: 1px solid var(--border, var(--line));
-  border-radius: var(--radius-lg, 9px);
-  padding: 9px 11px;
-  min-height: 112px;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  grid-template-areas:
-    "title value"
-    "subtitle value"
-    "status status";
-  align-items: start;
-  gap: 3px 8px;
-}
-.ar-page .view-kpis .card-title {
-  grid-area: title;
-  margin: 0;
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: var(--text-strong, var(--tx1));
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-.ar-page .view-kpis .card-value {
-  grid-area: value;
-  margin: 0;
-  font-size: 1.3rem;
-  font-weight: 700;
-  color: var(--text-strong, var(--tx1));
-  line-height: 1;
-  justify-self: end;
-}
-.ar-page .view-kpis .card-subtitle {
-  grid-area: subtitle;
-  margin: 0;
-  font-size: 0.68rem;
-  color: var(--tx2);
-}
-.ar-page .view-kpis .card-status-breakdown {
-  grid-area: status;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 4px 10px;
-  margin-top: 6px;
-  padding-top: 6px;
-  border-top: 1px solid var(--border, var(--line));
-}
-.ar-page .view-kpis .status-item {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  min-width: 0;
-  font-size: 0.68rem;
-  color: var(--text, var(--tx2));
-  white-space: nowrap;
-}
-.ar-page .view-kpis .status-item span:last-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.ar-page .view-kpis .status-indicator {
-  width: 7px;
-  height: 7px;
-  border-radius: 0;
-  flex-shrink: 0;
-}
-.ar-page .view-kpis .status-indicator.operational { background: var(--ok); }
-.ar-page .view-kpis .status-indicator.planned { background: var(--acc); }
-.ar-page .view-kpis .status-indicator.under-construction { background: var(--amber); }
-.ar-page .view-kpis .status-indicator.maintenance { background: var(--amber); }
-.ar-page .view-kpis .status-indicator.decommissioned { background: var(--err); }
-
+/* KPI cards: see components/AssetKpiCards.css. */
 /* ── Sidebar rail (browse tree) + main content pane ──────────────────────
    Structured exactly like Network Builder's .nb-page/.nb-rail: a full-height
    flex row sitting directly in .app-content, so the rail is flush against
@@ -148,7 +65,7 @@
    main pane scrolls independently — instead of both being inset inside the
    page's own padding and scrolling the whole browser viewport together. */
 .ar-shell {
-  --left-sidebar-width: 190px;
+  --left-sidebar-width: 248px;
   display: flex;
   height: 100%;
   min-height: 0;
@@ -164,7 +81,8 @@
   --surface-subtle: var(--panel2);
 }
 .ar-rail {
-  --sidebar-border-color: var(--tx1);
+  /* Same hairline as the Network Builder's rails. */
+  --sidebar-border-color: var(--line);
   width: var(--left-sidebar-width);
   flex: 0 0 var(--left-sidebar-width);
   display: flex;
@@ -214,78 +132,6 @@
    button. Mirrors the page's denser data-tool treatment (sharp corners,
    tight row padding, saturated status pills matching the .st palette). The
    8 columns line up header + rows via a shared grid-template. */
-.ar-page .list-wrapper {
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: var(--surface);
-  overflow: hidden;
-}
-.ar-page .list-content {
-  overflow-x: auto;
-}
-.ar-page .no-data {
-  padding: 40px 16px;
-  text-align: center;
-  color: var(--ink-dim);
-  font-size: 0.85rem;
-}
-.ar-page .no-data p {
-  margin: 0;
-}
-
-.ar-page .professional-table {
-  min-width: 900px;
-}
-.ar-page .table-header,
-.ar-page .table-row {
-  display: grid;
-  grid-template-columns:
-    minmax(120px, 1.1fr) minmax(150px, 1.6fr) minmax(90px, 1fr)
-    minmax(110px, 1.2fr) minmax(90px, 1fr) minmax(100px, 1fr)
-    minmax(110px, 0.9fr) 84px;
-  align-items: center;
-  gap: 10px;
-}
-.ar-page .table-header {
-  padding: 9px 14px;
-  background: var(--surface-subtle);
-  border-bottom: 1px solid var(--line);
-}
-.ar-page .table-cell.header {
-  font-size: 0.64rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--ink-dim);
-}
-.ar-page .table-row {
-  padding: 8px 14px;
-  border-bottom: 1px solid var(--line-soft);
-  font-size: 0.78rem;
-  color: var(--ink);
-}
-.ar-page .table-row:last-child {
-  border-bottom: none;
-}
-.ar-page .table-row:hover {
-  background: var(--surface-subtle);
-}
-.ar-page .table-cell {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.ar-page .table-cell .generated-id {
-  font-family: var(--mono);
-  font-size: 0.72rem;
-  color: var(--ink-dim);
-}
-.ar-page .table-cell .asset-name {
-  font-weight: 600;
-  color: var(--ink);
-}
-
 /* Status badge - same palette as the .st pills used elsewhere on this page. */
 .ar-page .status-badge {
   display: inline-flex;
@@ -322,37 +168,6 @@
 }
 
 /* Row actions */
-.ar-page .action-buttons {
-  display: flex;
-  gap: 6px;
-}
-.ar-page .asset-table-action-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  border: 1px solid var(--line);
-  background: var(--surface);
-  color: var(--ink-dim);
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-}
-.ar-page .asset-table-action-btn:hover {
-  background: var(--surface-subtle);
-  color: var(--ink);
-  border-color: var(--line2);
-}
-.ar-page .asset-table-action-btn--view:hover {
-  color: var(--accent);
-  border-color: var(--acc-border);
-}
-.ar-page .asset-table-action-btn--edit:hover {
-  color: var(--warnTx);
-  border-color: var(--amber-border);
-}
-
 /* Map */
 .map-view-container {
   padding: 16px;
@@ -389,12 +204,7 @@
   background: var(--panel2);
   font-family: inherit;
 }
-/* Category divIcon markers: drop Leaflet's default box/border. */
-.leaflet-div-icon.asset-triangle-marker,
-.leaflet-div-icon.asset-square-marker {
-  background: transparent;
-  border: none;
-}
+/* Asset markers: see components/AssetMapView.css. */
 
 /* Detail drawer */
 .adr__cat {
@@ -493,4 +303,137 @@
 
 .af__new {
   align-self: flex-end;
+}
+
+/* ── Map view on this page: framed as a card like the KPI strip and list ─── */
+.ar-page .map-view-container {
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+.ar-page .map-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.ar-page .map-header h3 {
+  margin: 0;
+  color: var(--mut);
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.ar-page .map-header p {
+  margin: 0;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--panel2);
+  color: var(--tx2);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+.ar-page .map-container {
+  height: calc(100vh - 360px);
+  min-height: 420px;
+  border: 0;
+  border-radius: 0;
+}
+
+/* ── Browse rail (AssetRegistrySidebar) ───────────────────────────────────── */
+.ar-browse__type {
+  width: calc(100% - 12px);
+  border: 1px solid transparent;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+}
+.ar-browse__chevron {
+  flex-shrink: 0;
+  margin-right: -4px;
+  color: var(--mut);
+  transition: transform 0.15s ease;
+}
+.ar-browse__type.is-expanded .ar-browse__chevron { transform: rotate(90deg); }
+.ar-browse__children {
+  position: relative;
+  margin: 2px 0 6px 25px;
+}
+/* Guide line tying the assets to their type. */
+.ar-browse__children::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 0;
+  width: 1px;
+  background: var(--line);
+}
+.ar-browse__asset {
+  margin-left: 6px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ar-browse__chevron { transition: none; }
+}
+
+/* ── Create / edit: header card above the form (FormHeading) ──────────────── */
+.ar-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ar-form__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel2);
+}
+.ar-form__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--acc) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--acc) 30%, transparent);
+  color: var(--acc);
+}
+.ar-form__titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.ar-form__eyebrow {
+  color: var(--mut);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.ar-form__title {
+  margin: 0;
+  overflow: hidden;
+  color: var(--tx1);
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ar-form__subtitle {
+  color: var(--mut);
+  font-size: 11.5px;
 }

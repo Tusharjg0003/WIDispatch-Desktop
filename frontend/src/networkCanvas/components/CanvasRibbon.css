@@ -52,13 +52,16 @@
   gap: 4px;
   height: calc(var(--rb-row) * 3 + var(--rb-gap) * 2);
 }
+/* Same treatment as section titles in the side panels. */
 .rb-group__label {
   margin-top: 3px;
   color: var(--mut);
-  font-size: 10px;
-  font-weight: 500;
+  font-size: 9.5px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
   line-height: 13px;
   text-align: center;
+  text-transform: uppercase;
   white-space: nowrap;
 }
 
@@ -82,12 +85,12 @@
   gap: 5px;
   margin: 0;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: 6px;
   background: transparent;
   color: var(--tx1);
   font: inherit;
-  font-size: 11.5px;
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 550;
   line-height: 1.15;
   white-space: nowrap;
   cursor: pointer;
@@ -109,7 +112,7 @@ img.rb-btn__icon {
 
 .rb-btn:hover:not(:disabled) {
   background: var(--rb-hover);
-  border-color: color-mix(in srgb, var(--acc) 22%, transparent);
+  border-color: color-mix(in srgb, var(--acc) 40%, var(--line2));
 }
 .rb-btn:active:not(:disabled),
 .rb-btn.is-active {
@@ -148,17 +151,52 @@ img.rb-btn__icon {
   gap: 1px;
 }
 
-/* Large: icon over a label of up to two lines, full column height. */
+/* Large: icon tile over a label of up to two lines, full column height. */
 .rb-btn--large {
   flex-direction: column;
   justify-content: flex-start;
-  gap: 3px;
-  min-width: 50px;
-  max-width: 76px;
+  gap: 4px;
+  min-width: 54px;
+  max-width: 78px;
   height: 100%;
-  padding: 6px 5px 4px;
+  padding: 5px 5px 4px;
+  font-size: 11.5px;
   white-space: normal;
   text-align: center;
+}
+.rb-btn__tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--rb-tone, var(--acc)) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rb-tone, var(--acc)) 26%, transparent);
+  transition: background-color 0.12s ease, box-shadow 0.12s ease;
+}
+/* Per-type colour (Insert → Assets) via --rb-tone; accent otherwise. */
+.rb-btn__tile .rb-btn__icon {
+  color: var(--rb-tone, var(--acc));
+}
+.rb-btn--large:hover:not(:disabled) .rb-btn__tile {
+  background: color-mix(in srgb, var(--rb-tone, var(--acc)) 22%, transparent);
+}
+.rb-btn--large.is-active .rb-btn__tile {
+  background: var(--rb-tone, var(--acc));
+  box-shadow: none;
+}
+.rb-btn--large.is-active .rb-btn__tile .rb-btn__icon {
+  color: var(--on-accent, #fff);
+}
+/* Asset images (Plant, Tank…) keep their own colours inside the tile. */
+.rb-btn--large.is-active .rb-btn__tile img.rb-btn__icon {
+  filter: brightness(0) invert(1);
+}
+.rb-btn--large:disabled .rb-btn__tile {
+  background: color-mix(in srgb, var(--mut2) 10%, transparent);
+  box-shadow: inset 0 0 0 1px var(--line);
 }
 .rb-btn--large .rb-btn__label {
   display: -webkit-box;
@@ -170,8 +208,18 @@ img.rb-btn__icon {
   margin: -2px 0 0;
 }
 
-/* Primary (Save / Run): filled accent. */
-.rb-btn--primary:not(:disabled) {
+/* Primary (Save / Run): filled accent. A large primary keeps the tile
+   look, with the tile filled instead of the whole button. */
+.rb-btn--large.rb-btn--primary:not(:disabled) {
+  background: transparent;
+  border-color: transparent;
+  color: var(--tx1);
+}
+.rb-btn--large.rb-btn--primary:not(:disabled) .rb-btn__tile {
+  background: var(--acc);
+  box-shadow: none;
+}
+.rb-btn--small.rb-btn--primary:not(:disabled) {
   background: var(--acc);
   border-color: var(--acc);
   color: var(--on-accent, #fff);
@@ -179,7 +227,7 @@ img.rb-btn__icon {
 .rb-btn--primary:not(:disabled) .rb-btn__icon {
   color: var(--on-accent, #fff);
 }
-.rb-btn--primary:hover:not(:disabled) {
+.rb-btn--small.rb-btn--primary:hover:not(:disabled) {
   background: color-mix(in srgb, var(--acc) 86%, #000);
   border-color: color-mix(in srgb, var(--acc) 86%, #000);
 }
@@ -203,10 +251,10 @@ img.rb-btn__icon {
   height: var(--rb-row);
   padding: 0 7px 0 5px;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: 6px;
   color: var(--tx1);
-  font-size: 11.5px;
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 550;
   cursor: pointer;
   user-select: none;
 }

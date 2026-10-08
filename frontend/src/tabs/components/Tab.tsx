@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { X } from "lucide-react";
 
 export interface TabView {
   id: string;
@@ -131,7 +132,7 @@ export default function Tab({
             onClose();
           }}
         >
-          ×
+          <X size={12} aria-hidden="true" />
         </button>
       )}
     </div>

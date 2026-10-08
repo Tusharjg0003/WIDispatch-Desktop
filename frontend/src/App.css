@@ -87,32 +87,172 @@
   .route-loading__spinner { animation: none; }
 }
 
-/* Bottom status bar: Production "Control Room" shell (24px). */
+/* Bottom status bar (StatusBar.jsx), shared by every page. Same language as
+   the panels: colour dots + muted label + bold value, a status pill, a
+   segmented zoom control and accent-tinted toggles. */
 .app-status-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   flex-shrink: 0;
-  height: 24px;
-  padding: 0 12px;
+  height: 28px;
+  padding: 0 8px 0 10px;
   border-top: 1px solid var(--line);
   background: var(--panel);
   color: var(--mut);
-  font-size: 10px;
+  font-size: 11.5px;
   white-space: nowrap;
   overflow: hidden;
 }
-.app-status-bar__left { display: flex; flex: 1; align-items: center; gap: 14px; min-width: 0; overflow: hidden; }
-.app-status-bar__right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
-.app-status-bar__item { display: inline-flex; align-items: center; gap: 4px; }
-.app-status-bar strong { color: var(--tx1); }
-.app-status-bar__dot { display: inline-block; width: 6px; height: 6px; border-radius: 999px; background: var(--mut); }
-.app-status-bar__actions { display: inline-flex; align-items: center; gap: 2px; }
-.app-status-bar__action { min-width: 18px; height: 16px; padding: 0 5px; border: 1px solid var(--line2); border-radius: 4px; background: var(--panel2); color: var(--tx2); font: inherit; font-size: 10px; font-weight: 700; line-height: 1; cursor: pointer; }
-.app-status-bar__action:hover:not(:disabled) { color: var(--tx1); border-color: var(--acc-border); }
-.app-status-bar__toggles { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; }
-.app-status-bar__toggle { display: inline-flex; align-items: center; gap: 4px; height: 18px; padding: 0 6px; border: 1px solid var(--line2); border-radius: 4px; background: transparent; color: var(--mut); font: inherit; font-size: 10px; font-weight: 600; line-height: 1; cursor: pointer; }
-.app-status-bar__toggle:hover { color: var(--tx1); border-color: var(--acc-border); }
-.app-status-bar__toggle--on { color: var(--accTx, var(--acc)); border-color: var(--acc-border); background: var(--acc-soft); }
-.app-status-bar__readout { min-width: 38px; text-align: center; color: var(--tx1); font-weight: 700; font-variant-numeric: tabular-nums; }
+.sb-left {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  min-width: 0;
+  overflow: hidden;
+}
+.sb-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+/* Metric: dot · label · value, with hairline dividers between metrics. */
+.sb-metric {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+.sb-left > .sb-metric { padding: 0 10px; }
+.sb-left > .sb-metric:first-child { padding-left: 0; }
+.sb-left > .sb-metric + .sb-metric { border-left: 1px solid var(--line); }
+.sb-metric__label { color: var(--mut); }
+.sb-metric__value {
+  color: var(--tx1);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.sb-metric__icon { color: var(--mut); }
+.sb-dot {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--mut);
+}
+
+/* Status pill (e.g. Saved / Unsaved), tinted by its tone. */
+.sb-pill {
+  --sb-tone: var(--mut);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  height: 18px;
+  margin: 0 10px;
+  padding: 0 8px;
+  border: 1px solid color-mix(in srgb, var(--sb-tone) 40%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--sb-tone) 12%, transparent);
+  color: color-mix(in srgb, var(--sb-tone) 70%, var(--tx1));
+  font-weight: 600;
+}
+.sb-pill:first-child { margin-left: 0; }
+.sb-pill > .sb-dot { background: var(--sb-tone); }
+
+/* Buttons / segmented control. */
+.sb-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.sb-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--line2);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--tx2);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+.sb-btn--icon { width: 22px; padding: 0; }
+.sb-btn:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--acc) 40%, var(--line2));
+  background: color-mix(in srgb, var(--acc) 10%, transparent);
+  color: var(--tx1);
+}
+.sb-btn:disabled { opacity: 0.5; cursor: default; }
+.sb-btn:focus-visible,
+.sb-toggle:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 1px;
+}
+.sb-segment {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  overflow: hidden;
+  border: 1px solid var(--line2);
+  border-radius: 6px;
+}
+.sb-segment .sb-btn {
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.sb-segment__readout {
+  min-width: 42px;
+  padding: 0 4px;
+  border-left: 1px solid var(--line2);
+  border-right: 1px solid var(--line2);
+  color: var(--tx1);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+/* Panel toggles. */
+.sb-toggles {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.sb-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--mut);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+.sb-toggle:hover {
+  border-color: var(--line2);
+  color: var(--tx1);
+}
+.sb-toggle.is-on {
+  border-color: color-mix(in srgb, var(--acc) 40%, transparent);
+  background: color-mix(in srgb, var(--acc) 12%, transparent);
+  color: var(--accTx, var(--acc));
+}
+.sb-brand { color: var(--mut2); }

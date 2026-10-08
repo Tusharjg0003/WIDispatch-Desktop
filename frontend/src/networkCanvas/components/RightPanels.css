@@ -1,0 +1,371 @@
+/* Right panel → Validation and Isolation tabs (ValidationPanel,
+   IsolationPanel). Same build as the Details card (SelectionInspector.css)
+   and the legend (CanvasLegend.css): header tile, uppercase section titles,
+   bordered lists of colour-coded rows. Global theme tokens only. */
+
+.rp {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ── Header card ─────────────────────────────────────────────────────────── */
+.rp-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel2);
+}
+.rp-head__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--acc) 16%, transparent);
+  color: var(--acc);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--acc) 30%, transparent);
+}
+.rp-head__titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.rp-head__eyebrow {
+  color: var(--mut);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.rp-head__title {
+  margin: 0;
+  color: var(--tx1);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.25;
+}
+.rp-head__subtitle {
+  color: var(--mut);
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+.rp-head__subtitle strong {
+  color: var(--tx1);
+  font-weight: 600;
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+.rp-actions {
+  display: flex;
+  gap: 6px;
+}
+.rp-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--line2);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--tx1);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 550;
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+.rp-btn:hover {
+  border-color: color-mix(in srgb, var(--acc) 40%, var(--line2));
+  background: color-mix(in srgb, var(--acc) 10%, transparent);
+}
+.rp-btn:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 1px;
+}
+.rp-btn--primary {
+  border-color: var(--acc);
+  background: var(--acc);
+  color: var(--on-accent, #fff);
+}
+.rp-btn--primary:hover {
+  border-color: color-mix(in srgb, var(--acc) 86%, #000);
+  background: color-mix(in srgb, var(--acc) 86%, #000);
+}
+
+/* ── Stat tiles (validation counts) ──────────────────────────────────────── */
+.rp-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.rp-stat {
+  --rp-tone: var(--acc);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 7px 9px;
+  border: 1px solid color-mix(in srgb, var(--rp-tone) 30%, var(--line));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--rp-tone) 9%, transparent);
+}
+.rp-stat__value {
+  color: var(--rp-tone);
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.rp-stat__label {
+  color: var(--tx2);
+  font-size: 10.5px;
+  font-weight: 550;
+}
+.rp-stat.is-zero {
+  --rp-tone: var(--mut2);
+  border-color: var(--line);
+  background: transparent;
+}
+.rp-stat--err { --rp-tone: var(--err); }
+.rp-stat--warn { --rp-tone: var(--warn, #f59e0b); }
+.rp-stat--acc { --rp-tone: var(--acc); }
+
+/* ── Sections & lists ─────────────────────────────────────────────────────── */
+.rp-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.rp-section__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.rp-section__title {
+  margin: 0;
+  color: var(--mut);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.rp-count {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--panel2);
+  color: var(--tx2);
+  font-size: 10px;
+  font-weight: 650;
+}
+.rp-list {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  list-style: none;
+}
+.rp-list > li + li {
+  border-top: 1px solid var(--line);
+}
+
+/* Row: tile + name/sub + trailing affordance. */
+.rp-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 9px;
+  border: 0;
+  background: transparent;
+  color: var(--tx1);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+.rp-row:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--acc) 8%, transparent);
+}
+.rp-row:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: -2px;
+}
+.rp-row:disabled {
+  cursor: default;
+}
+.rp-row:disabled:not(.is-static) {
+  opacity: 0.5;
+}
+.rp-row__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+.rp-row__name {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rp-row__sub {
+  overflow: hidden;
+  color: var(--mut);
+  font-size: 11px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rp-row__sub--wrap {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+.rp-row__go {
+  flex-shrink: 0;
+  color: var(--mut);
+}
+.rp-row:hover .rp-row__go {
+  color: var(--acc);
+}
+
+/* Colour-coded tile (severity or tree level). */
+.rp-tile {
+  --rp-tone: var(--acc);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--rp-tone) 16%, transparent);
+  color: var(--rp-tone);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rp-tone) 28%, transparent);
+}
+.rp-tile--err { --rp-tone: var(--err); }
+.rp-tile--warn { --rp-tone: var(--warn, #f59e0b); }
+.rp-tile--acc { --rp-tone: var(--acc); }
+.rp-tile--ok { --rp-tone: var(--ok); }
+.rp-tile--system { --rp-tone: var(--acc); }
+.rp-tile--line { --rp-tone: #8b5cf6; }
+.rp-tile--branch { --rp-tone: #ec4899; }
+.rp-tile--pipe { --rp-tone: #5b7ca3; }
+
+.rp-tag {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--acc-soft);
+  color: var(--accTx);
+  font-size: 10px;
+  font-weight: 650;
+}
+
+/* ── Isolation tree ───────────────────────────────────────────────────────── */
+.rp-tree {
+  overflow: hidden;
+  padding: 3px 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.rp-tree__group + .rp-tree__group {
+  margin-top: 3px;
+  padding-top: 3px;
+  border-top: 1px solid var(--line);
+}
+.rp-tree__row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding-left: calc(var(--depth, 0) * 18px);
+}
+/* Indentation guide for nested rows. */
+.rp-tree__row--nested::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--depth) * 18px - 6px);
+  width: 1px;
+  background: var(--line);
+}
+.rp-tree__row .rp-row {
+  padding-top: 5px;
+  padding-bottom: 5px;
+  border-radius: 6px;
+}
+.rp-tree__row .rp-row.is-active {
+  background: color-mix(in srgb, var(--acc) 14%, transparent);
+  box-shadow: inset 2px 0 0 var(--acc);
+}
+.rp-tree__toggle,
+.rp-tree__spacer {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin-left: 4px;
+}
+.rp-tree__toggle {
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--mut);
+  cursor: pointer;
+}
+.rp-tree__toggle:hover {
+  background: var(--panel2);
+  color: var(--tx1);
+}
+.rp-tree__toggle:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 0;
+}
+.rp-tree__note {
+  padding: 4px 10px 6px calc(var(--depth, 0) * 18px + 34px);
+  color: var(--mut);
+  font-size: 11px;
+}
+
+/* ── Empty / success states ──────────────────────────────────────────────── */
+.rp-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 18px 12px;
+  border: 1px dashed var(--line2);
+  border-radius: 8px;
+  color: var(--mut);
+  font-size: 12px;
+  line-height: 1.45;
+  text-align: center;
+}
+.rp-empty svg {
+  color: var(--mut2);
+}
+.rp-empty--ok {
+  border-style: solid;
+  border-color: var(--ok-border);
+  background: var(--ok-soft);
+  color: var(--okTx);
+}
+.rp-empty--ok svg {
+  color: var(--ok);
+}

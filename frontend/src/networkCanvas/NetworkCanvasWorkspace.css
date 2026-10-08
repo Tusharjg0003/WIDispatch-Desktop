@@ -117,14 +117,20 @@
   padding: 4px;
 }
 
+/* Canvas view controls: one floating segmented toolbar (same build as the
+   footer's zoom control) — icon buttons divided by hairlines. */
 .nb-canvas-controls {
   position: absolute;
   top: 10px;
   right: 10px;
   z-index: 7;
   display: flex;
-  align-items: center;
-  gap: 6px;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid var(--line2);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.14);
 }
 
 .nb-canvas-ctl {
@@ -134,32 +140,28 @@
   width: 30px;
   height: 30px;
   padding: 0;
-  border: 1px solid var(--line2);
-  border-radius: 4px;
-  background: var(--panel);
-  color: var(--tx1);
-  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
+  border: 0;
+  background: transparent;
+  color: var(--tx2);
   cursor: pointer;
-  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease, box-shadow 0.12s ease;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+.nb-canvas-ctl + .nb-canvas-ctl {
+  border-left: 1px solid var(--line);
 }
 
-.nb-canvas-ctl svg,
-.nb-canvas-ctl img {
-  width: 13px;
-  height: 13px;
-  color: currentColor;
+.nb-canvas-ctl:hover {
+  background: color-mix(in srgb, var(--acc) 10%, transparent);
+  color: var(--tx1);
 }
-
-.nb-canvas-ctl:hover,
 .nb-canvas-ctl.is-active {
-  border-color: var(--acc-border);
-  background: var(--panel2);
-  color: var(--accTx);
+  background: color-mix(in srgb, var(--acc) 16%, transparent);
+  color: var(--accTx, var(--acc));
 }
 
 .nb-canvas-ctl:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--acc-border);
+  outline: 2px solid var(--acc);
+  outline-offset: -2px;
 }
 
 .nb-page--place-asset .nb-canvas,
@@ -525,282 +527,6 @@
   font-size: 0.6875rem;
 }
 
-.ns2-adv-toggle {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  margin-bottom: 10px;
-}
-
-.ns2-adv-toggle-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  height: 28px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: var(--panel2);
-  color: var(--tx2);
-  font-size: 0.75rem;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.ns2-adv-toggle-btn--active {
-  border-color: var(--acc-border);
-  background: var(--acc-soft);
-  color: var(--accTx);
-}
-
-.ns2-issues-summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 9px;
-  margin-bottom: 10px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--panel2);
-}
-
-.ns2-issues-title {
-  color: var(--tx1);
-  font-size: 0.8125rem;
-  font-weight: 800;
-}
-
-.ns2-issues-subtitle,
-.ns2-find-meta {
-  color: var(--mut);
-  font-size: 0.6875rem;
-  margin-top: 2px;
-}
-
-.ns2-issue-list,
-.ns2-find-results {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.ns2-issue-row,
-.ns2-find-row {
-  display: flex;
-  width: 100%;
-  gap: 8px;
-  padding: 8px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--panel);
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.ns2-issue-row:disabled {
-  cursor: default;
-}
-
-.ns2-issue-row:hover:not(:disabled),
-.ns2-find-row:hover {
-  border-color: var(--acc-border);
-  background: var(--panel);
-}
-
-.ns2-issue-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  background: var(--panel2);
-  color: var(--mut2);
-  font-size: 0.625rem;
-  font-weight: 900;
-}
-
-.ns2-issue-row--error .ns2-issue-icon {
-  background: var(--err-soft);
-  color: var(--errTx);
-}
-
-.ns2-issue-row--warning .ns2-issue-icon {
-  background: var(--warn-soft);
-  color: var(--warnTx);
-}
-
-.ns2-issue-row--success .ns2-issue-icon {
-  background: var(--ok-soft);
-  color: var(--okTx);
-}
-
-.ns2-issue-copy,
-.ns2-find-row {
-  min-width: 0;
-}
-
-.ns2-issue-copy,
-.ns2-find-row {
-  display: flex;
-  flex-direction: column;
-}
-
-.ns2-issue-title,
-.ns2-find-name {
-  display: block;
-  color: var(--tx1);
-  font-size: 0.75rem;
-  font-weight: 800;
-  line-height: 1.2;
-}
-
-.ns2-issue-detail,
-.ns2-find-detail {
-  display: block;
-  margin-top: 2px;
-  color: var(--mut);
-  font-size: 0.6875rem;
-  line-height: 1.25;
-}
-
-.ns2-find-panel .ns2-input {
-  margin-bottom: 6px;
-}
-
-.ns2-find-meta {
-  margin-bottom: 8px;
-}
-
-.ns2-trace-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.ns2-trace-summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 9px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--panel2);
-}
-
-.ns2-trace-root {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--tx1);
-  font-size: 0.8125rem;
-  font-weight: 800;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ns2-trace-subtitle {
-  margin-top: 2px;
-  color: var(--mut);
-  font-size: 0.6875rem;
-  line-height: 1.25;
-}
-
-.ns2-trace-stats {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-.ns2-trace-stat {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 2px 8px;
-  padding: 9px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--panel);
-}
-
-.ns2-trace-stat span {
-  color: var(--mut);
-  font-size: 0.6875rem;
-  font-weight: 700;
-}
-
-.ns2-trace-stat strong {
-  color: var(--tx1);
-  font-size: 1rem;
-  line-height: 1;
-}
-
-.ns2-trace-stat small {
-  grid-column: 1 / -1;
-  color: var(--mut);
-  font-size: 0.6875rem;
-}
-
-.ns2-trace-section {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.ns2-trace-section__title {
-  color: var(--tx1);
-  font-size: 0.6875rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.ns2-trace-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.ns2-trace-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 8px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--panel);
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.ns2-trace-row:hover {
-  border-color: var(--acc-border);
-  background: var(--panel);
-}
-
-.ns2-trace-row__name {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--tx1);
-  font-size: 0.75rem;
-  font-weight: 800;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ns2-trace-row__flow,
-.ns2-trace-row__type {
-  color: var(--mut);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
 .ns2-panel-empty {
   padding: 0;
 }
@@ -841,158 +567,6 @@
 }
 .ns2-input:focus {
   border-color: var(--acc);
-  background: var(--panel);
-}
-
-.ns2-isolation-tools {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-  padding: 8px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--panel);
-}
-
-.ns2-isolation-status {
-  color: var(--mut2);
-  font-size: 0.75rem;
-  line-height: 1.35;
-}
-
-.ns2-isolation-tree {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.ns2-isolation-tree__title {
-  color: var(--tx1);
-  font-size: 0.6875rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.ns2-isolation-tree__system,
-.ns2-isolation-tree__ungrouped {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 8px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--panel2);
-}
-
-.ns2-isolation-tree__children,
-.ns2-isolation-tree__line {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.ns2-isolation-tree__row {
-  display: flex;
-  align-items: stretch;
-  gap: 6px;
-  min-width: 0;
-}
-
-.ns2-isolation-tree__row--line {
-  margin-left: 10px;
-}
-
-.ns2-isolation-tree__row--segment {
-  margin-left: 20px;
-}
-
-.ns2-isolation-tree__focus {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 2px 6px;
-  align-items: center;
-  width: 100%;
-  min-width: 0;
-  padding: 7px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--panel);
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.ns2-isolation-tree__focus:disabled {
-  cursor: default;
-}
-
-.ns2-isolation-tree__focus:hover:not(:disabled) {
-  border-color: var(--acc-border);
-  background: var(--panel);
-}
-
-.ns2-isolation-tree__focus--active,
-.ns2-isolation-tree__focus--active:hover:not(:disabled) {
-  border-color: var(--ok);
-  box-shadow: 0 0 0 2px var(--ok-border);
-  background: var(--ok-soft);
-}
-
-.ns2-isolation-tree__focus--active .ns2-isolation-tree__level {
-  background: var(--ok-soft);
-  color: var(--okTx);
-}
-
-.ns2-isolation-tree__focus strong {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--tx1);
-  font-size: 0.75rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ns2-isolation-tree__focus small {
-  grid-column: 2;
-  min-width: 0;
-  overflow: hidden;
-  color: var(--mut);
-  font-size: 0.6875rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ns2-isolation-tree__level {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 42px;
-  height: 18px;
-  padding: 0 5px;
-  border-radius: 9px;
-  background: var(--panel2);
-  color: var(--accTx);
-  font-size: 0.5625rem;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-}
-
-.ns2-isolation-tree__branch-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 12px;
-  color: var(--mut2);
-  font-size: 0.75rem;
-}
-
-.ns2-isolation-tree__empty {
-  padding: 8px;
-  color: var(--mut);
-  font-size: 0.75rem;
-  border: 1px dashed var(--line2);
-  border-radius: 6px;
   background: var(--panel);
 }
 
@@ -1307,173 +881,6 @@
   border-radius: 3px;
 }
 
-.ns2-legend {
-  width: 100%;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--panel);
-  color: var(--tx2);
-  overflow: hidden;
-}
-
-.ns2-legend__title {
-  padding: 9px 10px 8px;
-  border-bottom: 1px solid var(--line);
-  color: var(--tx1);
-  font-size: 0.6875rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  line-height: 1;
-  text-transform: uppercase;
-}
-
-.ns2-legend__section {
-  padding: 8px 10px 9px;
-  border-bottom: 1px solid var(--line-soft);
-}
-
-.ns2-legend__section:last-child {
-  border-bottom: 0;
-}
-
-.ns2-legend__section-title {
-  margin-bottom: 7px;
-  color: var(--mut);
-  font-size: 0.625rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  line-height: 1;
-  text-transform: uppercase;
-}
-
-.ns2-legend__grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px 8px;
-}
-
-.ns2-legend__item {
-  display: grid;
-  grid-template-columns: 24px minmax(0, 1fr);
-  align-items: center;
-  min-width: 0;
-  min-height: 20px;
-}
-
-.ns2-legend__label {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--tx2);
-  font-size: 0.71875rem;
-  font-weight: 600;
-  line-height: 1.2;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* Rings, because that is how a node reports its status on the canvas: the
-   symbol's fill is its type and its border is its lifecycle. */
-.ns2-legend__status {
-  justify-self: start;
-  width: 11px;
-  height: 11px;
-  border: 2px solid var(--line2);
-  border-radius: 50%;
-  background: var(--panel);
-}
-
-.ns2-legend__status--planned {
-  border-color: var(--acc);
-}
-
-.ns2-legend__status--operational {
-  border-color: var(--ok);
-}
-
-.ns2-legend__status--construction {
-  border-color: var(--amber);
-}
-
-.ns2-legend__status--inactive {
-  border-color: var(--line2);
-  border-style: dashed;
-}
-
-/* The amber dot the symbol carries when an asset's capacity is capped. */
-.ns2-legend__status--capacity-limited {
-  width: 9px;
-  height: 9px;
-  border: 1.5px solid var(--panel);
-  background: var(--amber);
-  box-shadow: 0 0 0 1px var(--amber-border);
-}
-
-.ns2-legend__hint {
-  margin-bottom: 8px;
-  font-size: 0.6875rem;
-  line-height: 1.35;
-  color: var(--ink-dim);
-}
-.ns2-legend__hint--footer {
-  margin: 10px 0 0;
-  padding-top: 8px;
-  border-top: 1px solid var(--line);
-}
-
-.ns2-legend__asset {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  justify-self: start;
-  width: 18px;
-  height: 18px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: var(--panel2);
-  color: var(--mut2);
-}
-
-.ns2-legend__asset-text {
-  color: var(--mut2);
-  font-size: 0.5625rem;
-  font-weight: 800;
-  line-height: 1;
-}
-
-.ns2-legend__junction {
-  width: 8px;
-  height: 8px;
-  border: 2px solid var(--panel);
-  border-radius: 50%;
-  background: var(--mut);
-  box-shadow: 0 0 0 1px var(--line2);
-}
-
-.ns2-legend__line {
-  justify-self: start;
-  width: 22px;
-  height: 0;
-  border-top: 3px solid var(--warn);
-  border-radius: 2px;
-}
-
-.ns2-legend__line--capacity {
-  border-top-color: var(--warn);
-}
-
-.ns2-legend__line--utilisation {
-  border-top-color: var(--chart-purple);
-}
-
-.ns2-legend__line--bottleneck,
-.ns2-legend__line--shortage {
-  border-top-color: var(--err);
-}
-
-.ns2-legend__line--dashed {
-  border-top-style: dashed;
-}
-
 /* ── Saved-networks rail (fixed, far left) ─────────────────────────────────
    Content is the generic WorkspaceRecordSidebar (see components/); this just
    supplies the rail's fixed width/border/scroll. ── */
@@ -1786,13 +1193,13 @@
   min-width: 0;
 }
 
-/* Builder: the ribbon sits at the top of the canvas column, between the
-   rails. Negative margins cancel .nb-workspace's padding so it runs flush. */
-.nb-workspace > .nb-chrome {
-  flex: 0 0 auto;
-  width: auto;
-  margin: -6px -6px 6px;
+/* Under the page-wide tab bar, the ribbon closes the toolbar slot with a
+   hairline above the side rails and canvas. */
+.nb-chrome > .nb-ribbon {
   border-bottom: 1px solid var(--line);
+}
+.nb-chrome > .nb-ribbon.nb-ribbon--collapsed {
+  border-bottom: 0;
 }
 
 /* Geographic map view — full-bleed overlay over the schematic canvas while the
@@ -1806,10 +1213,15 @@
 
 /* ── Ribbon tabs (SWIIMS WIPlan: Home / Insert / Edit / View / Tools) ─────── */
 .nb-ribbon { display: flex; flex-direction: column; min-width: 0; background: var(--panel); }
-.nb-ribbon__tabs { display: flex; align-items: flex-end; gap: 2px; padding: 3px 8px 0; border-bottom: 1px solid var(--line); background: var(--headBg); }
-.nb-ribbon__tab { height: 24px; padding: 0 12px; border: 1px solid transparent; border-bottom: 0; border-radius: 6px 6px 0 0; background: transparent; color: var(--mut); font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; margin-bottom: -1px; }
-.nb-ribbon__tab:hover { color: var(--tx1); background: var(--chip); }
-.nb-ribbon__tab--active { color: var(--accTx); background: var(--panel); border-color: var(--line); box-shadow: inset 0 2px 0 var(--acc); }
+/* Underline tabs, the same pattern as the panels' second-level tabs. */
+.nb-ribbon__tabs { display: flex; align-items: stretch; gap: 16px; height: 32px; padding: 0 12px; border-bottom: 1px solid var(--line); background: var(--panel); }
+.nb-ribbon__tab { position: relative; padding: 0 2px; border: 0; background: transparent; color: var(--mut); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; transition: color 0.12s ease; }
+.nb-ribbon__tab::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; border-radius: 2px 2px 0 0; background: transparent; transition: background-color 0.12s ease; }
+.nb-ribbon__tab:hover { color: var(--tx1); }
+.nb-ribbon__tab:hover::after { background: var(--line2); }
+.nb-ribbon__tab--active { color: var(--accTx, var(--acc)); }
+.nb-ribbon__tab--active::after, .nb-ribbon__tab--active:hover::after { background: var(--acc); }
+.nb-ribbon__tab:focus-visible { outline: 2px solid var(--acc); outline-offset: -4px; border-radius: 4px; }
 .nb-ribbon__contextual-label { margin-left: auto; align-self: center; padding: 0 8px; border-radius: 4px; background: var(--amber-soft); color: var(--amberTx); font-size: 9px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; }
 
 /* Draw Route live preview (SWIIMS segmented-line preview). */
@@ -1894,19 +1306,20 @@
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   border: 1px solid transparent;
-  border-radius: 5px;
+  border-radius: 6px;
   background: transparent;
   color: var(--mut);
   cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
 .nb-collapse-btn:hover {
   color: var(--tx1);
-  background: var(--chip);
-  border-color: var(--line);
+  background: color-mix(in srgb, var(--acc) 10%, transparent);
+  border-color: color-mix(in srgb, var(--acc) 40%, var(--line2));
 }
 .nb-collapse-btn:focus-visible {
   outline: 2px solid var(--acc);
@@ -1925,7 +1338,7 @@
 /* Ribbon: collapse chevron pinned to the right of the tab row. */
 .nb-ribbon__collapse {
   align-self: center;
-  margin: 0 0 2px auto;
+  margin: 0 -6px 0 auto;
 }
 .nb-ribbon__contextual-label + .nb-ribbon__collapse {
   margin-left: 6px;

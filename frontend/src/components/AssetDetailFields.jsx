@@ -1,57 +1,68 @@
 import React from "react";
 
-const clean = (v) => (v == null || v === "" || v === "NULL" ? null : v);
-const dash = (v) => clean(v) ?? "N/A";
-const plantTypeLabel = (t) => (t === "water_purification" ? "Water Purification" : "Seawater Desalination");
-const statusLabel = (s) => (s ? s.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase()) : "N/A");
-const statusBadgeClass = (s) => (s === "operational" ? "in-operation" : s || "unknown");
-const statusBadgeText = (s) => (s === "operational" ? "In Operation" : statusLabel(s));
-const isFunctionalPump = (pump) =>
-  ["active", "functional"].includes(String(pump?.role || "").toLowerCase());
-const isBackupPump = (pump) =>
-  ["standby", "backup"].includes(String(pump?.role || "").toLowerCase());
-const formatDateTime = (value) => {
-  if (!value) return null;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString();
-};
+// Read-only detail sections for one asset (asset view page). Each section is
+// a card with an uppercase header row and a label / value grid — values read
+// as text, not as input boxes. Which sections show depends on the category
+// (production plant, treatment plant, pump station, tank, city gate).
 
-// Field: label + value cell, inline (label left, value right), matching the
-// reference form-group/form-display layout.
-function Field({ label, value, full }) {
-  return (
-    <div className={`form-group${full ? " full-width" : ""}`}>
-      <label>{label}</label>
-      <div className="form-display">{dash(value)}</div>
-    </div>
-  );
-}
+const clean = (v) => (v == null || v === "" || v === "NULL" ? null : v);
+const plantTypeLabel = (t) => (t === "water_purification" ? "Water purification" : "Seawater desalination");
+const isFunctionalPump = (pump) => ["active", "functional"].includes(String(pump?.role || "").toLowerCase());
+const isBackupPump = (pump) => ["standby", "backup"].includes(String(pump?.role || "").toLowerCase());
+const number = (v, unit) => {
+  const raw = clean(v);
+  if (raw == null) return null;
+  const n = Number(raw);
+  const text = Number.isFinite(n) ? n.toLocaleString(undefined, { maximumFractionDigits: 3 }) : String(raw);
+  return unit ? `${text} ${unit}` : text;
+};
+export const formatDate = (value) => {
+  if (!clean(value)) return null;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+};
 
 function pumpNameList(pumps, fallback) {
   if (!Array.isArray(pumps) || pumps.length === 0) return null;
   return pumps.map((pump, index) => pump.name || pump.id || `${fallback} ${index + 1}`).join(", ");
 }
 
-// Granular project-lifetime formatter — years when >= 1yr, else months, else
-// days. Ported from the reference's calculateProjectLifetime.
+// Years when ≥ 1 year, else months, else days.
 function projectLifetime(startDate, endDate) {
   if (!startDate || !endDate) return null;
   const start = new Date(startDate).getTime();
   const end = new Date(endDate).getTime();
   if (Number.isNaN(start) || Number.isNaN(end) || end <= start) return null;
   const diffMs = end - start;
-  const diffYears = diffMs / (1000 * 60 * 60 * 24 * 365.25);
-  if (diffYears >= 1) return `${diffYears.toFixed(1)} years`;
-  const diffMonths = diffMs / (1000 * 60 * 60 * 24 * 30.4375);
-  if (diffMonths >= 1) return `${diffMonths.toFixed(1)} months`;
-  const diffDays = diffMs / (1000 * 60 * 60 * 24);
-  return `${Math.floor(diffDays)} days`;
+  const years = diffMs / (1000 * 60 * 60 * 24 * 365.25);
+  if (years >= 1) return `${years.toFixed(1)} years`;
+  const months = diffMs / (1000 * 60 * 60 * 24 * 30.4375);
+  if (months >= 1) return `${months.toFixed(1)} months`;
+  return `${Math.floor(diffMs / (1000 * 60 * 60 * 24))} days`;
 }
 
-// Read-only field sections for a single asset (plant or pump station),
-// rendered as the same 3-column inline form-grid the reference app uses for
-// General Information / Asset Specifications / Financial Breakdown.
+/** One card: header row + label/value grid. Rows are [label, value, options]. */
+export function DetailCard({ title, rows = [], children, wide = false }) {
+  return (
+    <section className={`ad-card${wide ? " ad-card--wide" : ""}`} aria-label={title}>
+      <h3 className="ad-card__title">{title}</h3>
+      {rows.length > 0 && (
+        <dl className="ad-grid">
+          {rows.map(([label, value, opts = {}]) => (
+            <div key={label} className={`ad-field${opts.full ? " ad-field--full" : ""}`}>
+              <dt>{label}</dt>
+              <dd className={opts.mono ? "ad-mono" : undefined} dir={opts.dir}>
+                {clean(value) ?? <span className="ad-empty">—</span>}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      {children}
+    </section>
+  );
+}
+
 export default function AssetDetailFields({ asset }) {
   const spec = asset.specifications || {};
   const isProduction = asset.category === "plant" && spec.plant_category !== "treatment";
@@ -63,151 +74,140 @@ export default function AssetDetailFields({ asset }) {
 
   return (
     <>
-      <div className="form-content">
-        <h3>General Information</h3>
-        <div className="form-grid">
-          <Field label="Generated ID" value={asset.generated_id || asset.id} />
-          <Field label="Created" value={formatDateTime(asset.created_at)} />
-          <Field label="Last Updated" value={formatDateTime(asset.updated_at)} />
-          <Field label="External ID" value={asset.external_id} />
-          <Field label="Asset Name (EN)" value={asset.name} />
-          <Field label="Asset Name (AR)" value={asset.asset_name_ar} />
-          <Field label="Cluster" value={asset.cluster} />
-          <Field label="Region" value={asset.region} />
-          <Field label="Governorate" value={asset.governorate} />
-          <Field label="City" value={asset.city} />
-          <Field label="Entity" value={asset.entity} />
-          <Field label="Entity Type" value={asset.entity_type} />
-          <div className="form-group">
-            <label>Operational Status</label>
-            <div className="form-display">
-              <span className={`status-badge ${statusBadgeClass(asset.status)}`}>
-                {statusBadgeText(asset.status)}
-              </span>
-            </div>
-          </div>
-          <Field label="Activity" value={asset.activity} />
-          <Field label="Asset Type" value={asset.asset_type} />
-          <Field label="Commissioning Date" value={asset.commissioning_date} />
-          <Field label="Decommissioning Date" value={asset.decommissioning_date} />
-        </div>
-      </div>
+      <DetailCard
+        title="General information"
+        rows={[
+          ["Asset name (EN)", asset.name],
+          ["Asset name (AR)", asset.asset_name_ar, { dir: "rtl" }],
+          ["Activity", asset.activity],
+          ["Asset type", asset.asset_type],
+          ["Region", asset.region],
+          ["Governorate", asset.governorate],
+          ["City", asset.city],
+          ["Cluster", asset.cluster],
+          ["Entity", asset.entity],
+          ["Entity type", asset.entity_type],
+          ["Commissioned", formatDate(asset.commissioning_date)],
+          ["Decommissioned", formatDate(asset.decommissioning_date)],
+        ]}
+      />
 
-      {asset.category === "plant" && (isProduction || isTreatment) && (
-        <div className="form-section">
-          <h3>Asset Specifications</h3>
-          <div className="form-grid">
-            {isProduction && (
-              <>
-                <Field label="Plant Type" value={spec.plant_type && plantTypeLabel(spec.plant_type)} />
-                <Field label="PSID" value={spec.psid} />
-                <Field label="Dispatch ID" value={spec.dispatch_id} />
-                <Field label="Production System" value={spec.production_system} />
-                <Field label="Water Source" value={spec.water_source} />
-                <Field label="Technology" value={spec.technology} />
-                <Field label="Design Capacity (m³/day)" value={spec.design_capacity} />
-                <Field label="Maximum Capacity (m³/day)" value={spec.maximum_capacity} />
-                <Field label="Contracted Capacity (m³/day)" value={spec.contracted_capacity} />
-                <Field label="Fund Status" value={spec.fund_status} />
-                <Field label="Plant Manager" value={spec.plant_manager_name} />
-                <Field label="Phone Number" value={spec.phone_number} />
-                <Field label="Source" value={spec.source} />
-              </>
-            )}
-            {isTreatment && (
-              <>
-                <Field label="Maximum Capacity (m³/day)" value={spec.maximum_capacity} />
-                <Field label="Expansion Date" value={spec.expansion_date} />
-                <Field label="Treatment Level" value={spec.treatment_level} />
-                <Field label="Design Capacity (m³/day)" value={spec.design_capacity} />
-                <Field label="Expansion Capacity (m³/day)" value={spec.expansion_capacity} />
-                <Field label="Source" value={spec.source} />
-              </>
-            )}
-          </div>
-        </div>
+      {asset.category === "plant" && isProduction && (
+        <DetailCard
+          title="Specifications"
+          rows={[
+            ["Plant type", spec.plant_type && plantTypeLabel(spec.plant_type)],
+            ["Technology", spec.technology],
+            ["Water source", spec.water_source],
+            ["Production system", spec.production_system],
+            ["Design capacity", number(spec.design_capacity, "m³/day")],
+            ["Maximum capacity", number(spec.maximum_capacity, "m³/day")],
+            ["Contracted capacity", number(spec.contracted_capacity, "m³/day")],
+            ["PSID", spec.psid, { mono: true }],
+            ["Dispatch ID", spec.dispatch_id, { mono: true }],
+            ["Fund status", spec.fund_status],
+            ["Plant manager", spec.plant_manager_name],
+            ["Phone number", spec.phone_number],
+            ["Source", spec.source],
+          ]}
+        />
+      )}
+
+      {asset.category === "plant" && isTreatment && (
+        <DetailCard
+          title="Specifications"
+          rows={[
+            ["Treatment level", spec.treatment_level],
+            ["Design capacity", number(spec.design_capacity, "m³/day")],
+            ["Maximum capacity", number(spec.maximum_capacity, "m³/day")],
+            ["Expansion capacity", number(spec.expansion_capacity, "m³/day")],
+            ["Expansion date", formatDate(spec.expansion_date)],
+            ["Source", spec.source],
+          ]}
+        />
       )}
 
       {isProduction && (spec.ccr != null || spec.fixed_om != null || spec.variable_om != null || spec.capex != null) && (
-        <div className="form-section">
-          <h3>Financial Breakdown</h3>
-          <div className="form-grid">
-            <Field label="CCR (SAR/month)" value={spec.ccr} />
-            <Field label="Fixed O&M (SAR/month)" value={spec.fixed_om} />
-            <Field label="Variable O&M (SAR/m³)" value={spec.variable_om} />
-            <Field label="CAPEX (SAR)" value={spec.capex} />
-          </div>
-          <div className="form-grid">
-            <Field label="Project Lifetime" value={lifetime} />
-          </div>
-        </div>
+        <DetailCard
+          title="Financials"
+          rows={[
+            ["CCR", number(spec.ccr, "SAR / month")],
+            ["Fixed O&M", number(spec.fixed_om, "SAR / month")],
+            ["Variable O&M", number(spec.variable_om, "SAR / m³")],
+            ["CAPEX", number(spec.capex, "SAR")],
+            ["Project lifetime", lifetime],
+          ]}
+        />
       )}
 
       {asset.category === "pump" && (
-        <div className="form-section">
-          <h3>Asset Specifications</h3>
-          <div className="form-grid">
-            <Field label="Design Capacity (m³/day)" value={spec.design_capacity} />
-            <Field label="Active Pumps" value={pumpNameList(activePumps, "Functional pump")} />
-            <Field label="Standby Pumps" value={pumpNameList(standbyPumps, "Backup pump")} />
-          </div>
-        </div>
+        <DetailCard
+          title="Specifications"
+          rows={[
+            ["Design capacity", number(spec.design_capacity, "m³/day")],
+            ["Duty pumps", pumpNameList(activePumps, "Duty pump"), { full: true }],
+            ["Standby pumps", pumpNameList(standbyPumps, "Standby pump"), { full: true }],
+          ]}
+        />
       )}
 
-      {asset.category === "pump" && Array.isArray(spec.pumps) && spec.pumps.length > 0 && (
-        <div className="form-section">
-          <h3>Pump Configuration</h3>
-          <table className="pump-config-table">
+      {asset.category === "pump" && configuredPumps.length > 0 && (
+        <DetailCard title={`Pumps (${configuredPumps.length})`}>
+          <table className="ad-table">
             <thead>
-              <tr><th>Name</th><th>Capacity (m³/day)</th><th>Role</th><th>State</th></tr>
+              <tr><th>Name</th><th>Capacity</th><th>Role</th><th>State</th></tr>
             </thead>
             <tbody>
-              {spec.pumps.map((p) => (
-                <tr key={p.id}>
-                  <td>{p.name || "—"}</td>
-                  <td>{p.capacity_m3_day ?? "—"}</td>
-                  <td>{p.role === "backup" ? "Backup" : "Functional"}</td>
-                  <td>{p.active ? "On" : "Off"}</td>
+              {configuredPumps.map((p, i) => (
+                <tr key={p.id || i}>
+                  <td className="ad-table__name">{p.name || `Pump ${i + 1}`}</td>
+                  <td>{number(p.capacity_m3_day, "m³/day") || <span className="ad-empty">—</span>}</td>
+                  <td>
+                    <span className={`ad-pill ${p.role === "backup" ? "ad-pill--acc" : "ad-pill--ok"}`}>
+                      {p.role === "backup" ? "Standby" : "Duty"}
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`ad-pill ${p.active ? "ad-pill--ok" : "ad-pill--off"}`}>{p.active ? "On" : "Off"}</span>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
+        </DetailCard>
       )}
 
       {asset.category === "tank" && (
-        <div className="form-section">
-          <h3>Tank Specifications</h3>
-          <div className="form-grid">
-            <Field label="Total Capacity (m³)" value={spec.total_capacity_m3} />
-            <Field label="Number of Tanks" value={spec.number_tanks} />
-            <Field label="Storage Material" value={spec.storage_material} />
-            <Field label="Source" value={spec.source} />
-            <Field label="Transmission System ID" value={spec.transmission_system_id} />
-            <Field label="Transmission System Name" value={spec.transmission_system_name} />
-          </div>
-        </div>
+        <DetailCard
+          title="Storage"
+          rows={[
+            ["Total capacity", number(spec.total_capacity_m3, "m³")],
+            ["Number of tanks", number(spec.number_tanks)],
+            ["Storage material", spec.storage_material],
+            ["Source", spec.source],
+            ["Transmission system", spec.transmission_system_name],
+            ["Transmission system ID", spec.transmission_system_id, { mono: true }],
+          ]}
+        />
       )}
 
       {asset.category === "handover_point" && (
-        <div className="form-section">
-          <h3>Asset Specifications</h3>
-          <div className="form-grid">
-            <Field label="Contracted Capacity (m³/day)" value={spec.contracted_capacity} />
-            <Field label="Design Capacity (m³/day)" value={spec.design_capacity} />
-            <Field label="Maximum Capacity (m³/day)" value={spec.maximum_capacity} />
-            <Field
-              label="Capacity Limitation"
-              value={
-                spec.capacity_limitation_type && spec.capacity_limitation_type !== "none"
-                  ? `${spec.capacity_limitation_value ?? "—"}${spec.capacity_limitation_type === "percentage" ? "%" : " m³/day"}`
-                  : spec.capacity_limitation_type === "none"
-                  ? "None"
-                  : null
-              }
-            />
-          </div>
-        </div>
+        <DetailCard
+          title="Delivery"
+          rows={[
+            ["Contracted capacity", number(spec.contracted_capacity, "m³/day")],
+            ["Design capacity", number(spec.design_capacity, "m³/day")],
+            ["Maximum capacity", number(spec.maximum_capacity, "m³/day")],
+            [
+              "Capacity limit",
+              spec.capacity_limitation_type && spec.capacity_limitation_type !== "none"
+                ? number(spec.capacity_limitation_value, spec.capacity_limitation_type === "percentage" ? "%" : "m³/day")
+                : spec.capacity_limitation_type === "none"
+                ? "None"
+                : null,
+            ],
+          ]}
+        />
       )}
     </>
   );

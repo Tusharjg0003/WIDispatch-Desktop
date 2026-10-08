@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Archive, List, Map, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Archive, FilePen, FilePlus2, List, Map, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { fetchAssets, fetchAsset } from "../api/metrics";
 import { computeCategoryKpis } from "../lib/assetFilters";
 import { filterAllowedAssets } from "../lib/assetTypes";
@@ -16,6 +16,21 @@ import "../components/MetricDashboard.css";
 import "./AssetRegistryPage.css";
 // After the page stylesheet, so the form rules keep their old cascade position.
 import "../components/assetFormFields.css";
+
+// Header card above the create / edit form (same build as the side panels'
+// header cards: icon tile, eyebrow, title, one-line subtitle).
+function FormHeading({ icon: Icon, eyebrow, title, subtitle }) {
+  return (
+    <header className="ar-form__head">
+      <span className="ar-form__icon" aria-hidden="true"><Icon size={18} /></span>
+      <div className="ar-form__titles">
+        <span className="ar-form__eyebrow">{eyebrow}</span>
+        <h2 className="ar-form__title">{title}</h2>
+        {subtitle && <span className="ar-form__subtitle">{subtitle}</span>}
+      </div>
+    </header>
+  );
+}
 
 export default function AssetRegistryPage({ mode = "list" }) {
   const { id } = useParams();
@@ -107,22 +122,30 @@ export default function AssetRegistryPage({ mode = "list" }) {
         />
 
         {mode === "create" && (
-          <section className="sheet">
-            <header className="sheet__head sheet__head--simple">
-              <h2 className="sheet__name sheet__name--sm">New Asset</h2>
-            </header>
-            <AssetForm mode="create" onSaved={() => navigate("/asset-registry")} />
+          <section className="ar-form">
+            <FormHeading
+              icon={FilePlus2}
+              eyebrow="Asset registry"
+              title="New asset"
+              subtitle="Pick the category, activity and type, then place it on the map."
+            />
+            <AssetForm mode="create" onSaved={() => navigate("/asset-registry")} onCancel={() => navigate("/asset-registry")} />
           </section>
         )}
 
         {mode === "edit" && (
-          <section className="sheet">
-            <header className="sheet__head sheet__head--simple">
-              <h2 className="sheet__name sheet__name--sm">Edit Asset</h2>
-            </header>
+          <section className="ar-form">
+            <FormHeading
+              icon={FilePen}
+              eyebrow="Asset registry"
+              title={editAsset ? `Edit ${editAsset.name || editAsset.id}` : "Edit asset"}
+              subtitle={editAsset ? editAsset.generated_id || editAsset.id : "Loading…"}
+            />
             {editError && <div className="metric__notice metric__notice--error">{editError}</div>}
             {!editAsset && !editError && <div className="metric__notice">Loading asset…</div>}
-            {editAsset && <AssetForm mode="edit" initialAsset={editAsset} onSaved={() => navigate("/asset-registry")} />}
+            {editAsset && (
+              <AssetForm mode="edit" initialAsset={editAsset} onSaved={() => navigate("/asset-registry")} onCancel={() => navigate("/asset-registry")} />
+            )}
           </section>
         )}
 

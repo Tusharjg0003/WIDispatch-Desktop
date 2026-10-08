@@ -1,13 +1,48 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Archive, ArrowLeft, Edit2, Trash2 } from "lucide-react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { Archive, ArrowLeft, CircleDot, Cylinder, Droplets, Edit2, Factory, MapPinned, Trash2 } from "lucide-react";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { deleteAsset, fetchAsset } from "../api/metrics";
-import AssetDetailFields from "../components/AssetDetailFields";
+import AssetDetailFields, { DetailCard, formatDate } from "../components/AssetDetailFields";
 import WorkspaceHeader, { WorkspaceHeaderButton } from "../components/WorkspaceHeader";
-import CompactSection from "../components/ui/CompactSection";
+import { ENTITY_TYPE_COLORS } from "../cytoscape/buildCyStyle";
+import { assetMarkerIcon } from "../lib/assetMarker";
+import "../components/AssetMapView.css";
 import "./AssetDetailPage.css";
+
+// Same icon per category as the registry, the canvas and the legend.
+const CATEGORY_ICONS = { plant: Factory, pump: Droplets, tank: Cylinder, handover_point: MapPinned };
+const CATEGORY_NAME = { plant: "Plant", pump: "Pump station", tank: "Tank", handover_point: "City gate" };
+const STATUS_PILL = { operational: "ok", maintenance: "warn", under_construction: "acc", planned: "acc", decommissioned: "err" };
+const headlineCapacity = (asset) => {
+  const spec = asset.specifications || {};
+  if (asset.category === "tank") {
+    const v = Number(spec.total_capacity_m3);
+    return Number.isFinite(v) && v > 0 ? `${v.toLocaleString()} m³` : null;
+  }
+  const v = Number(spec.design_capacity ?? spec.contracted_capacity ?? spec.maximum_capacity);
+  return Number.isFinite(v) && v > 0 ? `${v.toLocaleString()} m³/day` : null;
+};
+// Leaflet only re-measures on window resizes; the map's box also changes when
+// the layout switches between one and two columns, so follow the box itself.
+function FitToContainer() {
+  const map = useMap();
+  useEffect(() => {
+    const el = map.getContainer();
+    if (typeof ResizeObserver === "undefined") return undefined;
+    const observer = new ResizeObserver(() => map.invalidateSize());
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [map]);
+  return null;
+}
+
+const formatDateTime = (value) => {
+  if (!value) return null;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleString(undefined, { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+};
 
 const CATEGORY_LABEL = { plant: "Plants", pump: "Pump Stations", handover_point: "Handover Points" };
 const STATUS_TONE = {
@@ -100,7 +135,7 @@ export default function AssetDetailPage() {
   const hasLocation = validCoord(latitude, longitude);
   const categoryLabel = CATEGORY_LABEL[asset.category] || asset.category;
   const showProduction = isProductionAsset(asset);
-  const showTopRow = showProduction || hasLocation;
+  const SummaryIcon = CATEGORY_ICONS[asset.category] || CircleDot;
   const editTo = `/asset-registry/edit/${encodeURIComponent(asset.id)}`;
 
   const handleDelete = async () => {
@@ -120,7 +155,7 @@ export default function AssetDetailPage() {
   };
 
   return (
-    <div className="asset-detail-page">
+    <div className="asset-detail-page ad-page">
       <WorkspaceHeader
         title={asset.name || asset.id}
         subtitle={`Asset Registry / ${categoryLabel}`}
@@ -142,54 +177,83 @@ export default function AssetDetailPage() {
         )}
       />
 
-      <div className="form-container">
-        {actionError && <div className="metric__notice metric__notice--error">{actionError}</div>}
+      {actionError && <div className="metric__notice metric__notice--error">{actionError}</div>}
 
-        {showTopRow && (
-          <CompactSection
-            title="Visual context"
-            summary={[showProduction && "production history", hasLocation && "map location"].filter(Boolean).join(" · ")}
-            className="asset-detail-visual-context"
-          >
-            <div className={`view-asset-top-row${showProduction && hasLocation ? "" : " view-asset-top-row--single"}`}>
-              {showProduction && (
-                <div className="form-section view-asset-top-row__chart">
-                  <h3>Historical Production</h3>
-                  <div className="view-asset-top-row__visual">
-                    <ProductionPlaceholder bars={productionBars} />
-                  </div>
-                </div>
-              )}
-
-              {hasLocation && (
-                <aside className="form-section view-asset-top-row__map">
-                  <h3>Geographic Location</h3>
-                  <div className="map-section">
-                    <MapContainer
-                      center={[latitude, longitude]}
-                      zoom={10}
-                      className="view-asset-top-row__map-canvas"
-                    >
-                      <TileLayer
-                        url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-                        maxZoom={18}
-                      />
-                      <Marker position={[latitude, longitude]}>
-                        <Popup>Asset Location<br />{latitude.toFixed(6)}, {longitude.toFixed(6)}</Popup>
-                      </Marker>
-                    </MapContainer>
-                  </div>
-                </aside>
-              )}
-            </div>
-          </CompactSection>
-        )}
-
-        <div className="view-asset-split">
-          <div className="view-asset-split__main">
-            <AssetDetailFields asset={asset} />
+      {/* Summary: who / what / state at a glance. */}
+      <section className="ad-summary" style={{ "--ad-colour": ENTITY_TYPE_COLORS[asset.category] || "var(--acc)" }}>
+        <span className="ad-summary__icon" aria-hidden="true"><SummaryIcon size={22} /></span>
+        <div className="ad-summary__titles">
+          <span className="ad-summary__eyebrow">
+            {CATEGORY_NAME[asset.category] || categoryLabel}
+            {asset.asset_type ? ` · ${asset.asset_type}` : ""}
+          </span>
+          <h2 className="ad-summary__name">{asset.name || asset.id}</h2>
+          <div className="ad-summary__meta">
+            <span className={`ad-pill ad-pill--${STATUS_PILL[asset.status] || "off"}`}>{statusLabel(asset.status) || "No status"}</span>
+            <span className="ad-mono ad-summary__id">{asset.generated_id || asset.id}</span>
           </div>
         </div>
+        <dl className="ad-facts">
+          {[
+            ["Capacity", headlineCapacity(asset)],
+            ["Region", asset.region],
+            ["Commissioned", formatDate(asset.commissioning_date)],
+          ].map(([label, value]) => (
+            <div key={label} className="ad-fact">
+              <dt>{label}</dt>
+              <dd>{value || <span className="ad-empty">—</span>}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+
+      <div className="ad-layout">
+        <div className="ad-main">
+          <AssetDetailFields asset={asset} />
+        </div>
+
+        <aside className="ad-side">
+          <DetailCard title="Location">
+            {hasLocation ? (
+              <>
+                <div className="ad-map">
+                  <MapContainer center={[latitude, longitude]} zoom={10} className="ad-map__canvas">
+                    <TileLayer
+                      url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                      maxZoom={18}
+                    />
+                    <FitToContainer />
+                    <Marker position={[latitude, longitude]} icon={assetMarkerIcon(asset.category, asset.status, 34)}>
+                      <Popup>{asset.name || asset.id}<br />{latitude.toFixed(6)}, {longitude.toFixed(6)}</Popup>
+                    </Marker>
+                  </MapContainer>
+                </div>
+                <dl className="ad-grid ad-grid--two">
+                  <div className="ad-field"><dt>Latitude (Y)</dt><dd className="ad-mono">{latitude.toFixed(6)}</dd></div>
+                  <div className="ad-field"><dt>Longitude (X)</dt><dd className="ad-mono">{longitude.toFixed(6)}</dd></div>
+                </dl>
+              </>
+            ) : (
+              <p className="ad-note">No coordinates recorded for this asset.</p>
+            )}
+          </DetailCard>
+
+          {showProduction && (
+            <DetailCard title="Production history">
+              <ProductionPlaceholder bars={productionBars} />
+            </DetailCard>
+          )}
+
+          <DetailCard
+            title="Record"
+            rows={[
+              ["Generated ID", asset.generated_id || asset.id, { mono: true, full: true }],
+              ["External ID", asset.external_id, { mono: true, full: true }],
+              ["Created", formatDateTime(asset.created_at)],
+              ["Last updated", formatDateTime(asset.updated_at)],
+            ]}
+          />
+        </aside>
       </div>
     </div>
   );

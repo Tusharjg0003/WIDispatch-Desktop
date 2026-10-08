@@ -1,0 +1,123 @@
+/* Asset Registry KPI strip (AssetKpiCards). Same language as the side
+   panels: bordered 8px cards, colour-coded icon tile, uppercase label, large
+   tabular count, status proportion bar + dot list. Global tokens only. */
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.kpi-card {
+  --kpi-colour: var(--acc);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px 12px 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+.kpi-card--total {
+  border-color: color-mix(in srgb, var(--acc) 35%, var(--line));
+  background: color-mix(in srgb, var(--acc) 6%, var(--panel));
+}
+
+.kpi-card__head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+.kpi-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--kpi-colour) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--kpi-colour) 30%, transparent);
+  color: var(--kpi-colour);
+}
+.kpi-card__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--mut);
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.kpi-card__value {
+  color: var(--tx1);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi-card__bar {
+  display: flex;
+  gap: 2px;
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--panel2);
+}
+.kpi-card__seg {
+  min-width: 3px;
+  border-radius: 999px;
+}
+
+.kpi-card__list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.kpi-card__list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+}
+.kpi-card__dot {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+.kpi-card__status {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--tx2);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kpi-card__list strong {
+  color: var(--tx1);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.kpi-card__empty {
+  margin: 0;
+  color: var(--mut);
+  font-size: 11.5px;
+}
+
+/* Lifecycle colours — the same ones the canvas rings and legend use. */
+.kpi-tone--operational { background: #6fa300; }
+.kpi-tone--maintenance,
+.kpi-tone--under_construction { background: #f59e0b; }
+.kpi-tone--planned { background: #3b82f6; }
+.kpi-tone--decommissioned { background: #ef4444; }

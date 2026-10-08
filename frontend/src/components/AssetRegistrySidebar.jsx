@@ -1,24 +1,25 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Boxes, ChevronRight, CircleHelp, Cylinder, Download, Droplets, Factory, MapPinned, Plus, Search } from "lucide-react";
 import { fetchAssets } from "../api/metrics";
 import { filterAllowedAssets } from "../lib/assetTypes";
-import SidebarActionToolbar from "./SidebarActionToolbar";
-import "./WorkspaceRecordSidebar.css";
+import { ENTITY_TYPE_COLORS } from "../cytoscape/buildCyStyle";
+import "./SidebarList.css";
 
-const ICON_ROOT = "/All Icons Zipped";
-const EXPAND_ICON = `${ICON_ROOT}/15 UI Utility Icons (System-Level)/Expand/SVG/Expand_20px.svg`;
-const MAP_ICON = `${ICON_ROOT}/11 Map & Location (GIS)/Map/SVG/Map_20px.svg`;
-const LIST_ICON = `${ICON_ROOT}/01 Core Navigation-System/Overview/SVG/Overview_20px.svg`;
-const DOCUMENT_ICON = `${ICON_ROOT}/12 File & Document Management/Document/SVG/Document_20px.svg`;
-const HELP_ICON = `${ICON_ROOT}/01 Core Navigation-System/Help - Support/SVG/Help - Support_20px.svg`;
+// Same icon and colour per category as the Network Builder's library, the
+// canvas and the legend.
+const CATEGORY_ICONS = { plant: Factory, pump: Droplets, tank: Cylinder, handover_point: MapPinned };
+const CATEGORY_LABELS = { plant: "Plant", pump: "Pump station", tank: "Tank", handover_point: "City gate" };
 
-const STATUS_DOT = {
-  operational: "var(--ok)",
-  maintenance: "var(--chart-warning)",
-  under_construction: "var(--chart-design)",
-  planned: "var(--chart-design)",
-  decommissioned: "var(--chart-danger)",
+const statusTone = (status) => {
+  const key = String(status || "").toLowerCase();
+  if (key === "operational") return "ok";
+  if (key === "maintenance") return "warn";
+  if (key === "planned" || key === "under_construction") return "acc";
+  return "off";
 };
+const statusLabel = (status) =>
+  status ? String(status).replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase()) : "No status";
 
 const formatTypeLabel = (type) =>
   String(type || "Uncategorized")
@@ -27,17 +28,17 @@ const formatTypeLabel = (type) =>
     .trim()
     .replace(/\b\w/g, (char) => char.toUpperCase());
 
-// Left-rail browse tree for the Asset Registry: Category > Asset Type >
-// individual assets, with its own search + a Map/List view toggle (adapted
-// from a reference app's AssetsTaggingSidebar). Fetches its own asset list
-// independent of whatever filters are active in the main content, and
-// clicking an asset navigates straight to its detail page.
+// Left-rail browse list for the Asset Registry: asset types (collapsible,
+// colour-coded by category) > individual assets, with search, New asset,
+// Export CSV and Help. Styled with the shared left-rail list styles
+// (SidebarList.css). Fetches its own asset list independent of the main
+// content's filters; clicking an asset opens its detail page. Map / List live
+// in the page header.
 export default function AssetRegistrySidebar({ view, onShowMap, onShowList, onCreate, onShowHelp, onExport }) {
   const navigate = useNavigate();
   const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [searchOpen, setSearchOpen] = useState(false);
   const [expandedTypes, setExpandedTypes] = useState({});
 
   useEffect(() => {
@@ -85,90 +86,105 @@ export default function AssetRegistrySidebar({ view, onShowMap, onShowList, onCr
   }, [searchTerm, filteredAssetsByType]);
 
   const toggleType = (key) => setExpandedTypes((p) => ({ ...p, [key]: !p[key] }));
+  const searching = Boolean(searchTerm.trim());
+  const types = Object.keys(filteredAssetsByType).sort((a, b) => formatTypeLabel(a).localeCompare(formatTypeLabel(b)));
+  const total = types.reduce((sum, type) => sum + filteredAssetsByType[type].length, 0);
 
   return (
-    <div className="sidebar-content">
-      <div className="sidebar-content__section-content">
-        <SidebarActionToolbar
-          createTitle="New Asset"
-          onCreate={onCreate}
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
-          searchOpen={searchOpen}
-          setSearchOpen={setSearchOpen}
-          showFilter={false}
-          showSort={false}
-          showDelete={false}
-          extraActions={[
-            { title: view === "list" ? "List View (active)" : "List View", iconSrc: LIST_ICON, active: view === "list", onClick: onShowList },
-            { title: view === "map" ? "Map View (active)" : "Map View", iconSrc: MAP_ICON, active: view === "map", onClick: onShowMap },
-            { title: "Export CSV", iconSrc: DOCUMENT_ICON, onClick: onExport },
-            { title: "Help", iconSrc: HELP_ICON, onClick: onShowHelp },
-          ]}
-        />
+    <div className="sl-panel">
+      <div className="sl-tools">
+        <div className="sl-tools__row">
+          <label className="sl-search">
+            <Search size={13} aria-hidden="true" />
+            <input
+              type="search"
+              placeholder="Search assets"
+              aria-label="Search assets by name, ID or type"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </label>
+        </div>
+        <div className="sl-tools__row">
+          <button type="button" className="sl-btn sl-btn--primary" onClick={onCreate} style={{ flex: 1 }}>
+            <Plus size={14} aria-hidden="true" /> New asset
+          </button>
+          <button type="button" className="sl-btn sl-btn--icon" onClick={onExport} title="Export CSV" aria-label="Export CSV">
+            <Download size={14} aria-hidden="true" />
+          </button>
+          <button type="button" className="sl-btn sl-btn--icon" onClick={onShowHelp} title="Help" aria-label="Help">
+            <CircleHelp size={14} aria-hidden="true" />
+          </button>
+        </div>
       </div>
 
-      {loading && <div className="sidebar-content__empty-msg">Loading assets…</div>}
-
-      {!loading && (
-        <div className="sidebar-content__tree-list">
-          {Object.keys(filteredAssetsByType).length === 0 ? (
-            <div className="sidebar-content__empty-msg">
-              {searchTerm ? "No assets found" : "No assets available"}
+      <div className="sl-body">
+        {loading ? (
+          <div className="sl-empty">Loading assets…</div>
+        ) : types.length === 0 ? (
+          <div className="sl-empty">{searching ? "No assets match that search." : "No assets available."}</div>
+        ) : (
+          <>
+            <div className="sl-group">
+              <span className="sl-group__label">Asset types</span>
+              <span className="sl-group__count">{total}</span>
             </div>
-          ) : (
-            Object.keys(filteredAssetsByType).sort((a, b) => formatTypeLabel(a).localeCompare(formatTypeLabel(b))).map((type) => {
-              const isExpanded = expandedTypes[type];
+            {types.map((type) => {
               const list = filteredAssetsByType[type];
+              const isExpanded = Boolean(expandedTypes[type]);
+              const category = list[0]?.category;
+              const Icon = CATEGORY_ICONS[category] || Boxes;
               return (
-                <div key={type} className="sidebar-content__tree-group">
+                <div key={type} className="ar-browse__group">
                   <button
                     type="button"
-                    className={`sidebar-content__tree-type${isExpanded ? " is-expanded" : ""}`}
+                    className={`sl-row ar-browse__type${isExpanded ? " is-expanded" : ""}`}
+                    style={{ "--sl-colour": ENTITY_TYPE_COLORS[category] || "var(--acc)" }}
                     onClick={() => toggleType(type)}
+                    aria-expanded={isExpanded}
                   >
-                    <img src={EXPAND_ICON} alt="" aria-hidden="true" />
-                    <span>{formatTypeLabel(type)} ({list.length})</span>
+                    <ChevronRight size={13} className="ar-browse__chevron" aria-hidden="true" />
+                    <span className="sl-row__icon" aria-hidden="true"><Icon size={15} /></span>
+                    <span className="sl-row__text">
+                      <span className="sl-row__name">{formatTypeLabel(type)}</span>
+                      <span className="sl-row__sub">{CATEGORY_LABELS[category] || "Asset"}</span>
+                    </span>
+                    <span className="sl-row__aside"><span className="sl-tag">{list.length}</span></span>
                   </button>
 
                   {isExpanded && (
-                    <div className="sidebar-content__list sidebar-content__list--nested">
-                      {list.map((asset, index) => (
+                    <div className="ar-browse__children">
+                      {list.map((asset) => (
                         <div
                           key={asset.id}
-                          className="sidebar-content__list-item"
+                          role="button"
+                          tabIndex={0}
+                          className="sl-row ar-browse__asset"
                           onClick={() => navigate(`/asset-registry/view/${encodeURIComponent(asset.id)}`)}
+                          onKeyDown={(e) => {
+                            if (e.key !== "Enter" && e.key !== " ") return;
+                            e.preventDefault();
+                            navigate(`/asset-registry/view/${encodeURIComponent(asset.id)}`);
+                          }}
+                          title={`${asset.name || asset.id} · open details`}
                         >
-                          <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-                            <span style={{ fontSize: 9, lineHeight: 1, fontFamily: "var(--mono)", color: "var(--chart-reference)", flexShrink: 0 }}>
-                              #{index + 1}
-                            </span>
-                            <span style={{
-                              fontWeight: 500, fontSize: 11, lineHeight: 1.15, color: "var(--tx1)",
-                              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                            }}>
-                              {asset.name || asset.id}
-                            </span>
-                          </div>
-                          <div className="sidebar-content__list-item-meta" style={{ display: "flex", alignItems: "center", gap: 6, paddingLeft: 18 }}>
-                            <span style={{
-                              width: 6, height: 6, borderRadius: 999, flexShrink: 0,
-                              background: STATUS_DOT[asset.status] || "var(--chart-reference)",
-                            }} />
-                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                              ID: {asset.id}
-                            </span>
-                          </div>
+                          <span className="sl-row__text">
+                            <span className="sl-row__name">{asset.name || asset.id}</span>
+                            <span className="sl-row__sub">{[asset.id, asset.region].filter(Boolean).join(" · ")}</span>
+                          </span>
+                          <span className="sl-row__aside">
+                            <span className={`sl-dot sl-dot--${statusTone(asset.status)}`} title={statusLabel(asset.status)} aria-label={statusLabel(asset.status)} />
+                          </span>
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
               );
-            })
-          )}
-        </div>
-      )}
+            })}
+          </>
+        )}
+      </div>
     </div>
   );
 }
