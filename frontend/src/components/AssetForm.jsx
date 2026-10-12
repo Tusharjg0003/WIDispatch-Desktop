@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createAsset, updateAsset } from "../api/metrics";
 import { Field, Toggle } from "./AssetFormControls";
 import MapLocationPicker from "./MapLocationPicker";
@@ -120,7 +120,7 @@ function formFromAsset(asset) {
   };
 }
 
-export default function AssetForm({ mode = "create", defaultCategory = "plant", initialAsset = null, onSaved, onCancel }) {
+export default function AssetForm({ mode = "create", defaultCategory = "plant", initialAsset = null, onSaved, onCancel, onDirtyChange }) {
   const isEdit = mode === "edit";
   const [form, setForm] = useState(
     isEdit && initialAsset ? formFromAsset(initialAsset) : { ...EMPTY_FORM, ...defaultsForCategory(defaultCategory) }
@@ -135,6 +135,24 @@ export default function AssetForm({ mode = "create", defaultCategory = "plant", 
       ? (initialAsset.specifications?.pumps || []).map((p) => ({ ...p, capacity_m3_day: p.capacity_m3_day ?? "" }))
       : []
   );
+  // Unsaved input, for the Asset Registry tab's dot and close prompt. The
+  // baseline is taken just after mount so set-up writes (e.g. a map picker
+  // settling its coordinates) don't count as edits. A timer, not a frame:
+  // frames don't run while the window is hidden.
+  const snapshot = JSON.stringify([form, spec, pumps]);
+  const baseline = useRef(null);
+  const latest = useRef(snapshot);
+  latest.current = snapshot;
+  useEffect(() => {
+    const timer = setTimeout(() => { baseline.current = latest.current; }, 60);
+    return () => clearTimeout(timer);
+  }, []);
+  useEffect(() => {
+    if (baseline.current == null) return;
+    onDirtyChange?.(snapshot !== baseline.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [snapshot]);
+
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);

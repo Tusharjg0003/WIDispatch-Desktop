@@ -44,8 +44,8 @@ export function assetFacts(asset, { typeLabel = "Plant Type" } = {}) {
   ];
 }
 
-export function FactsCard({ title = "Plant Facts", asset, typeLabel }) {
-  const facts = assetFacts(asset, { typeLabel });
+export function FactsCard({ title = "Plant Facts", asset, typeLabel, omit = [] }) {
+  const facts = assetFacts(asset, { typeLabel }).filter(([label]) => !omit.includes(label));
   return (
     <section className="pov__card pov__info">
       <div className="pov__card-head"><h3>{title}</h3></div>

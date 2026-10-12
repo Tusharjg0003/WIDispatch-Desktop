@@ -130,9 +130,31 @@ function normalise(body = {}, existing = {}) {
   return out;
 }
 
+/**
+ * A config's status is its latest run's: "published" once that run has been
+ * written back to the portals, otherwise "draft" (never run, or re-run since
+ * the last publish).
+ */
+export function withPlanStatus(configs, plans = []) {
+  const byId = new Map(plans.map((plan) => [plan.id, plan]));
+  return configs.map((config) => {
+    const plan = config.latestPlanId ? byId.get(config.latestPlanId) : null;
+    return {
+      ...config,
+      status: plan?.status === "published" ? "published" : "draft",
+      publishedAt: plan?.status === "published" ? plan.publishedAt ?? null : null,
+    };
+  });
+}
+
 export async function listSimulationConfigs() {
   const db = await getDb();
-  const configs = await db.collection(CONFIGS).find({}, { projection: LIST_PROJECTION }).sort({ updatedAt: -1 }).toArray();
+  const rows = await db.collection(CONFIGS).find({}, { projection: LIST_PROJECTION }).sort({ updatedAt: -1 }).toArray();
+  const planIds = rows.map((c) => c.latestPlanId).filter(Boolean);
+  const plans = planIds.length
+    ? await db.collection(PLANS).find({ id: { $in: planIds } }, { projection: { _id: 0, id: 1, status: 1, publishedAt: 1 } }).toArray()
+    : [];
+  const configs = withPlanStatus(rows, plans);
   return { configs, total: configs.length };
 }
 
@@ -204,7 +226,18 @@ export async function runSimulationConfig(id, body = {}) {
   const overrides = body.overrides ?? config.overrides ?? {};
   const strategicStorageMinPct = body.strategicStorageMinPct ?? config.strategicStorageMinPct ?? 70;
 
-  const result = await runDispatch({ networkId: config.networkId, from, to, overrides, strategicStorageMinPct });
+  // A preview may trial an unsaved network pick; a real run always uses the
+  // stored one, so a draft plan never disagrees with its configuration.
+  const networkId = body.preview === true && body.networkId ? String(body.networkId) : config.networkId;
+  if (!networkId) throw badRequest("Select a saved network to dispatch over");
+  if (from && to && from > to) throw badRequest("The from date must not be after the to date");
+
+  const result = await runDispatch({ networkId, from, to, overrides, strategicStorageMinPct });
+
+  // A preview fills the config tables while the operator picks a network and
+  // dates; it is not a run, so nothing is stored and the config's status and
+  // latest plan are left alone.
+  if (body.preview === true) return { ...result, preview: true, configId: config.id };
 
   const db = await getDb();
   const now = new Date().toISOString();

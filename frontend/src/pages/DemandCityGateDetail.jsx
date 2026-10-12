@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, MapPinned } from "lucide-react";
+import { ENTITY_TYPE_COLORS } from "../cytoscape/buildCyStyle";
 import { fetchCityGateBundle } from "../api/demand";
 import { StatusBadge } from "../components/ui/WorkspacePrimitives";
 import DemandOverview from "../components/demand/DemandOverview";
@@ -53,12 +54,13 @@ export default function DemandCityGateDetail({
 
   return (
     <div className="ppd demand-detail">
-      <header className="ppd__identity">
+      <header className="ppd__identity" style={{ "--ppd-colour": ENTITY_TYPE_COLORS.handover_point }}>
         {onBack && (
           <button type="button" className="ppd__back" onClick={onBack} title="Back to City Gates" aria-label="Back to City Gates">
             <ArrowLeft size={16} />
           </button>
         )}
+        <span className="ppd__icon" aria-hidden="true"><MapPinned size={18} /></span>
         <h1 className="ppd__name">{cityGate?.name || gateId}</h1>
         {cityGate?.status && <StatusBadge status={cityGate.status} />}
         {cityGate?.external_id && <span className="ppd__extid mono">{cityGate.external_id}</span>}

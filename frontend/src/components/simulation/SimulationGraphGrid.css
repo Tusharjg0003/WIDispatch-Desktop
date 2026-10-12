@@ -1,129 +1,105 @@
+/* Results charts (SimulationGraphGrid / SupplyDemandChart). Cards come from
+   ResultsPanel.css (.rp-card); this sets the two-up grid, the chart body,
+   and themes Recharts' tooltip, legend and axes with the app tokens. */
+
 .simgraphs {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-  margin-bottom: 18px;
+  gap: 10px;
+}
+@media (max-width: 1100px) {
+  .simgraphs { grid-template-columns: 1fr; }
 }
 
-.simgraph {
-  min-width: 0;
-  margin: 0;
-}
-
-.simgraph .sheet__head {
-  min-height: 38px;
-  padding: 10px 14px;
-}
-
-.simgraph .sdchart,
+.simgraph { margin: 0; }
 .simgraph__body {
-  height: 246px;
-  padding: 12px 10px 6px;
+  min-height: 232px;
+  padding: 10px 10px 4px 2px;
 }
 
 .simgraph__empty {
-  height: 220px;
   display: grid;
   place-items: center;
-  font-size: 0.78rem;
-  color: var(--ink-dim);
-  background: var(--surface-subtle);
-  border: 1px dashed var(--line);
+  height: 210px;
+  margin-left: 8px;
+  border: 1px dashed var(--line2);
   border-radius: 6px;
+  background: var(--panel2);
+  color: var(--mut);
+  font-size: 12px;
 }
 
+/* Delivery-point picker in the card header. */
+.simgraph__select {
+  max-width: 200px;
+  height: 26px;
+  padding: 0 6px;
+  border: 1px solid var(--line2);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--tx1);
+  font: inherit;
+  font-size: 11.5px;
+}
+.simgraph__select:focus {
+  outline: none;
+  border-color: var(--acc);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--acc) 22%, transparent);
+}
+
+/* Recharts, themed. */
+.simgraph .recharts-cartesian-axis-line,
+.simgraph .recharts-cartesian-axis-tick-line { stroke: var(--line2); }
+.simgraph .recharts-default-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px 12px;
+  font-size: 11px;
+  line-height: 1.2;
+}
+.simgraph .recharts-legend-item { margin-right: 0 !important; }
+.simgraph .recharts-legend-item-text { color: var(--tx2) !important; }
+.simgraph .recharts-default-tooltip {
+  padding: 8px 10px !important;
+  border: 1px solid var(--line2) !important;
+  border-radius: 8px;
+  background: var(--panel) !important;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
+  font-size: 11.5px;
+}
+.simgraph .recharts-tooltip-label {
+  margin-bottom: 4px !important;
+  color: var(--tx1);
+  font-weight: 650;
+}
+.simgraph .recharts-tooltip-item { padding: 1px 0 !important; }
+.simgraph .recharts-tooltip-cursor { fill: color-mix(in srgb, var(--acc) 8%, transparent); }
+
+/* Tank behaviour's custom tooltip. */
 .simgraph__tooltip {
   min-width: 220px;
   max-width: 340px;
-  padding: 10px 12px;
-  color: var(--ink);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14);
-  font-size: 0.72rem;
+  padding: 8px 10px;
+  border: 1px solid var(--line2);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
+  color: var(--tx1);
+  font-size: 11.5px;
 }
-
-.simgraph__tooltip > strong {
-  display: block;
-  margin-bottom: 7px;
-  font-size: 0.78rem;
-}
-
+.simgraph__tooltip > strong { display: block; margin-bottom: 6px; font-size: 12px; }
 .simgraph__tooltip-flows,
-.simgraph__tooltip-tank {
-  display: grid;
-  gap: 3px;
-}
-
-.simgraph__tooltip-flows {
-  grid-template-columns: 1fr 1fr;
-  padding-bottom: 7px;
-}
-
+.simgraph__tooltip-tank { display: grid; gap: 3px; }
+.simgraph__tooltip-flows { grid-template-columns: 1fr 1fr; padding-bottom: 6px; }
 .simgraph__tooltip-flows span,
 .simgraph__tooltip-tank span:not(.simgraph__tooltip-name) {
   display: flex;
   justify-content: space-between;
   gap: 12px;
+  color: var(--tx2);
 }
-
-.simgraph__tooltip-tank {
-  padding: 7px 0;
-  border-top: 1px solid var(--line);
-}
-
-.simgraph__tooltip-name {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 700;
-}
-
-.simgraph__tooltip-name i {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex: 0 0 auto;
-}
-
-.simgraph .recharts-default-legend {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 2px 8px;
-  font-size: 0.7rem;
-  line-height: 1.2;
-}
-
-.simgraph .recharts-legend-item {
-  margin-right: 0 !important;
-}
-
-@media (max-width: 980px) {
-  .simgraphs {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Delivery-point selector above its chart. */
-.simgraph__control {
-  display: flex;
-  justify-content: flex-end;
-  padding: 0 8px 6px;
-}
-.simgraph__control label {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  color: var(--mut);
-}
-.simgraph__control select {
-  font-size: 12px;
-  padding: 3px 6px;
-  border: 1px solid var(--line2);
-  border-radius: 5px;
-  background: var(--panel);
-  color: var(--tx1);
-}
+.simgraph__tooltip b { color: var(--tx1); font-weight: 650; font-variant-numeric: tabular-nums; }
+.simgraph__tooltip-tank { padding: 6px 0; border-top: 1px solid var(--line); }
+.simgraph__tooltip-name { display: flex; align-items: center; gap: 6px; font-weight: 650; }
+.simgraph__tooltip-name i { flex: 0 0 auto; width: 8px; height: 8px; border-radius: 50%; }

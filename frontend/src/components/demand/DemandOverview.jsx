@@ -5,11 +5,14 @@ import { FactsCard, UpcomingMaintenanceCard } from "../production/PlantOverview"
 import DemandCapacityChart from "./DemandCapacityChart";
 import "../production/PlantOverview.css";
 
+const CITY_GATE_OMIT = ["Technology", "Water Source", "Production System"];
+
 export default function DemandOverview({ cityGate, cityGateId, bundle }) {
   return (
     <div className="pov">
       <div className="pov__top">
-        <FactsCard title="City Gate Facts" asset={cityGate} typeLabel="Gate Type" />
+        {/* Plant-only facts (always N/A on a gate) are left out. */}
+        <FactsCard title="City Gate Facts" asset={cityGate} typeLabel="Gate Type" omit={CITY_GATE_OMIT} />
         <UpcomingMaintenanceCard bundle={bundle} />
         <section className="pov__card pov__loc">
           <div className="pov__card-head"><h3>Location</h3><p>Satellite view</p></div>

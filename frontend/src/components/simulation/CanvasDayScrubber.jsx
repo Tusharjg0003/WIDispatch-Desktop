@@ -51,7 +51,7 @@ export default function CanvasDayScrubber({ summaries, dayIdx, onChange }) {
               key={s.date}
               type="button"
               title={`${s.date} — ${fmt(s.shortage)} m³ short`}
-              className={`simscrub__bar${s.dayIdx === dayIdx ? " simscrub__bar--active" : ""}`}
+              className={`simscrub__bar${s.dayIdx === dayIdx ? " simscrub__bar--active" : ""}${s.shortage > 0 ? " simscrub__bar--short" : ""}`}
               style={{ "--fill": worstShortage > 0 ? `${(s.shortage / worstShortage) * 100}%` : "0%" }}
               onClick={() => onChange(s.dayIdx)}
             />
@@ -70,10 +70,12 @@ export default function CanvasDayScrubber({ summaries, dayIdx, onChange }) {
       </div>
 
       <div className="simscrub__readout">
-        <strong>{current.date}</strong>
-        <span>Day {dayIdx + 1} of {summaries.length}</span>
-        <span>{fmt(current.delivered)} / {fmt(current.required)} m³</span>
-        <span className={current.shortage > 0 ? "simscrub__short" : ""}>
+        <span className="simscrub__date">
+          <strong>{current.date}</strong>
+          <small>Day {dayIdx + 1} of {summaries.length}</small>
+        </span>
+        <span className="simscrub__served mono">{fmt(current.delivered)} / {fmt(current.required)} m³</span>
+        <span className={`simbar-pill ${current.shortage > 0 ? "simbar-pill--err" : "simbar-pill--ok"}`}>
           {current.shortage > 0 ? `${fmt(current.shortage)} m³ short` : "Fully served"}
         </span>
       </div>

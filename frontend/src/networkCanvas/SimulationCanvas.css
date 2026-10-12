@@ -369,204 +369,253 @@
 .simcanvas__swatch--idle { background: var(--mut); }
 .simcanvas__swatch--node-binding { background: var(--err); height: 10px; border: 2px solid var(--err-border); }
 
+/* ── Run bar (SimulationPanels) ──────────────────────────────────────────
+   Bottom of the embedded canvas: run summary pills + 28px buttons, the
+   legend as a chip row, then the day scrubber. Global tokens only. */
+.simbar-title {
+  color: var(--mut);
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.simbar-spacer { flex: 1; }
+.simbar-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 8px;
+  border: 1px solid var(--line2);
+  border-radius: 999px;
+  background: var(--panel2);
+  color: var(--tx2);
+  font-size: 10.5px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.simbar-pill--ok { border-color: var(--ok-border); background: var(--ok-soft); color: var(--okTx); }
+.simbar-pill--err { border-color: var(--err-border); background: var(--err-soft); color: var(--errTx); }
+.simbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--line2);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--tx2);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+.simbar-btn:hover {
+  border-color: color-mix(in srgb, var(--acc) 40%, var(--line2));
+  background: color-mix(in srgb, var(--acc) 10%, transparent);
+  color: var(--tx1);
+}
+.simbar-btn.is-on {
+  border-color: color-mix(in srgb, var(--acc) 40%, transparent);
+  background: color-mix(in srgb, var(--acc) 15%, transparent);
+  color: var(--accTx, var(--acc));
+}
+.simbar-btn--icon { width: 26px; height: 26px; padding: 0; border-color: transparent; }
+.simbar-btn:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+
+.simbar-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel2);
+  color: var(--tx2);
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+.simbar-notice svg { flex-shrink: 0; margin-top: 2px; color: var(--acc); }
+.simbar-notice strong { display: inline-flex; align-items: center; gap: 3px; color: var(--tx1); }
+.simbar-notice strong svg { margin-top: 0; }
+.simbar-notice--warn { border-color: var(--amber-border); background: var(--amber-soft); color: var(--amberTx); }
+.simbar-notice--warn svg { color: currentColor; }
+
+/* Floating Bottlenecks list. */
+.simbar-float__head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 6px 6px 8px;
+  border-bottom: 1px solid var(--line);
+  color: var(--tx1);
+  font-size: 12px;
+}
+.simbar-float__head strong { margin-right: auto; font-weight: 650; }
+.simbar-float__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--err) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--err) 30%, transparent);
+  color: var(--err);
+}
+.simbar-empty { display: inline-flex; align-items: center; gap: 6px; padding: 6px 2px; color: var(--okTx); font-size: 12px; }
+.simbar-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+.simbar-table th {
+  padding: 5px 6px;
+  border-bottom: 1px solid var(--line);
+  color: var(--mut);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-align: left;
+  text-transform: uppercase;
+}
+.simbar-table td { padding: 6px; border-bottom: 1px solid var(--line); color: var(--tx2); font-variant-numeric: tabular-nums; }
+.simbar-table .num { text-align: right; }
+.simbar-table tbody tr { cursor: pointer; }
+.simbar-table tbody tr:hover td { background: color-mix(in srgb, var(--acc) 8%, transparent); }
+.simbar-table tbody tr:last-child td { border-bottom: 0; }
+.simbar-table__name { color: var(--tx1) !important; font-weight: 600; }
+.simbar-table__muted { color: var(--mut) !important; }
+
+/* ── Day scrubber ────────────────────────────────────────────────────────── */
 .simscrub {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
-  padding: 8px 12px;
+  padding: 6px 8px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 8px;
+  background: var(--panel2);
+}
+.simscrub__controls {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--line2);
+  border-radius: 7px;
   background: var(--panel);
 }
-
-.simscrub__controls { display: flex; gap: 4px; }
-
 .simscrub__btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 26px;
-  height: 26px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--mut2);
+  height: 24px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--tx2);
   cursor: pointer;
 }
-
 .simscrub__btn:disabled { opacity: 0.4; cursor: default; }
-.simscrub__btn:not(:disabled):hover { background: var(--panel2); }
+.simscrub__btn:not(:disabled):hover { background: color-mix(in srgb, var(--acc) 12%, transparent); color: var(--acc); }
+.simscrub__btn:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
 
-.simscrub__track { display: flex; flex-direction: column; gap: 2px; }
-
-.simscrub__bars { display: flex; gap: 2px; height: 18px; align-items: flex-end; }
-
+.simscrub__track { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.simscrub__bars { display: flex; align-items: flex-end; gap: 2px; height: 20px; }
 .simscrub__bar {
   flex: 1;
   height: 100%;
   padding: 0;
   border: 0;
-  border-radius: 2px 2px 0 0;
-  background: linear-gradient(to top, var(--err) var(--fill), var(--line) var(--fill));
+  border-radius: 3px 3px 1px 1px;
+  background: color-mix(in srgb, var(--ok) 30%, var(--line));
   cursor: pointer;
+  transition: opacity 0.12s ease;
 }
-
-.simscrub__bar--active { outline: 2px solid var(--acc); outline-offset: 1px; }
-
-.simscrub__range { width: 100%; accent-color: var(--acc); }
-
-.simscrub__readout {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 11px;
-  color: var(--mut2);
-  white-space: nowrap;
+/* Short days fill from the bottom in proportion to the worst day. */
+.simscrub__bar--short {
+  background: linear-gradient(to top, color-mix(in srgb, var(--err) 75%, transparent) var(--fill), var(--line) var(--fill));
 }
+.simscrub__bar:hover { opacity: 0.8; }
+.simscrub__bar--active { box-shadow: 0 0 0 2px var(--acc); }
+.simscrub__range { width: 100%; height: 14px; margin: 0; accent-color: var(--acc); }
 
-.simscrub__short { color: var(--errTx); font-weight: 600; }
+.simscrub__readout { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+.simscrub__date { display: flex; flex-direction: column; line-height: 1.15; }
+.simscrub__date strong { color: var(--tx1); font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.simscrub__date small { color: var(--mut); font-size: 10.5px; }
+.simscrub__served { color: var(--tx2); font-size: 11.5px; }
 
-.simtoolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 6px 8px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--panel);
-}
-
-.simtoolbar__group {
-  display: flex;
-  gap: 4px;
-  padding-right: 8px;
-  border-right: 1px solid var(--line);
-}
-
-.simtoolbar__group:last-child { border-right: 0; padding-right: 0; }
-
-.simtoolbar__btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 9px;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--mut2);
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.simtoolbar__btn:hover:not(:disabled) { background: var(--panel2); }
-.simtoolbar__btn:disabled { opacity: 0.4; cursor: default; }
-
-.simtoolbar__btn--active {
-  border-color: var(--acc);
-  background: var(--acc-soft);
-  color: var(--accTx);
-}
-
-.simcanvas__toast {
-  position: absolute;
-  left: 50%;
-  bottom: 16px;
-  transform: translateX(-50%);
-  padding: 7px 14px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--overlay);
-  color: var(--on-accent);
-  font-size: 11px;
-  cursor: pointer;
-}
-
-.simcanvas__body {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
-  gap: 10px;
-}
-
-@media (max-width: 1100px) {
-  .simcanvas__body { grid-template-columns: minmax(0, 1fr); }
-}
-
+/* ── Run details (right rail, CanvasDetails) ───────────────────────────────
+   Same build as the Details panel: uppercase eyebrow + title, then label /
+   value rows on hairlines, uppercase subheads and focusable link rows. */
 .simdetail {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 12px 14px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--panel);
+  padding: 10px 12px 12px;
   font-size: 12px;
-  overflow-y: auto;
-  max-height: clamp(420px, 62vh, 760px);
 }
-
-.simdetail__head { margin-bottom: 4px; }
-
+.simdetail__head { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
 .simdetail__eyebrow {
   display: block;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+  color: var(--mut);
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--mut2);
 }
-
-.simdetail__head h3 { margin: 2px 0 0; font-size: 14px; color: var(--tx1); }
-
+.simdetail__head h3 { margin: 2px 0 0; color: var(--tx1); font-size: 14px; font-weight: 650; }
 .simdetail__row {
   display: flex;
   justify-content: space-between;
   gap: 10px;
-  padding: 3px 0;
+  padding: 5px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
 }
-
 .simdetail__label { color: var(--mut); }
-.simdetail__value { font-weight: 600; color: var(--tx1); text-align: right; }
+.simdetail__value { color: var(--tx1); font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
 .simdetail__value--bad { color: var(--errTx); }
-.simdetail__value--warn { color: var(--warnTx); }
-
-.simdetail__rule { border: 0; border-top: 1px solid var(--line); margin: 8px 0 4px; }
-
+.simdetail__value--warn { color: var(--amberTx); }
+.simdetail__rule { margin: 8px 0 4px; border: 0; border-top: 1px solid var(--line); }
 .simdetail__subhead {
-  margin: 10px 0 4px;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--mut2);
+  margin: 12px 0 4px;
+  color: var(--mut);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
-
-.simdetail__empty { margin: 0; color: var(--mut2); font-size: 11px; }
-
+.simdetail__empty { margin: 2px 0; color: var(--mut); font-size: 11.5px; }
 .simdetail__note {
-  margin: 6px 0 0;
+  margin: 8px 0 0;
   padding: 6px 8px;
+  border: 1px solid var(--line);
   border-radius: 6px;
   background: var(--panel2);
-  color: var(--mut2);
-  font-size: 11px;
+  color: var(--tx2);
+  font-size: 11.5px;
 }
-
-.simdetail__note--warn { background: var(--warn-soft); color: var(--amberTx); }
-
+.simdetail__note--warn { border-color: var(--amber-border); background: var(--amber-soft); color: var(--amberTx); }
 .simdetail__link {
   display: flex;
   justify-content: space-between;
   gap: 8px;
   width: 100%;
-  padding: 5px 7px;
-  border: 0;
+  padding: 6px 8px;
+  border: 1px solid transparent;
   border-radius: 6px;
   background: transparent;
   color: var(--tx1);
-  font-size: 11px;
+  font: inherit;
+  font-size: 12px;
   text-align: left;
   cursor: pointer;
 }
-
-.simdetail__link:hover { background: var(--panel2); }
-.simdetail__link span { color: var(--mut); white-space: nowrap; }
+.simdetail__link:hover {
+  border-color: color-mix(in srgb, var(--acc) 30%, transparent);
+  background: color-mix(in srgb, var(--acc) 8%, transparent);
+}
+.simdetail__link span { color: var(--mut); font-variant-numeric: tabular-nums; white-space: nowrap; }

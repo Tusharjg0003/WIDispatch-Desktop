@@ -1,11 +1,25 @@
-.qp-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-.qp-card { border: 1px solid var(--line); border-radius: 2px; background: var(--panel); padding: 12px; }
-.qp-card__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.qp-card__title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--tx1); }
-.qp-card__limit { font-size: 0.62rem; color: var(--mut); }
-.qp-empty { display: flex; height: 150px; align-items: center; justify-content: center; border: 1px dashed var(--line); border-radius: 2px; color: var(--mut); font-size: 0.75rem; }
-.qp-tip { border: 1px solid var(--line); background: var(--panel); border-radius: 2px; padding: 6px 10px; font-size: 0.72rem; box-shadow: 0 8px 24px rgba(0,0,0,.15); }
-.qp-tip__title { font-weight: 600; margin-bottom: 4px; color: var(--tx1); }
+/* Water quality parameter charts (Overview): one card per parameter with an
+   uppercase title and its limit as a pill. App tokens only. */
+.qp-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.qp-card { padding: 10px 10px 6px 4px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.qp-card__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 6px 8px; }
+.qp-card__title { color: var(--mut); font-size: 10.5px; font-weight: 650; letter-spacing: 0.08em; text-transform: uppercase; }
+.qp-card__limit {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 7px;
+  border: 1px solid var(--line2);
+  border-radius: 999px;
+  background: var(--panel2);
+  color: var(--tx2);
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.qp-empty { display: flex; align-items: center; justify-content: center; height: 150px; border: 1px dashed var(--line2); border-radius: 8px; background: var(--panel2); color: var(--mut); font-size: 12px; }
+.qp-tip { padding: 6px 10px; border: 1px solid var(--line2); border-radius: 8px; background: var(--panel); box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18); font-size: 11.5px; }
+.qp-tip__title { margin-bottom: 4px; color: var(--tx1); font-weight: 650; }
 
 @media (max-width: 1100px) { .qp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 700px) { .qp-grid { grid-template-columns: 1fr; } }

@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { format, parseISO, startOfDay, subDays } from "date-fns";
-import { Download } from "lucide-react";
+import { Activity, CheckCircle2, Download, Gauge, Percent, TriangleAlert } from "lucide-react";
+import RecordKpis from "./RecordKpis";
 import { buildProductionRows, filterRows, computeTotals } from "../../lib/productionRows";
 import { productionRowsToCsv } from "../../lib/productionCsv";
 import "./ProductionInputTable.css";
@@ -47,21 +48,17 @@ export default function ProductionInputTable({ plant, plantId, bundle }) {
 
   return (
     <div className="prod-input">
-      <div className="prod-strip">
-        {[
-          ["Contracted (m³)", num(totals.contracted), ""],
-          ["Available (m³)", num(totals.available), "prod-kpi--blue"],
-          ["Delivered (m³)", num(totals.delivered), "prod-kpi--green"],
-          ["Total Loss (m³)", num(totals.loss), "prod-kpi--red"],
-          ["Avg Availability", `${totals.availabilityPct.toFixed(0)}%`, ""],
-        ].map(([label, value, tone]) => (
-          <div className="prod-strip-cell" key={label}>
-            <div className="prod-kpi-label">{label}</div>
-            <div className={`prod-kpi-value ${tone}`}>{value}</div>
-          </div>
-        ))}
-      </div>
+      <RecordKpis
+        items={[
+          { label: "Contracted", value: num(totals.contracted), unit: "m³", icon: Gauge, tone: "neutral" },
+          { label: "Available", value: num(totals.available), unit: "m³", icon: Activity, tone: "acc" },
+          { label: "Delivered", value: num(totals.delivered), unit: "m³", icon: CheckCircle2, tone: "ok" },
+          { label: "Total loss", value: num(totals.loss), unit: "m³", icon: TriangleAlert, tone: totals.loss > 0 ? "err" : "neutral" },
+          { label: "Avg availability", value: `${totals.availabilityPct.toFixed(0)}%`, icon: Percent, tone: "acc", meter: totals.availabilityPct },
+        ]}
+      />
 
+      <section className="prod-card">
       <div className="prod-filters">
         <label>Start Date
           <input type="date" value={isoInput(startDate)} onChange={(e) => e.target.value && setStartDate(startOfDay(parseISO(e.target.value)))} />
@@ -121,9 +118,10 @@ export default function ProductionInputTable({ plant, plantId, bundle }) {
           </tbody>
         </table>
       </div>
-      <div className="prod-caption">
-        {visibleRows.length === 0 ? "No days match the selected range/filters." : `Showing ${visibleRows.length} day${visibleRows.length === 1 ? "" : "s"}`}
-      </div>
+      </section>
+      {visibleRows.length > 0 && (
+        <div className="prod-caption">Showing {visibleRows.length} day{visibleRows.length === 1 ? "" : "s"}</div>
+      )}
     </div>
   );
 }

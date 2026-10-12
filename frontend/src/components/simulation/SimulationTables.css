@@ -1,221 +1,187 @@
-/* Simulation Config tables. Layout, typography and colour come from
-   MetricDashboard.css (.sheet / .ledger / .num / .mono and the --ink/--line
-   custom properties); this file only adds the bits those tables do not have —
-   inline override inputs, provenance badges and the disabled-row treatment. */
+/* Configuration tab tables (SimulationTables). Cards, groups, uppercase
+   table heads, pills, fill bars and detail rows come from ResultsPanel.css
+   (.rp-*); this adds what only these tables have: the type icon tile, the
+   include switch, override inputs, the expand chevron, the excluded-row
+   treatment and the daily breakdowns. Global tokens only. */
 
-.simt__hint {
-  font-size: 0.72rem;
-  color: var(--ink-dim);
-}
+.simt-tables { gap: 14px; }
+.simt-tables .rp-group { gap: 8px; }
 
-.simt__name {
-  display: block;
-  font-weight: 600;
-}
-
-.simt__sub {
-  display: block;
-  font-size: 0.68rem;
-  color: var(--ink-dim);
-}
-
-.simt__tick {
-  width: 40px;
-  text-align: center;
-}
-
-.simt__active {
-  accent-color: var(--accent);
-  cursor: pointer;
-}
-
-/* A row switched off still shows its portal values, so the operator can see
-   what they are excluding rather than having it disappear. */
-.simt__row--off > td {
-  opacity: 0.45;
-}
-
-.simt__short {
-  color: var(--bad);
-  font-weight: 600;
-}
-
-.simt__empty {
-  padding: 24px;
-  text-align: center;
-  color: var(--ink-dim);
-}
-
-/* ---- Override cells ---- */
-.simt__override {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.simt__override-input {
-  width: 96px;
-  padding: 5px 8px;
-  font: inherit;
-  font-size: 0.78rem;
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-  color: var(--ink);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-}
-
-.simt__override-input::placeholder {
-  color: var(--mut2);
-}
-
-.simt__override-input:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
-}
-
-/* A filled override is the one thing on the row that is not portal data. */
-.simt__override-input:not(:placeholder-shown) {
-  border-color: var(--warn);
-  background: var(--amber-soft);
-  font-weight: 600;
-}
-
-.simt__override-suffix {
-  font-size: 0.66rem;
-  color: var(--ink-dim);
-  white-space: nowrap;
-}
-
-/* ---- Per-day breakdown ---- */
-.simt__expand {
+/* Type icon tile in the card header (asset type colour). */
+.simt-card__icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 2px;
-  color: var(--ink-dim);
-  background: none;
-  border: none;
-  border-radius: 4px;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--simt-colour, var(--acc)) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--simt-colour, var(--acc)) 30%, transparent);
+  color: var(--simt-colour, var(--acc));
+}
+
+/* Pill tones. */
+.simt-pill--ok { border-color: var(--ok-border); background: var(--ok-soft); color: var(--okTx); }
+.simt-pill--acc { border-color: var(--acc-border); background: var(--acc-soft); color: var(--accTx); }
+.simt-pill--warn { border-color: var(--amber-border); background: var(--amber-soft); color: var(--amberTx); }
+.simt-pill--err { border-color: var(--err-border); background: var(--err-soft); color: var(--errTx); }
+.simt-pill--off { border-style: dashed; color: var(--mut); }
+
+.simt td { vertical-align: middle; }
+/* Wide tables: slightly tighter cells than the Results tables so the plant
+   and tank sheets fit a 1440px window without scrolling. */
+.simt th,
+.simt td { padding-left: 7px !important; padding-right: 7px !important; }
+.simt__tick { width: 34px; text-align: center; padding-left: 6px !important; padding-right: 6px !important; }
+
+/* Expand chevron. */
+.simt-expand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--mut);
   cursor: pointer;
 }
+.simt-expand svg { transition: transform 0.15s ease; }
+.simt-expand:hover { background: color-mix(in srgb, var(--acc) 12%, transparent); color: var(--acc); }
+.simt-expand.is-open { color: var(--acc); }
+.simt-expand.is-open svg { transform: rotate(90deg); }
+.simt-expand:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.simt tbody tr.is-open > td { background: color-mix(in srgb, var(--acc) 6%, transparent); }
 
-.simt__expand:hover {
-  color: var(--accent);
-  background: var(--accent-soft);
+/* Include switch. */
+.simt-switch { position: relative; display: inline-flex; cursor: pointer; }
+.simt-switch input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
+.simt-switch span {
+  position: relative;
+  width: 28px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--line2);
+  transition: background-color 0.15s ease;
 }
-
-.simt__detail-row > td {
-  padding: 0;
-  background: var(--surface-subtle);
-  white-space: normal;
+.simt-switch span::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--panel);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.3);
+  transition: transform 0.15s ease;
 }
+.simt-switch input:checked + span { background: var(--acc); }
+.simt-switch input:checked + span::after { transform: translateX(12px); }
+.simt-switch input:focus-visible + span { outline: 2px solid var(--acc); outline-offset: 2px; }
 
-.simt__breakdown {
-  padding: 12px 16px 16px 48px;
-  overflow-x: auto;
-}
+/* An excluded row keeps its portal values visible, dimmed, so the operator
+   can see what they are leaving out. The switch stays at full strength. */
+.simt-row--off > td:not(.simt__tick) { opacity: 0.45; }
+.simt-row--off .rp__name { text-decoration: line-through; text-decoration-color: var(--mut2); }
 
-.simt__days {
-  border-collapse: collapse;
-  font-size: 0.76rem;
-  min-width: 520px;
-}
-
-.simt__days th,
-.simt__days td {
-  padding: 6px 14px;
-  text-align: left;
-  border-bottom: 1px solid var(--line-soft);
+/* Override inputs: the placeholder is the portal value; a set value is amber. */
+.simt-ovr {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   white-space: nowrap;
 }
-
-.simt__days thead th {
-  font-size: 0.62rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--ink-dim);
-}
-
-.simt__days .num {
+.simt-ovr input {
+  width: 84px;
+  height: 28px;
+  box-sizing: border-box;
+  padding: 0 8px;
+  border: 1px solid var(--line2);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--tx1);
+  font: inherit;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
   text-align: right;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
-
-.simt__days tbody tr:last-child td {
-  border-bottom: none;
+.simt-ovr input::placeholder { color: var(--mut2); }
+.simt-ovr input:hover { border-color: color-mix(in srgb, var(--acc) 40%, var(--line2)); }
+.simt-ovr input:focus {
+  outline: none;
+  border-color: var(--acc);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--acc) 22%, transparent);
 }
-
-/* The days that actually bind the dispatch. */
-.simt__day--derated td {
+.simt-ovr.is-set input {
+  border-color: var(--amber-border);
   background: var(--amber-soft);
+  color: var(--amberTx);
+  font-weight: 650;
 }
-
-.simt__day--short td {
-  background: var(--err-soft);
+.simt-ovr__suffix { color: var(--mut); font-size: 10.5px; }
+/* Reset sits inside the input's left edge so a set cell is no wider. */
+.simt-ovr.is-set input { padding-left: 24px; }
+.simt-ovr--pct input { width: 70px; }
+.simt-ovr input::-webkit-inner-spin-button { margin-left: 2px; }
+.simt-ovr__reset {
+  position: absolute;
+  top: 4px;
+  left: 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--amberTx);
+  cursor: pointer;
 }
+.simt-ovr__reset:hover { background: var(--amber-soft); }
 
-.simt__chip {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 30px;
-  font-size: 0.66rem;
-  font-weight: 600;
+/* Reserve-rule select. */
+.simt-select {
+  height: 28px;
+  padding: 0 6px;
+  border: 1px solid var(--line2);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--tx1);
+  font: inherit;
+  font-size: 12px;
+}
+.simt-select:focus { outline: none; border-color: var(--acc); box-shadow: 0 0 0 2px color-mix(in srgb, var(--acc) 22%, transparent); }
+.simt-select.is-set { border-color: var(--amber-border); background: var(--amber-soft); color: var(--amberTx); font-weight: 600; }
+
+/* Utilisation bar tones (base bar is green). */
+.simt-util { min-width: 96px; }
+.simt-util--warn .rp-fill__bar { background: #f59e0b; }
+.simt-util--err .rp-fill__bar { background: var(--err); }
+
+/* Daily breakdown inside an expanded row. */
+.simt-breakdown { padding: 8px 12px 10px 74px; overflow-x: auto; }
+.simt-days {
+  width: auto !important;
+  min-width: 520px;
+  overflow: hidden;
   border: 1px solid var(--line);
-  color: var(--ink-dim);
-  background: var(--surface-subtle);
-  white-space: nowrap;
+  border-radius: 8px;
+  background: var(--panel);
 }
+.simt-day--derated td { background: color-mix(in srgb, #f59e0b 8%, transparent); }
+.simt-day--short td { background: color-mix(in srgb, var(--err) 8%, transparent); }
 
-.simt__chip--warn {
-  color: var(--warn);
-  border-color: var(--amber-border);
-  background: var(--amber-soft);
-}
-
-/* ---- Provenance badges ---- */
-.simt__badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 30px;
-  font-size: 0.64rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  border: 1px solid var(--line);
-  color: var(--ink-dim);
-  background: var(--surface-subtle);
-}
-
-.simt__badge--economics {
-  color: var(--good);
-  border-color: var(--ok-border);
-  background: var(--ok-soft);
-}
-
-.simt__badge--plant_spec {
-  color: var(--accent);
-  border-color: var(--acc-border);
-  background: var(--accent-soft);
-}
-
-.simt__badge--default,
-.simt__badge--warn {
-  color: var(--warn);
-  border-color: var(--amber-border);
-  background: var(--amber-soft);
-}
-
-.simt__badge--override {
-  color: var(--warn);
-  border-color: var(--amber-border);
-  background: var(--amber-soft);
-}
+.simt-empty { padding: 22px !important; color: var(--mut); text-align: center; }
 
 @media (max-width: 900px) {
-  .simt__override-input {
-    width: 74px;
-  }
+  .simt-ovr input { width: 74px; }
+  .simt-breakdown { padding-left: 12px; }
 }

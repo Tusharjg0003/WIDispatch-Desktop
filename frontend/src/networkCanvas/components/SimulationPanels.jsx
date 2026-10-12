@@ -1,5 +1,11 @@
 import React from "react";
+import { AlertTriangle, CircleCheck, Eye, Info, Play, Spline, X } from "lucide-react";
 import CanvasDayScrubber from "../../components/simulation/CanvasDayScrubber";
+
+// Simulation-mode canvas chrome (embedded in Simulation Config): the bottom
+// run bar (run summary, Show Gap, legend, day scrubber) and the floating
+// Bottlenecks list. Same language as the side panels: uppercase header rows,
+// pills, 28px buttons with tinted hover / on states.
 
 const LEGEND = [
   ["low", "Below 70%"],
@@ -13,30 +19,33 @@ const LEGEND = [
 
 const pct = (v) => (v == null ? "—" : `${Math.round(v * 100)}%`);
 const fmt = (v) => (v == null ? "—" : Math.round(v).toLocaleString());
+const stamp = (iso) => new Date(iso).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 
 /** Simulation View → Bottlenecks floating list (SWIIMS bottleneck panel). */
 export function BottleneckPanel({ items, onFocus, onClose }) {
   return (
     <section className="nb-trace-float nb-bottleneck-float" aria-label="Bottlenecks">
-      <header className="nb-trace-float__head">
+      <header className="simbar-float__head">
+        <span className="simbar-float__icon" aria-hidden="true"><AlertTriangle size={13} /></span>
         <strong>Bottlenecks</strong>
-        <span className="cr-count">{items.length} binding</span>
-        <span className="cr-spacer" />
-        <button type="button" className="cr-btn cr-btn--sm cr-btn--icon" onClick={onClose} aria-label="Close bottlenecks">×</button>
+        <span className="simbar-pill simbar-pill--err">{items.length} binding</span>
+        <button type="button" className="simbar-btn simbar-btn--icon" onClick={onClose} aria-label="Close bottlenecks" title="Close">
+          <X size={14} aria-hidden="true" />
+        </button>
       </header>
       <div className="nb-trace-float__body">
         {items.length === 0 ? (
-          <span className="nb-trace-card__empty">Nothing was binding on this day.</span>
+          <span className="simbar-empty"><CircleCheck size={14} aria-hidden="true" /> Nothing was binding on this day.</span>
         ) : (
-          <table className="cr-table">
+          <table className="simbar-table">
             <thead>
               <tr><th>Element</th><th>Kind</th><th className="num">Util.</th><th className="num">Flow m³/d</th></tr>
             </thead>
             <tbody>
               {items.map((item) => (
-                <tr key={item.id} className="is-clickable" onClick={() => onFocus(item.id)}>
-                  <td className="cr-td--strong">{item.name}</td>
-                  <td className="cr-td--muted">{item.kind}</td>
+                <tr key={item.id} onClick={() => onFocus(item.id)} title="Show on the canvas">
+                  <td className="simbar-table__name">{item.name}</td>
+                  <td className="simbar-table__muted">{item.kind}</td>
                   <td className="num">{pct(item.util)}</td>
                   <td className="num">{fmt(item.flow)}</td>
                 </tr>
@@ -49,44 +58,70 @@ export function BottleneckPanel({ items, onFocus, onClose }) {
   );
 }
 
-/** Bottom run bar: notices, legend, Show Gap and the day scrubber. */
+function Notice({ tone = "info", children }) {
+  const Icon = tone === "warn" ? AlertTriangle : Info;
+  return (
+    <div className={`simbar-notice simbar-notice--${tone}`}>
+      <Icon size={13} aria-hidden="true" />
+      <span>{children}</span>
+    </div>
+  );
+}
+
+/** Bottom run bar: notices, run summary, Show Gap, legend and the day scrubber. */
 export function SimulationRunBar({ sim, plan, showLegend, onToggleLegend }) {
   if (!plan) {
     return (
       <div className="nb-run-bar">
-        <div className="metric__notice">No run yet — use Home → Run to simulate this configuration and paint the results on the canvas.</div>
+        <Notice>
+          No run yet. Use <strong><Play size={11} aria-hidden="true" /> Run</strong> on the Home tab to simulate this configuration and paint the results on the canvas.
+        </Notice>
       </div>
     );
   }
   const emptyRun = plan?.kpis?.totalRequiredM3 === 0;
+  const dayShort = sim.overlay?.totals?.shortage;
   return (
     <div className="nb-run-bar">
       {sim.stale.missingFromCanvas.length > 0 && (
-        <div className="metric__notice metric__notice--warn">
-          {sim.stale.missingFromCanvas.length} element(s) this run used are no longer on the canvas.
-        </div>
+        <Notice tone="warn">
+          {sim.stale.missingFromCanvas.length} element{sim.stale.missingFromCanvas.length === 1 ? "" : "s"} this run used {sim.stale.missingFromCanvas.length === 1 ? "is" : "are"} no longer on the canvas.
+        </Notice>
       )}
-      {emptyRun && <div className="metric__notice">This run had no demand to dispatch, so every pipe shows as idle.</div>}
+      {emptyRun && <Notice>This run had no demand to dispatch, so every pipe shows as idle.</Notice>}
       {sim.cleared ? (
         <div className="nb-run-bar__row">
-          <span className="cr-count">Run overlay cleared.</span>
-          <button type="button" className="cr-btn cr-btn--sm" onClick={sim.restore}>Show results again</button>
+          <span className="simbar-title">Run overlay hidden</span>
+          <span className="simbar-spacer" />
+          <button type="button" className="simbar-btn" onClick={sim.restore}>
+            <Eye size={13} aria-hidden="true" /> Show results again
+          </button>
         </div>
       ) : (
         <>
           <div className="nb-run-bar__row">
-            <span className="cr-count">
-              Run {new Date(plan.runAt).toLocaleString()} · {plan.from} → {plan.to}
-              {sim.overlay?.totals ? ` · day short ${fmt(sim.overlay.totals.shortage)} m³` : ""}
-            </span>
-            <span className="cr-spacer" />
+            <span className="simbar-title">Run results</span>
+            <span className="simbar-pill">{stamp(plan.runAt)}</span>
+            <span className="simbar-pill">{plan.from} → {plan.to}</span>
+            {dayShort != null && (
+              dayShort > 0
+                ? <span className="simbar-pill simbar-pill--err">{fmt(dayShort)} m³ short this day</span>
+                : <span className="simbar-pill simbar-pill--ok">Fully served this day</span>
+            )}
+            <span className="simbar-spacer" />
             {sim.canShowGap && (
-              <button type="button" className="cr-btn cr-btn--sm" onClick={() => sim.showGap(sim.selection.id)} title="Binding pipes upstream and plants with spare capacity">
-                Show Gap
+              <button type="button" className="simbar-btn" onClick={() => sim.showGap(sim.selection.id)} title="Binding pipes upstream and plants with spare capacity">
+                <Spline size={13} aria-hidden="true" /> Show gap
               </button>
             )}
-            {sim.gap && <button type="button" className="cr-btn cr-btn--sm" onClick={sim.clearGap}>Clear Gap</button>}
-            <button type="button" className={`cr-btn cr-btn--sm${showLegend ? " active" : ""}`} onClick={onToggleLegend} aria-pressed={showLegend}>Legend</button>
+            {sim.gap && (
+              <button type="button" className="simbar-btn" onClick={sim.clearGap}>
+                <X size={13} aria-hidden="true" /> Clear gap
+              </button>
+            )}
+            <button type="button" className={`simbar-btn${showLegend ? " is-on" : ""}`} onClick={onToggleLegend} aria-pressed={showLegend}>
+              <Info size={13} aria-hidden="true" /> Legend
+            </button>
           </div>
           {showLegend && (
             <div className="nb-run-bar__legend">

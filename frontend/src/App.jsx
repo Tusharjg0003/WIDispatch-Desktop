@@ -14,7 +14,6 @@ const DemandPage = lazy(() => import("./pages/DemandPage"));
 const TransmissionPage = lazy(() => import("./pages/TransmissionPage"));
 const EconomicsPage = lazy(() => import("./pages/EconomicsPage"));
 const AssetRegistryPage = lazy(() => import("./pages/AssetRegistryPage"));
-const AssetDetailPage = lazy(() => import("./pages/AssetDetailPage"));
 const NetworkBuilderPage = lazy(() => import("./pages/NetworkBuilderPage"));
 const SimulationConfigPage = lazy(() => import("./pages/SimulationConfigPage"));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
@@ -50,6 +49,7 @@ export default function App() {
                 <Route path="/transmission/pump-stations" element={<TransmissionPage />} />
                 <Route path="/transmission/pump-stations/:pumpStationId" element={<TransmissionPage />} />
                 <Route path="/transmission/systems" element={<TransmissionPage mode="systems" />} />
+                <Route path="/transmission/systems/:systemId" element={<TransmissionPage mode="systems" />} />
                 <Route path="/economics" element={<EconomicsPage />} />
                 <Route path="/economics/:plantId" element={<EconomicsPage />} />
                 <Route path="/network-builder" element={<NetworkBuilderPage />} />
@@ -59,7 +59,7 @@ export default function App() {
                 <Route path="/asset-registry" element={<AssetRegistryPage mode="list" />} />
                 <Route path="/asset-registry/create" element={<AssetRegistryPage mode="create" />} />
                 <Route path="/asset-registry/edit/:id" element={<AssetRegistryPage mode="edit" />} />
-                <Route path="/asset-registry/view/:id" element={<AssetDetailPage />} />
+                <Route path="/asset-registry/view/:id" element={<AssetRegistryPage mode="view" />} />
                 <Route path="*" element={<NotFoundPage />} />
               </Routes>
             </Suspense>

@@ -1,4 +1,5 @@
-.qrl { display: flex; flex-direction: column; gap: 12px; }
-/* Reuses shared prod-* classes from ProductionInputTable.css, which is imported by the
-   sibling table component on the same page; these fallbacks keep this tab self-contained. */
-.qrl .prod-table .empty { text-align: center; color: var(--mut); padding: 16px; }
+/* Quality tab (QualityRecordList). Shared styles from ProductionInputTable.css. */
+.qrl { display: flex; flex-direction: column; gap: 10px; }
+.qrl .prod-table .empty { padding: 22px; color: var(--mut); text-align: center; }
+/* Out-of-spec samples stand out without hiding the readings. */
+.qrl__row--out td { background: color-mix(in srgb, var(--err) 6%, transparent); }

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
-import { Check, Download, X } from "lucide-react";
+import { Check, CheckCircle2, Clock3, Download, TriangleAlert, Wrench, X } from "lucide-react";
+import RecordKpis from "./RecordKpis";
 import { updateMaintenanceDesktopApproval } from "../../api/production";
 import { buildMaintenanceRows, filterMaintenanceByStatus, computeMaintenanceStats, maintenanceDurationHours, maintenanceRowsToCsv } from "../../lib/maintenanceRecords";
 import "./MaintenanceRecordList.css";
@@ -81,13 +82,16 @@ export default function MaintenanceRecordList({ plantId, bundle, readOnly = fals
 
   return (
     <div className="mrl">
-      <div className="prod-strip">
-        <div className="prod-strip-cell"><div className="prod-kpi-label">Total</div><div className="prod-kpi-value">{stats.total}</div></div>
-        <div className="prod-strip-cell"><div className="prod-kpi-label">Pending</div><div className="prod-kpi-value">{stats.pending}</div></div>
-        <div className="prod-strip-cell"><div className="prod-kpi-label">Approved</div><div className="prod-kpi-value prod-kpi--green">{stats.approved}</div></div>
-        <div className="prod-strip-cell"><div className="prod-kpi-label">Expected Loss (m³)</div><div className="prod-kpi-value prod-kpi--red">{Math.round(stats.totalImpact).toLocaleString()}</div></div>
-      </div>
+      <RecordKpis
+        items={[
+          { label: "Total", value: stats.total, icon: Wrench, tone: "neutral", sub: "Records in range" },
+          { label: "Pending", value: stats.pending, icon: Clock3, tone: stats.pending > 0 ? "warn" : "neutral", sub: "Awaiting approval" },
+          { label: "Approved", value: stats.approved, icon: CheckCircle2, tone: "ok", sub: "On the website" },
+          { label: "Expected loss", value: Math.round(stats.totalImpact).toLocaleString(), unit: "m³", icon: TriangleAlert, tone: stats.totalImpact > 0 ? "err" : "neutral" },
+        ]}
+      />
 
+      <section className="prod-card">
       <div className="prod-filters">
         <label>Start Date<input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></label>
         <label>End Date<input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} /></label>
@@ -110,7 +114,7 @@ export default function MaintenanceRecordList({ plantId, bundle, readOnly = fals
               <th>Responsible User</th><th>Submitted At</th><th>Website Approved At</th>
               {!hideDesktopApproval && <th>Desktop Approval</th>}
               {!hideDesktopApproval && <th>Desktop Approved At</th>}
-              {showActions && <th>Actions</th>}
+              {showActions && <th className="mrl__sticky">Actions</th>}
             </tr>
           </thead>
           <tbody>
@@ -133,11 +137,12 @@ export default function MaintenanceRecordList({ plantId, bundle, readOnly = fals
                 {!hideDesktopApproval && <td><span className={`prod-badge prod-badge--${desktopStatus(r)}`}>{humanStatus(desktopStatus(r))}</span></td>}
                 {!hideDesktopApproval && <td className="nowrap">{fmtDT(desktopApprovedAt(r))}</td>}
                 {showActions && (
-                  <td>
-                    <div className="mrl__actions">
+                  <td className="mrl__sticky">
+                    <div className="mrl__actions" role="group" aria-label={`Desktop approval for ${r.description || "this record"}`}>
                       <button
                         type="button"
-                        className="mrl__approval-btn mrl__approval-btn--accept"
+                        className={`mrl__approval-btn mrl__approval-btn--accept${desktopStatus(r) === "approved" ? " is-on" : ""}`}
+                        aria-pressed={desktopStatus(r) === "approved"}
                         onClick={() => setDesktopApproval(r, "approved")}
                         disabled={!r.id || !!pendingApprovals[r.id] || desktopStatus(r) === "approved"}
                       >
@@ -145,7 +150,8 @@ export default function MaintenanceRecordList({ plantId, bundle, readOnly = fals
                       </button>
                       <button
                         type="button"
-                        className="mrl__approval-btn mrl__approval-btn--reject"
+                        className={`mrl__approval-btn mrl__approval-btn--reject${desktopStatus(r) === "rejected" ? " is-on" : ""}`}
+                        aria-pressed={desktopStatus(r) === "rejected"}
                         onClick={() => setDesktopApproval(r, "rejected")}
                         disabled={!r.id || !!pendingApprovals[r.id] || desktopStatus(r) === "rejected"}
                       >
@@ -160,7 +166,10 @@ export default function MaintenanceRecordList({ plantId, bundle, readOnly = fals
           </tbody>
         </table>
       </div>
-      {showActions && approvalError && <div className="mrl__error">{approvalError}</div>}
+      </section>
+      {showActions && approvalError && (
+        <div className="mrl__error" role="alert"><TriangleAlert size={14} aria-hidden="true" /><span>{approvalError}</span></div>
+      )}
     </div>
   );
 }

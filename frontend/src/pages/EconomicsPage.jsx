@@ -73,7 +73,7 @@ export default function EconomicsPage() {
           onPlantLoaded={adoptTitle}
         />
       ) : (
-        <ProductionPlantList basePath="/economics" onOpenPlant={openPlant} />
+        <ProductionPlantList basePath="/economics" onOpenPlant={openPlant} variant="economics" />
       )}
     </div>
   );

@@ -1,24 +1,112 @@
-.ppd { padding: 8px 10px; background: var(--bg); min-height: 100%; }
-/* Web identity bar: back · name · status chip · asset ID · meta line. */
-.ppd__identity { position: sticky; top: 0; z-index: 4; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); box-shadow: 0 5px 16px rgba(0, 48, 87, 0.08); }
-.ppd__back { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border: 1px solid var(--line2); border-radius: 6px; background: var(--panel2); color: var(--tx1); cursor: pointer; }
-.ppd__back:hover { background: var(--brand-soft); color: var(--brand); }
-.ppd__name { font-size: 15px; font-weight: 700; color: var(--tx1); }
-.ppd__extid { font-family: var(--mono); font-size: 11px; color: var(--mut); }
-.ppd__meta { font-size: 10.5px; color: var(--mut); }
-.ppd__state { padding: 24px; color: var(--mut); }
-.ppd__state--err { color: var(--critical); }
+/* Asset detail (Production / Economics plant, Demand city gate, Transmission
+   pump station). The app's card language: a sticky identity card (back,
+   type-coloured icon tile, name, status, asset ID, meta), a segmented tab
+   strip like the workspace tabs, then the tab's cards. Global tokens only. */
+.ppd { display: flex; flex-direction: column; gap: 10px; min-height: 100%; padding: 10px 12px; background: var(--panel2); }
 
-.ppd__sections { display: flex; flex-direction: column; gap: 12px; }
-.ppd__card { border: 1px solid var(--line); border-radius: 2px; background: var(--panel); }
-.ppd__card-head { padding: 10px 12px; border-bottom: 1px solid var(--line); }
-.ppd__card-head h2 { font-size: 0.95rem; font-weight: 700; color: var(--tx1); }
-.ppd__card-head p { font-size: 0.72rem; color: var(--mut); margin-top: 2px; }
+.ppd__identity {
+  --ppd-colour: var(--acc);
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+.ppd__back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line2);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--tx2);
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+.ppd__back:hover { border-color: color-mix(in srgb, var(--acc) 40%, var(--line2)); background: color-mix(in srgb, var(--acc) 10%, transparent); color: var(--tx1); }
+.ppd__back:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.ppd__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--ppd-colour) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ppd-colour) 30%, transparent);
+  color: var(--ppd-colour);
+}
+.ppd__name { margin: 0; color: var(--tx1); font-size: 16px; font-weight: 700; line-height: 1.2; }
+.ppd__extid {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 7px;
+  border: 1px solid var(--line2);
+  border-radius: 999px;
+  background: var(--panel2);
+  color: var(--tx2);
+  font-family: var(--mono);
+  font-size: 10.5px;
+}
+.ppd__meta { flex-basis: 100%; margin-left: calc(30px + 36px + 20px); color: var(--mut); font-size: 11.5px; }
+.ppd__identity:not(:has(.ppd__back)) .ppd__meta { margin-left: calc(36px + 10px); }
+.ppd__state { padding: 28px; color: var(--mut); font-size: 12.5px; text-align: center; }
+.ppd__state--err { color: var(--errTx); }
+
+.ppd__sections { display: flex; flex-direction: column; gap: 10px; }
+.ppd__card { overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.ppd__card-head { display: flex; align-items: baseline; gap: 8px; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+.ppd__card-head h2 { margin: 0; color: var(--mut); font-size: 10.5px; font-weight: 650; letter-spacing: 0.08em; text-transform: uppercase; }
+.ppd__card-head p { margin: 0 0 0 auto; color: var(--mut); font-size: 11.5px; }
 .ppd__card-body { padding: 12px; }
 
-.ppd__tabs { display: flex; gap: 2px; margin-bottom: 8px; }
-.ppd__tab { display: inline-flex; align-items: center; height: 26px; padding: 0 12px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--mut); font-size: 11px; font-weight: 600; cursor: pointer; }
-.ppd__tab:hover { color: var(--tx1); background: var(--panel2); }
-.ppd__tab--active { color: var(--on-accent); background: var(--acc-grad); border-color: var(--acc-border); }
-.ppd__tab--active:hover { color: var(--on-accent); }
+/* Tabs: a segmented strip, accent-tinted when on (same as the workspace tabs). */
+.ppd__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-self: flex-start;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+.ppd__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--tx2);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+.ppd__tab:hover { background: color-mix(in srgb, var(--acc) 10%, transparent); color: var(--tx1); }
+.ppd__tab--active,
+.ppd__tab--active:hover {
+  border-color: color-mix(in srgb, var(--acc) 40%, transparent);
+  background: color-mix(in srgb, var(--acc) 15%, transparent);
+  color: var(--accTx, var(--acc));
+}
+.ppd__tab:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
 .ppd__tabpanel { min-height: 200px; }
+
+@media (max-width: 640px) {
+  .ppd__meta { margin-left: 0; }
+}

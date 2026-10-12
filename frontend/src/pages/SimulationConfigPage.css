@@ -1,185 +1,372 @@
-/* Simulation Config page shell: the setup form, readiness checks and the
-   Configuration/Results/Decisions tab strip. Everything else on the page is
-   MetricDashboard.css (.sheet / .ledger / .kpi) or the panel-specific files. */
+/* Simulation Config (SimulationConfigPage.jsx). Same shell as the Asset
+   Registry: a full-height row with the saved-simulations rail flush left
+   (SimulationConfigSidebar, shared SidebarList.css) and the main pane
+   scrolling on its own. The main pane is the app's card language: setup card
+   with an uppercase header row, 32px fields, ok / warn / err check rows, a
+   tab strip like the workspace tabs, then the tables (MetricDashboard.css
+   .sheet / .ledger and SimulationTables.css). Global tokens only. */
 
-.scp__picker {
-  min-width: 220px;
-  padding: 6px 10px;
-  font: inherit;
-  font-size: 0.8rem;
-  color: var(--ink);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 6px;
+/* Tab strip on top, then the rail + pane row. */
+.scp-root { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.scp-shell {
+  --left-sidebar-width: 268px;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  /* The rail sits outside .metric, so redeclare its token aliases here (the
+     same block .ar-shell and .nb-page use). */
+  --ink: var(--tx1);
+  --ink-dim: var(--mut);
+  --accent: var(--acc);
+  --good: var(--ok);
+  --bad: var(--err);
+  --surface: var(--panel);
+  --surface-subtle: var(--panel2);
 }
+.scp-rail {
+  width: var(--left-sidebar-width);
+  flex: 0 0 var(--left-sidebar-width);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  z-index: 1;
+}
+.scp-rail > .sl-panel { flex: 1; min-height: 0; }
 
+.scp.metric {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  width: auto;
+  min-width: 0;
+  height: 100%;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
 .scp > .workspace-header {
   position: sticky;
   top: 0;
   z-index: 20;
-  box-shadow: 0 5px 16px rgba(15, 23, 42, 0.08);
+  margin: 0;
 }
+.scp > .metric__notice { margin: 0; }
 
-.scp > .metric__notice:not(.metric__notice--error) {
-  min-height: 96px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-style: dashed;
-  border-radius: var(--radius-lg, 9px);
-  background: linear-gradient(135deg, var(--panel), var(--panel));
-  color: var(--mut);
-}
-
-/* ---- Setup ---- */
-.scp__setup {
-  margin-bottom: 18px;
-}
-
-.scp__setup-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 14px 18px;
-  padding: 18px 22px;
-}
-
-.scp__wide {
-  grid-column: span 2;
-}
-
-.scp__setup-grid label {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.scp__setup-grid label > span {
-  font-size: 0.66rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--ink-dim);
-}
-
-.scp__setup-grid input,
-.scp__setup-grid select {
-  padding: 7px 10px;
-  font: inherit;
-  font-size: 0.82rem;
-  color: var(--ink);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-}
-
-.scp__setup-grid input:focus,
-.scp__setup-grid select:focus,
-.scp__picker:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
-}
-
-.scp__delete {
+/* ── Buttons used inside the page (empty states) ─────────────────────────── */
+.scp-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  padding: 5px 12px;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--line2);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--tx1);
   font: inherit;
-  font-size: 0.74rem;
-  color: var(--bad);
-  background: var(--surface);
-  border: 1px solid var(--err-border);
-  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
 }
-
-.scp__delete:hover {
-  background: var(--err-soft);
+.scp-btn:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--acc) 40%, var(--line2));
+  background: color-mix(in srgb, var(--acc) 10%, transparent);
 }
-
-/* ---- Readiness checks ---- */
-.scp__checks {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 0 22px 18px;
+.scp-btn--primary {
+  border-color: var(--acc);
+  background: var(--acc);
+  color: var(--on-accent, #fff);
 }
-
-.scp__check {
-  margin: 0;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 0.78rem;
-  border: 1px solid transparent;
+.scp-btn--primary:hover:not(:disabled) {
+  border-color: var(--acc);
+  background: color-mix(in srgb, var(--acc) 88%, #000);
 }
+.scp-btn:disabled { cursor: not-allowed; opacity: 0.55; }
 
-/* Blockers disable Run; warnings only inform. */
-.scp__check--block {
-  color: var(--bad);
-  border-color: var(--err-border);
-  background: var(--err-soft);
+/* ── Setup card ──────────────────────────────────────────────────────────── */
+.scp-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
 }
-
-.scp__check--warn {
-  color: var(--warn);
-  border-color: var(--amber-border);
-  background: var(--amber-soft);
-}
-
-/* ---- Tabs ---- */
-.scp__tabs {
+.scp-card__head {
   display: flex;
   align-items: center;
-  gap: 4px;
-  margin-bottom: 18px;
+  gap: 10px;
+  padding: 10px 14px;
   border-bottom: 1px solid var(--line);
-  position: sticky;
-  top: 55px;
-  z-index: 15;
-  background: var(--surface-subtle);
 }
-
-.scp__tab {
-  padding: 9px 16px;
-  font: inherit;
-  font-size: 0.82rem;
-  font-weight: 500;
-  color: var(--ink-dim);
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  cursor: pointer;
+.scp-card__head h2 {
+  margin: 0;
+  color: var(--mut);
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
-
-.scp__tab:hover {
-  color: var(--ink);
-}
-
-.scp__tab--active {
-  color: var(--accent);
-  font-weight: 600;
-  border-bottom-color: var(--accent);
-}
-
-.scp__runmeta {
+.scp-card__meta {
   margin-left: auto;
-  padding-right: 4px;
-  font-size: 0.72rem;
-  color: var(--ink-dim);
+  color: var(--mut);
+  font-size: 11.5px;
   font-variant-numeric: tabular-nums;
 }
 
-@media (max-width: 900px) {
-  .scp__wide {
-    grid-column: auto;
-  }
-
-  .scp__runmeta {
-    display: none;
-  }
+.scp-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px 16px;
+  padding: 14px;
+}
+.scp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+.scp-field--wide { grid-column: span 2; }
+.scp-field > span {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--mut);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.scp-field__note {
+  margin-left: auto;
+  color: var(--accTx, var(--acc));
+  font-style: normal;
+  font-weight: 650;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.scp-field input,
+.scp-field select {
+  width: 100%;
+  height: 32px;
+  box-sizing: border-box;
+  padding: 0 10px;
+  border: 1px solid var(--line2);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--tx1);
+  font: inherit;
+  font-size: 12.5px;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+.scp-field input:hover,
+.scp-field select:hover { border-color: color-mix(in srgb, var(--acc) 40%, var(--line2)); }
+.scp-field input:focus,
+.scp-field select:focus {
+  outline: none;
+  border-color: var(--acc);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--acc) 22%, transparent);
 }
 
-/* Embedded network canvas (SWIIMS simulation-config canvas) */
-.scp__canvas-host { display: flex; flex-direction: column; gap: 6px; height: calc(100vh - 230px); min-height: 520px; }
-.scp__canvas-host > .nb-page { flex: 1; min-height: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+/* Readiness: blockers disable Run, warnings only inform. */
+.scp-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0 14px 14px;
+  list-style: none;
+}
+.scp-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.scp-check svg { flex-shrink: 0; margin-top: 2px; }
+.scp-check--err { border-color: var(--err-border); background: var(--err-soft); color: var(--errTx); }
+.scp-check--warn { border-color: var(--amber-border); background: var(--amber-soft); color: var(--amberTx); }
+.scp-check--ok { border-color: var(--ok-border); background: var(--ok-soft); color: var(--okTx); }
+
+/* ── Tab strip ───────────────────────────────────────────────────────────── */
+.scp-tabs {
+  position: sticky;
+  top: 56px;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+.scp-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--tx2);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+.scp-tab:hover { background: color-mix(in srgb, var(--acc) 10%, transparent); color: var(--tx1); }
+.scp-tab.is-active {
+  border-color: color-mix(in srgb, var(--acc) 40%, transparent);
+  background: color-mix(in srgb, var(--acc) 15%, transparent);
+  color: var(--accTx, var(--acc));
+}
+.scp-tab:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.scp-tab__hint {
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--panel2);
+  color: var(--mut);
+  font-size: 9.5px;
+  font-weight: 600;
+}
+.scp-tabs__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  margin-left: auto;
+  padding-right: 8px;
+  overflow: hidden;
+  color: var(--mut);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Banners, empty states, loading ──────────────────────────────────────── */
+.scp-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.scp-banner svg { flex-shrink: 0; margin-top: 2px; }
+.scp-banner--warn { border-color: var(--amber-border); background: var(--amber-soft); color: var(--amberTx); }
+.scp-banner--err { border-color: var(--err-border); background: var(--err-soft); color: var(--errTx); }
+
+.scp-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 220px;
+  padding: 28px 20px;
+  border: 1px dashed var(--line2);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--mut);
+  font-size: 12.5px;
+  text-align: center;
+}
+.scp-empty--inline { min-height: 180px; }
+.scp-empty strong { color: var(--tx1); font-size: 13.5px; font-weight: 650; }
+.scp-empty p { max-width: 420px; margin: 0 0 4px; line-height: 1.5; }
+.scp-empty__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--acc) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--acc) 30%, transparent);
+  color: var(--acc);
+}
+
+.scp-spin { animation: scp-spin 0.8s linear infinite; }
+@keyframes scp-spin { to { transform: rotate(360deg); } }
+
+.scp-tables { transition: opacity 0.15s ease; }
+/* Outcome of the previewed (or last stored) dispatch, above the tables. */
+.scp-outcome { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.scp-outcome__title { display: flex; align-items: center; gap: 10px; margin: 0; color: var(--mut); font-size: 10.5px; font-weight: 650; letter-spacing: 0.08em; text-transform: uppercase; }
+.scp-outcome__title span { color: var(--mut2); font-weight: 500; letter-spacing: 0; text-transform: none; }
+.scp-outcome__title::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.scp-tables.is-updating { opacity: 0.6; }
+
+.scp-skeleton { display: flex; flex-direction: column; gap: 12px; }
+.scp-skeleton__sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+.scp-skeleton__sheet span {
+  height: 12px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--panel2), color-mix(in srgb, var(--acc) 8%, var(--panel2)), var(--panel2));
+  background-size: 200% 100%;
+  animation: scp-shimmer 1.2s ease-in-out infinite;
+}
+.scp-skeleton__sheet span:first-child { width: 30%; height: 14px; }
+.scp-skeleton__sheet span:nth-child(3) { width: 85%; }
+.scp-skeleton__sheet span:last-child { width: 60%; }
+@keyframes scp-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .scp-spin, .scp-skeleton__sheet span { animation: none; }
+}
+@media (max-width: 900px) {
+  .scp-field--wide { grid-column: auto; }
+  .scp-tabs__meta { display: none; }
+}
+
+/* ── Canvas tab ──────────────────────────────────────────────────────────
+   A workspace rather than a scrolling section: the setup card steps aside
+   and the embedded canvas (ribbon, library rail, canvas, details rail, run
+   bar) fills the rest of the pane inside one framed card. */
+.scp.scp--canvas { overflow: hidden; }
+.scp--canvas > .scp-tabs { position: static; }
+.scp__canvas-host {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 460px;
+}
+.scp__canvas-host > .nb-embed {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+.scp__canvas-host .nb-embed > .nb-page { flex: 1; height: auto; min-height: 0; }
+/* The library / details rails sit inside the frame: hairlines, not boxes. */
+.scp__canvas-host .nb-embed .nb-rail,
+.scp__canvas-host .nb-embed .nb-inspector { border-top: 0; border-bottom: 0; }
+.scp__canvas-host .nb-embed .nb-rail { border-left: 0; }
+.scp__canvas-host .nb-embed .nb-inspector { border-right: 0; }

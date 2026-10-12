@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Download, List, Map as MapIcon, Search } from "lucide-react";
+import { CircleCheck, Download, Gauge, Landmark, List, Map as MapIcon, MapPinned, Search } from "lucide-react";
 import { fetchCityGates } from "../api/demand";
 import { StatusBadge } from "../components/ui/WorkspacePrimitives";
 import AssetMapView from "../components/AssetMapView";
@@ -20,6 +20,26 @@ const EXPORT_COLUMNS = [
   { key: "capacity", label: "Contracted (m3/day)", get: (gate) => gate.specifications?.contracted_capacity ?? "" },
 ];
 const isOperational = (gate) => String(gate.status || "").toLowerCase() === "operational";
+const compact = (v) => {
+  if (v == null) return "—";
+  const abs = Math.abs(v);
+  if (abs >= 1e6) return `${(v / 1e6).toFixed(2)}M`;
+  if (abs >= 1e4) return `${(v / 1e3).toFixed(abs >= 1e5 ? 0 : 1)}K`;
+  return Math.round(v).toLocaleString();
+};
+
+function Kpi({ icon: Icon, tone = "", label, value, unit, sub }) {
+  return (
+    <section className={`ppl-kpi${tone ? ` ppl-kpi--${tone}` : ""}`} aria-label={label}>
+      <span className="ppl-kpi__icon" aria-hidden="true"><Icon size={16} /></span>
+      <span className="ppl-kpi__text">
+        <span className="ppl-kpi__label">{label}</span>
+        <span className="ppl-kpi__value">{value}{unit && <small>{unit}</small>}</span>
+        {sub && <span className="ppl-kpi__sub">{sub}</span>}
+      </span>
+    </section>
+  );
+}
 
 // City-gate list — matches the WIDispatch-Demand web app (Plants components
 // relabelled "City Gate"): panel + search/count/List·Map toolbar, inline header
@@ -63,6 +83,14 @@ export default function DemandCityGateList({ basePath = "/demand", onOpenGate })
     });
   }, [operational, query, gateType, entity, region]);
 
+  const kpis = useMemo(() => {
+    if (!gates.length) return null;
+    const capacity = operational.reduce((sum, gate) => sum + (Number(gate.specifications?.contracted_capacity) || 0), 0);
+    const regions = uniqSorted(operational.map((gate) => gate.region));
+    const entities = uniqSorted(operational.map((gate) => gate.entity));
+    return { total: gates.length, operational: operational.length, capacity, regions: regions.length, entities: entities.length };
+  }, [gates, operational]);
+
   const openGate = (gate) => {
     if (onOpenGate) { onOpenGate(gate); return; }
     navigate(`${basePath}/${encodeURIComponent(gate.id)}`);
@@ -71,6 +99,15 @@ export default function DemandCityGateList({ basePath = "/demand", onOpenGate })
 
   return (
     <main className="ppl ppl--compact demand-city-gates">
+      {kpis && (
+        <div className="ppl-kpis">
+          <Kpi icon={CircleCheck} tone="ok" label="Operational city gates" value={kpis.operational} unit={`/ ${kpis.total}`}
+            sub={kpis.total - kpis.operational ? `${kpis.total - kpis.operational} not operational` : "Every gate operational"} />
+          <Kpi icon={Gauge} label="Contracted demand" value={compact(kpis.capacity)} unit="m³/day" sub="Operational city gates" />
+          <Kpi icon={MapPinned} tone="warn" label="Regions served" value={kpis.regions} sub="With an operational gate" />
+          <Kpi icon={Landmark} label="Entities" value={kpis.entities} sub="Distribution entities" />
+        </div>
+      )}
       <div className="ppl__panel">
         <header className="ppl__toolbar-row">
           <label className="ppl__search-wrap">
@@ -98,9 +135,9 @@ export default function DemandCityGateList({ basePath = "/demand", onOpenGate })
               <thead><tr>
                 <th>Asset ID</th>
                 <th>City Gate Name</th>
-                <th><select className="ppl__head-select" aria-label="City gate type" value={gateType} onChange={(e) => setGateType(e.target.value)}><option value="">City Gate Type: All</option>{filterOptions.gateTypes.map((t) => <option key={t} value={t}>{t}</option>)}</select></th>
-                <th><select className="ppl__head-select" aria-label="Entity" value={entity} onChange={(e) => setEntity(e.target.value)}><option value="">Entity: All</option>{filterOptions.entities.map((t) => <option key={t} value={t}>{t}</option>)}</select></th>
-                <th><select className="ppl__head-select" aria-label="Region" value={region} onChange={(e) => setRegion(e.target.value)}><option value="">Region: All</option>{filterOptions.regions.map((t) => <option key={t} value={t}>{t}</option>)}</select></th>
+                <th><select className={`ppl__head-select${gateType ? " is-set" : ""}`} aria-label="City gate type" value={gateType} onChange={(e) => setGateType(e.target.value)}><option value="">City Gate Type: All</option>{filterOptions.gateTypes.map((t) => <option key={t} value={t}>{t}</option>)}</select></th>
+                <th><select className={`ppl__head-select${entity ? " is-set" : ""}`} aria-label="Entity" value={entity} onChange={(e) => setEntity(e.target.value)}><option value="">Entity: All</option>{filterOptions.entities.map((t) => <option key={t} value={t}>{t}</option>)}</select></th>
+                <th><select className={`ppl__head-select${region ? " is-set" : ""}`} aria-label="Region" value={region} onChange={(e) => setRegion(e.target.value)}><option value="">Region: All</option>{filterOptions.regions.map((t) => <option key={t} value={t}>{t}</option>)}</select></th>
                 <th>Status</th>
                 <th className="ta-r">Contracted (m³/day)</th>
               </tr></thead>
@@ -109,7 +146,7 @@ export default function DemandCityGateList({ basePath = "/demand", onOpenGate })
                   <tr key={gate.id} role="link" tabIndex={0} onClick={() => openGate(gate)} onKeyDown={(event) => { if (event.key === "Enter") openGate(gate); }}>
                     <td data-label="Asset ID" className="mono muted">{gate.external_id}</td>
                     <td data-label="City Gate" className="ppl__identity-cell"><div className="ppl__name">{gate.name}</div><div className="ppl__city">{gate.city || "-"}</div></td>
-                    <td data-label="Type"><span className="ppl__badge">{gate.asset_type || "N/A"}</span></td>
+                    <td data-label="Type"><span className="ppl__badge ppl__badge--gate">{gate.asset_type || "N/A"}</span></td>
                     <td data-label="Entity" className="muted">{gate.entity || "-"}</td>
                     <td data-label="Region" className="muted">{gate.region || "-"}</td>
                     <td data-label="Status"><StatusBadge status={gate.status} /></td>

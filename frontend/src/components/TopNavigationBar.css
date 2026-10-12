@@ -59,8 +59,9 @@
 .top-navigation-bar__rule { width: 1px; height: 18px; background: var(--line); }
 
 /* ── Primary navigation ───────────────────────────────────────────────────── */
-/* Clips rather than sliding under the Modules button if it ever runs short. */
-.top-navigation-bar__items { display: flex; flex: 1; align-items: center; gap: 2px; min-width: 0; overflow: hidden; }
+/* Not clipped: the Transmission dropdown hangs below the bar and must stay
+   visible. The width breakpoints below keep every link fitting instead. */
+.top-navigation-bar__items { display: flex; flex: 1; align-items: center; gap: 2px; min-width: 0; }
 .top-navigation-bar__nav-group { position: relative; display: flex; align-items: center; flex-shrink: 0; }
 .top-navigation-bar__item {
   display: inline-flex;
@@ -385,27 +386,35 @@
 .not-found-page__actions button.primary { border-color: var(--brand); background: var(--brand); color: var(--on-accent); }
 .not-found-page__actions > span { display: flex; align-items: center; gap: 5px; margin-left: 8px; color: var(--text-muted); font-size: 10px; }
 
-/* Breakpoints measured from the items' real widths: the clock gives way
-   first, then the secondary pages, then all pages, into the Modules menu. */
+/* Every page keeps its own button at desktop widths. As space runs out the
+   chrome around them compacts instead: clock → workspace badge and search
+   field (search becomes an icon) → user name → page labels (icon buttons
+   with tooltips; the current page keeps its label). The Modules menu is
+   only the phone fallback. */
 @media (max-width: 1700px) {
   .top-navigation-bar__clock { display: none; }
   .top-navigation-bar__search { width: 150px; }
 }
 @media (max-width: 1580px) {
-  .top-navigation-bar__item--secondary { display: none; }
-  .top-navigation-bar__module-menu { display: block; }
-}
-@media (max-width: 1100px) {
-  .top-navigation-bar__clock,
-  .top-navigation-bar__user-copy,
-  .top-navigation-bar__search kbd { display: none; }
-  .top-navigation-bar__search { width: 110px; }
-}
-/* Below this every page is reached from the Modules menu. */
-@media (max-width: 1340px) {
-  .top-navigation-bar__items,
+  .top-navigation-bar__portal-chip,
   .top-navigation-bar__rule { display: none; }
-  .top-navigation-bar__module-menu { margin-right: auto; }
+  .top-navigation-bar__search { width: 30px; margin-right: 0; padding: 0; justify-content: center; }
+  .top-navigation-bar__search span,
+  .top-navigation-bar__search kbd { display: none; }
+}
+@media (max-width: 1440px) {
+  .top-navigation-bar__user-copy { display: none; }
+  .top-navigation-bar__user-btn { padding-right: 3px; }
+  .top-navigation-bar__item { padding: 0 8px; }
+}
+@media (max-width: 1240px) {
+  .top-navigation-bar__item:not(.active) > span,
+  .top-navigation-bar__item:not(.active) > .top-navigation-bar__item-chevron { display: none; }
+}
+/* Phone: pages move into the Modules menu. */
+@media (max-width: 768px) {
+  .top-navigation-bar__items { display: none; }
+  .top-navigation-bar__module-menu { display: block; margin-right: auto; }
 }
 /* Production's .cr-hide-sm breakpoint. */
 @media (max-width: 768px) {

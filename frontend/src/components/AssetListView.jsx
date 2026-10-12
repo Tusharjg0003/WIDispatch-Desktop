@@ -1,5 +1,5 @@
-import React from "react";
-import { ArrowUpRight, CircleDot, Cylinder, Droplets, Factory, MapPinned, Pencil } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import { ArrowUpRight, CircleDot, Cylinder, Droplets, Factory, MapPinned, Pencil, Search, X } from "lucide-react";
 import { ENTITY_TYPE_COLORS } from "../cytoscape/buildCyStyle";
 import "./AssetListView.css";
 
@@ -18,16 +18,72 @@ const statusTone = (s) => {
   return "off";
 };
 const clean = (v) => (v && v !== "NULL" ? v : null);
+const uniqSorted = (values) => [...new Set(values.filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b)));
+const CATEGORY_LABELS = { plant: "Plants", pump: "Pump stations", tank: "Tanks", handover_point: "City gates" };
 
 export default function AssetListView({ assets, onView, onEdit }) {
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("");
+  const [region, setRegion] = useState("");
+  const [status, setStatus] = useState("");
+
+  const options = useMemo(() => ({
+    categories: uniqSorted(assets.map((a) => a.category)),
+    regions: uniqSorted(assets.map((a) => clean(a.region))),
+    statuses: uniqSorted(assets.map((a) => a.status)),
+  }), [assets]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return assets.filter((a) => {
+      if (category && a.category !== category) return false;
+      if (region && a.region !== region) return false;
+      if (status && a.status !== status) return false;
+      if (!q) return true;
+      return [a.name, a.asset_name_ar, a.id, a.asset_type, a.activity, a.region, a.governorate, a.city]
+        .filter(Boolean)
+        .some((field) => String(field).toLowerCase().includes(q));
+    });
+  }, [assets, query, category, region, status]);
+
+  const filtering = Boolean(query || category || region || status);
+  const clearFilters = () => { setQuery(""); setCategory(""); setRegion(""); setStatus(""); };
+
   if (assets.length === 0) {
-    return <div className="al-empty">No assets match the selected filters.</div>;
+    return <div className="al-empty">No assets in the registry yet.</div>;
   }
   return (
     <section className="al" aria-label="Assets">
       <header className="al-head">
         <h3 className="al-head__title">Assets</h3>
-        <span className="al-head__count">{assets.length}</span>
+        <span className="al-head__count">{filtering ? `${filtered.length} / ${assets.length}` : assets.length}</span>
+        <label className="al-search">
+          <Search size={13} aria-hidden="true" />
+          <input
+            type="search"
+            placeholder="Search name, ID, type, region…"
+            aria-label="Search assets"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </label>
+        <select className={`al-filter${category ? " is-set" : ""}`} aria-label="Category" value={category} onChange={(e) => setCategory(e.target.value)}>
+          <option value="">All categories</option>
+          {options.categories.map((c) => <option key={c} value={c}>{CATEGORY_LABELS[c] || c}</option>)}
+        </select>
+        <select className={`al-filter${region ? " is-set" : ""}`} aria-label="Region" value={region} onChange={(e) => setRegion(e.target.value)}>
+          <option value="">All regions</option>
+          {options.regions.map((r) => <option key={r} value={r}>{r}</option>)}
+        </select>
+        <select className={`al-filter${status ? " is-set" : ""}`} aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value)}>
+          <option value="">All statuses</option>
+          {options.statuses.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}
+        </select>
+        {filtering && (
+          <button type="button" className="al-clear" onClick={clearFilters}>
+            <X size={12} aria-hidden="true" /> Clear
+          </button>
+        )}
       </header>
       <div className="al-scroll">
         <table className="al-table">
@@ -43,20 +99,24 @@ export default function AssetListView({ assets, onView, onEdit }) {
             </tr>
           </thead>
           <tbody>
-            {assets.map((item) => {
+            {filtered.map((item) => {
               const Icon = CATEGORY_ICONS[item.category] || CircleDot;
               const name = item.name || item.asset_name_ar || "Unnamed asset";
               return (
-                <tr key={`${item.category}-${item.id}`} onDoubleClick={() => onView(item)}>
+                <tr
+                  key={`${item.category}-${item.id}`}
+                  tabIndex={0}
+                  onClick={() => onView(item)}
+                  onKeyDown={(e) => { if (e.key === "Enter") onView(item); }}
+                  title="Open details"
+                >
                   <td>
                     <div className="al-asset">
                       <span className="al-asset__icon" style={{ "--al-colour": ENTITY_TYPE_COLORS[item.category] || "var(--acc)" }} aria-hidden="true">
                         <Icon size={14} />
                       </span>
                       <span className="al-asset__text">
-                        <button type="button" className="al-asset__name" onClick={() => onView(item)} title="View details">
-                          {name}
-                        </button>
+                        <span className="al-asset__name">{name}</span>
                         <span className="al-asset__id">{item.id || "—"}</span>
                       </span>
                     </div>
@@ -67,7 +127,7 @@ export default function AssetListView({ assets, onView, onEdit }) {
                   <td>{clean(item.governorate) || <span className="al-muted">—</span>}</td>
                   <td><span className={`al-pill al-pill--${statusTone(item.status)}`}>{statusLabel(item.status)}</span></td>
                   <td>
-                    <div className="al-actions">
+                    <div className="al-actions" onClick={(e) => e.stopPropagation()}>
                       <button type="button" className="al-icon-btn" onClick={() => onView(item)} title="View details" aria-label={`View ${name}`}>
                         <ArrowUpRight size={14} />
                       </button>
@@ -79,6 +139,13 @@ export default function AssetListView({ assets, onView, onEdit }) {
                 </tr>
               );
             })}
+            {filtered.length === 0 && (
+              <tr className="al-none">
+                <td colSpan={7}>
+                  No assets match these filters. <button type="button" className="al-link" onClick={clearFilters}>Clear filters</button>
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

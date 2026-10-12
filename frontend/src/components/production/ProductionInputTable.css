@@ -1,35 +1,147 @@
-.prod-input { display: flex; flex-direction: column; gap: 12px; }
+/* Shared record-tab styles (prod-*): Production / Demand inputs, Quality,
+   Maintenance and Outage lists, the Economics Financial tab. The app's card
+   language: KPI cards, 30px filter controls, a bordered table card with an
+   uppercase head, pill badges. Global tokens only. */
+.prod-input { display: flex; flex-direction: column; gap: 10px; }
 
-.prod-strip { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
-.prod-strip-cell { padding: 10px 12px; border: 2px solid var(--tx1); border-radius: 2px; background: var(--panel); }
-.prod-kpi-label { color: var(--tx1); font-size: 0.66rem; font-weight: 700; letter-spacing: 0.06em; }
-.prod-kpi-value { margin-top: 4px; color: var(--tx1); font-size: 1.25rem; font-weight: 700; }
+/* KPI strip (RecordKpis): cards with a tinted icon tile, uppercase label,
+   large figure, optional meter and sub line. */
+.prod-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+.prod-strip-cell {
+  --prod-tone: var(--mut);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+/* control-room.css drops the last cell's right border (old divided strip); these are cards. */
+.prod-strip .prod-strip-cell:last-child { border-right: 1px solid var(--line); }
+.prod-tone--acc { --prod-tone: var(--acc); }
+.prod-tone--ok { --prod-tone: var(--ok); }
+.prod-tone--warn { --prod-tone: #f59e0b; }
+.prod-tone--err { --prod-tone: var(--err); }
+.prod-kpi-head { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.prod-kpi-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--prod-tone) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--prod-tone) 30%, transparent);
+  color: var(--prod-tone);
+}
+.prod-kpi-label { overflow: hidden; color: var(--mut); font-size: 10.5px; font-weight: 650; letter-spacing: 0.08em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.prod-kpi-value { margin: 0; color: var(--tx1); font-size: 22px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.prod-kpi-value small { margin-left: 5px; color: var(--mut); font-size: 11.5px; font-weight: 600; }
+.prod-tone--err .prod-kpi-value { color: var(--errTx); }
+.prod-kpi-meter { height: 5px; overflow: hidden; border-radius: 999px; background: var(--panel2); }
+.prod-kpi-meter span { display: block; height: 100%; border-radius: inherit; background: var(--prod-tone); }
+.prod-kpi-sub { overflow: hidden; color: var(--mut); font-size: 11.5px; text-overflow: ellipsis; white-space: nowrap; }
+/* Legacy tone classes (kept for any strip not yet on RecordKpis). */
 .prod-kpi--blue { color: var(--accTx); } .prod-kpi--green { color: var(--okTx); } .prod-kpi--red { color: var(--errTx); }
 
-.prod-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
-.prod-filters label { display: flex; flex-direction: column; gap: 3px; color: var(--tx1); font-size: 0.64rem; font-weight: 700; letter-spacing: 0.04em; }
-.prod-filters input, .prod-filters select { height: 30px; padding: 0 8px; border: 1px solid var(--line); border-radius: 2px; background: var(--panel); color: var(--tx1); font-size: 0.8rem; }
-.prod-btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border: 1px solid var(--line); border-radius: 2px; background: var(--panel); color: var(--tx1); font-weight: 600; font-size: 0.78rem; cursor: pointer; }
-.prod-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+/* Table card: the filters are its header row, the table its body. */
+.prod-card { overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.prod-card > .prod-filters { padding: 10px 12px; border-bottom: 1px solid var(--line); background: var(--panel); }
+.prod-card > .prod-filters > .prod-btn { margin-left: auto; }
+.prod-card > .prod-table-wrap { border: 0; border-radius: 0; }
+.prod-card + .prod-caption { margin-top: -4px; }
 
-.prod-table-wrap { border: 1px solid var(--line); border-radius: 2px; overflow-x: auto; background: var(--panel); }
-.prod-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
-.prod-table thead th { position: sticky; top: 0; padding: 7px 10px; text-align: left; color: var(--tx1); background: var(--panel2); border-bottom: 1px solid var(--line); font-size: 0.64rem; font-weight: 700; letter-spacing: 0.06em; }
+/* Filters */
+.prod-filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; }
+.prod-filters label { display: flex; flex-direction: column; gap: 4px; color: var(--mut); font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+.prod-filters input,
+.prod-filters select {
+  height: 30px;
+  box-sizing: border-box;
+  padding: 0 9px;
+  border: 1px solid var(--line2);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--tx1);
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.prod-filters input:focus,
+.prod-filters select:focus { outline: none; border-color: var(--acc); box-shadow: 0 0 0 2px color-mix(in srgb, var(--acc) 22%, transparent); }
+.prod-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--line2);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--tx2);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+.prod-btn:hover:not(:disabled) { border-color: color-mix(in srgb, var(--acc) 40%, var(--line2)); background: color-mix(in srgb, var(--acc) 10%, transparent); color: var(--tx1); }
+.prod-btn svg { color: var(--acc); }
+.prod-btn:disabled { cursor: not-allowed; opacity: 0.5; }
+
+/* Table card */
+.prod-table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.prod-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.prod-table thead th {
+  position: sticky;
+  top: 0;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel2);
+  color: var(--mut);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
 .prod-table td { padding: 7px 10px; border-bottom: 1px solid var(--line); color: var(--tx1); }
+.prod-table tbody tr:last-child td { border-bottom: 0; }
+.prod-table tbody tr:hover td { background: color-mix(in srgb, var(--acc) 5%, transparent); }
 .prod-table .ta-r, .prod-table th.ta-r { text-align: right; }
-.prod-table .mono { font-family: var(--mono); }
+.prod-table .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 .prod-table .muted { color: var(--mut); }
-.prod-table .neg { color: var(--errTx); }
-.prod-table .empty { text-align: center; color: var(--mut); padding: 16px; }
-.prod-table .delivered { display: inline-flex; align-items: center; gap: 6px; justify-content: flex-end; }
+.prod-table .neg { color: var(--errTx); font-weight: 600; }
+.prod-table .nowrap { white-space: nowrap; }
+.prod-table .empty { padding: 22px; color: var(--mut); text-align: center; }
+.prod-table .delivered { display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; }
 
-.prod-badge { padding: 1px 6px; border-radius: 2px; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; border: 1px solid var(--line); background: var(--panel2); color: var(--tx2); }
-.prod-badge--approved { background: var(--ok-soft); border-color: var(--ok-border); color: var(--okTx); }
-.prod-badge--submitted, .prod-badge--revised { background: var(--acc-soft); border-color: var(--acc-border); color: var(--accTx); }
-.prod-badge--under_revision { background: var(--warn-soft); border-color: var(--amber-border); color: var(--amberTx); }
-.prod-badge--rejected { background: var(--err-soft); border-color: var(--err-border); color: var(--errTx); }
+/* Badges: pills. */
+.prod-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border: 1px solid var(--line2);
+  border-radius: 999px;
+  background: var(--panel2);
+  color: var(--tx2);
+  font-size: 10.5px;
+  font-weight: 650;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+.prod-badge--approved, .prod-badge-ok { border-color: var(--ok-border); background: var(--ok-soft); color: var(--okTx); }
+.prod-badge--submitted, .prod-badge--revised, .prod-badge-info { border-color: var(--acc-border); background: var(--acc-soft); color: var(--accTx); }
+.prod-badge--under_revision, .prod-badge--draft { border-color: var(--amber-border); background: var(--amber-soft); color: var(--amberTx); }
+.prod-badge--rejected { border-color: var(--err-border); background: var(--err-soft); color: var(--errTx); }
 
-.prod-caption { color: var(--mut); font-size: 0.72rem; }
+.prod-caption { color: var(--mut); font-size: 11.5px; }
 
 @media (max-width: 1100px) { .prod-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 640px) { .prod-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

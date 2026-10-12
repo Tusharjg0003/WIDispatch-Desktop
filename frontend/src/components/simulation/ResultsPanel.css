@@ -1,114 +1,354 @@
-/* Results view. Cards, KPIs and table chrome come from MetricDashboard.css;
-   this adds the shortfall and bottleneck drill-down details. */
+/* Results tab (ResultsPanel, SimulationGraphGrid, SupplyDemandChart). The
+   app's card language: groups with an uppercase label, KPI cards with a
+   tinted icon tile and meter, cards with an uppercase header row + count +
+   hint, ledger tables inside. Global tokens only. */
 
-.rp__hint {
-  font-size: 0.72rem;
-  color: var(--ink-dim);
-}
-
-.rp__name {
-  display: block;
-  font-weight: 600;
-}
-
-.rp__sub {
-  display: block;
-  font-size: 0.68rem;
-  color: var(--ink-dim);
-}
-
-.rp__bad {
-  color: var(--bad);
-  font-weight: 600;
-}
-
-.kpi--bad .kpi__value {
-  color: var(--bad);
-}
-
-/* ---- Shortfall drill-down ---- */
-.rp__row--click {
-  cursor: pointer;
-}
-
-.rp__detail-row > td {
-  background: var(--surface-subtle);
-  white-space: normal;
-}
-
-.rp__detail {
-  padding: 6px 4px 10px;
-}
-
-.rp__detail h4 {
-  margin: 0 0 10px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--ink-dim);
-}
-
-.rp__binding {
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.rp {
   display: flex;
   flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Groups ──────────────────────────────────────────────────────────────── */
+.rp-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.rp-group__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: var(--mut);
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.rp-group__title::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+/* Tones shared by KPI cards, pills and tiles. */
+.rp-tone--acc { --rp-tone: var(--acc); }
+.rp-tone--ok { --rp-tone: var(--ok); }
+.rp-tone--warn { --rp-tone: #f59e0b; }
+.rp-tone--err { --rp-tone: var(--err); }
+.rp-tone--neutral { --rp-tone: var(--mut); }
+
+/* ── Outcome KPI cards ───────────────────────────────────────────────────── */
+.rp-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 8px;
 }
-
-.rp__binding--inline {
-  flex-direction: row;
-  flex-wrap: wrap;
-  gap: 6px 16px;
+.rp-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+  padding: 10px 12px 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
 }
-
-.rp__binding li {
+.rp-kpi__head {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.78rem;
+  min-width: 0;
 }
-
-.rp__binding .rp__sub {
-  display: inline;
+.rp-kpi__icon,
+.rp-net__icon,
+.rp-allclear__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--rp-tone) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rp-tone) 30%, transparent);
+  color: var(--rp-tone);
 }
-
-.rp__chip {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 30px;
-  font-size: 0.62rem;
-  font-weight: 600;
+.rp-kpi__label {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--mut);
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-overflow: ellipsis;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  border: 1px solid var(--line);
-  background: var(--surface);
-  color: var(--ink-dim);
+  white-space: nowrap;
 }
-
-.rp__chip--plant_supply {
-  color: var(--accent);
-  border-color: var(--acc-border);
-  background: var(--accent-soft);
+.rp-kpi__value {
+  color: var(--tx1);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
-
-.rp__chip--pipe,
-.rp__chip--pump {
-  color: var(--warn);
-  border-color: var(--amber-border);
-  background: var(--amber-soft);
+.rp-tone--ok .rp-kpi__value { color: var(--okTx, var(--ok)); }
+.rp-tone--warn .rp-kpi__value { color: var(--amberTx, #f59e0b); }
+.rp-tone--err .rp-kpi__value { color: var(--errTx, var(--err)); }
+.rp-kpi__unit {
+  margin-left: 4px;
+  color: var(--mut);
+  font-size: 11.5px;
+  font-weight: 600;
 }
-
-/* Explains which network-config Results charts the daily dispatch can't show. */
-.rp__note {
-  margin: 4px 2px 0;
-  padding: 8px 12px;
-  border-left: 3px solid var(--line2);
+.rp-kpi__meter {
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
   background: var(--panel2);
+}
+.rp-kpi__meter span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--rp-tone);
+}
+.rp-kpi__sub {
+  overflow: hidden;
+  color: var(--mut);
+  font-size: 11.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Cards ───────────────────────────────────────────────────────────────── */
+.rp-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+.rp-card__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.rp-card__title {
+  margin: 0;
+  color: var(--mut);
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.rp-card__count {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--panel2);
+  color: var(--tx2);
+  font-size: 10px;
+  font-weight: 650;
+}
+.rp-card__hint {
+  min-width: 0;
+  margin-left: auto;
+  overflow: hidden;
+  color: var(--mut);
+  font-size: 11.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rp-card__aside { display: inline-flex; flex-shrink: 0; margin-left: auto; }
+.rp-card__hint + .rp-card__aside { margin-left: 8px; }
+
+/* Network summary: one card, six icon + figure items. */
+.rp-net {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  margin: 0;
+}
+.rp-net__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px 12px;
+  border-right: 1px solid var(--line);
+}
+.rp-net__item:last-child { border-right: 0; }
+.rp-net__text { min-width: 0; }
+.rp-net dt {
+  color: var(--mut);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.rp-net dd {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  margin: 2px 0 0;
+}
+.rp-net dd strong {
+  color: var(--tx1);
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.rp-net dd span {
+  overflow: hidden;
+  color: var(--mut);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Tables ──────────────────────────────────────────────────────────────── */
+.rp-table { width: 100%; }
+.rp-table th,
+.rp-table td { padding: 7px 10px; font-size: 12px; }
+.rp-table thead th {
+  background: var(--panel2);
+  color: var(--mut);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.rp-table__chev { width: 28px; padding-right: 0 !important; color: var(--mut); }
+.rp-table__chev svg { display: block; transition: transform 0.15s ease; }
+.rp__row--click { cursor: pointer; }
+.rp__row--click:hover td { background: color-mix(in srgb, var(--acc) 6%, transparent); }
+.rp__row--click.is-open .rp-table__chev svg { transform: rotate(90deg); color: var(--acc); }
+.rp__row--click.is-open td { background: color-mix(in srgb, var(--acc) 8%, transparent); }
+
+.rp__name { display: block; color: var(--tx1); font-weight: 600; }
+.rp__sub { display: block; color: var(--mut); font-size: 10.5px; }
+.rp__bad { color: var(--errTx, var(--err)); font-weight: 650; }
+
+.rp__detail-row > td {
+  padding: 0 !important;
+  background: var(--panel2);
+  white-space: normal;
+}
+.rp__detail { padding: 10px 14px 12px 38px; }
+.rp__detail h4 {
+  margin: 0 0 8px;
+  color: var(--mut);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Pills: status-style tags inside table cells. */
+.rp-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  margin-right: 4px;
+  padding: 0 8px;
+  border: 1px solid var(--line2);
+  border-radius: 999px;
+  background: var(--panel2);
+  color: var(--tx2);
+  font-size: 10.5px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.rp-pill--acc { border-color: var(--acc-border); background: var(--acc-soft); color: var(--accTx); }
+.rp-pill--err { border-color: var(--err-border); background: var(--err-soft); color: var(--errTx); }
+
+/* Binding constraints. */
+.rp__binding {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rp__binding--inline { flex-direction: row; flex-wrap: wrap; gap: 4px 14px; }
+.rp__binding li { display: flex; align-items: center; gap: 7px; font-size: 12px; }
+.rp__binding .rp__sub { display: inline; }
+.rp__chip {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 7px;
+  border: 1px solid var(--line2);
+  border-radius: 999px;
+  background: var(--panel2);
+  color: var(--tx2);
+  font-size: 10px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.rp__chip--plant_supply { border-color: var(--acc-border); background: var(--acc-soft); color: var(--accTx); }
+.rp__chip--pipe,
+.rp__chip--pump { border-color: var(--amber-border); background: var(--amber-soft); color: var(--amberTx); }
+.rp__chip--gate_intake { border-color: var(--err-border); background: var(--err-soft); color: var(--errTx); }
+
+/* Tank fill bar with a reserve tick. */
+.rp-fill { display: inline-flex; align-items: center; gap: 8px; min-width: 130px; }
+.rp-fill__track {
+  position: relative;
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--panel2);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.rp-fill__bar { display: block; height: 100%; border-radius: 999px; background: var(--ok); }
+.rp-fill--low .rp-fill__bar { background: #f59e0b; }
+.rp-fill__min {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--tx2);
+}
+.rp-fill__pct { min-width: 38px; color: var(--tx1); font-size: 12px; text-align: right; }
+
+/* "All served" card in place of an empty shortfall table. */
+.rp-allclear {
+  --rp-tone: var(--ok);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--ok-border);
+  border-radius: 8px;
+  background: var(--ok-soft);
+}
+.rp-allclear div { display: flex; flex-direction: column; gap: 2px; }
+.rp-allclear strong { color: var(--okTx); font-size: 12.5px; font-weight: 650; }
+.rp-allclear span:not(.rp-allclear__icon) { color: var(--tx2); font-size: 11.5px; }
+
+/* Which network-config Results charts the daily dispatch can't show. */
+.rp__note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
   color: var(--mut);
   font-size: 11px;
   line-height: 1.5;
-  border-radius: 0 6px 6px 0;
+}
+.rp__note svg { flex-shrink: 0; margin-top: 2px; }
+
+@media (max-width: 900px) {
+  .rp-net__item { border-right: 0; border-bottom: 1px solid var(--line); }
 }

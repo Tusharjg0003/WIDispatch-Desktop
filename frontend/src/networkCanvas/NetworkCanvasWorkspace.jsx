@@ -20,7 +20,7 @@ import GeoAnchorPanel from "./components/GeoAnchorPanel";
 import CanvasTableView from "./components/CanvasTableView";
 import CapacityRequiredModal from "./modals/CapacityRequiredModal";
 import KmzReviewModal from "./modals/KmzReviewModal";
-import { Keyboard, Map as MapIcon, Maximize2, Minimize2, PanelLeft, PanelRight } from "lucide-react";
+import { Keyboard, Map as MapIcon, Maximize2, Minimize2, PanelLeft, PanelRight, RefreshCw, Search, Spline, X } from "lucide-react";
 import CanvasLegend from "./components/CanvasLegend";
 import SelectionInspector from "./components/SelectionInspector";
 import ValidationPanel from "./components/ValidationPanel";
@@ -511,6 +511,9 @@ export default function NetworkCanvasWorkspace({
   const id = isBuilder ? routeId : null;
   const navigate = useNavigate();
   const { setToolbar, setSidebar } = useLayout();
+  // Embedded (Simulation Config) canvases keep their ribbon inside their own
+  // frame; only the Network Builder page owns the app-wide toolbar slot.
+  const [embeddedChrome, setEmbeddedChrome] = useState(null);
   // One live Cytoscape graph per mounted canvas: the builder keeps the
   // application-wide controller its workspace layer is bound to; an embedded
   // canvas gets its own so it can never disturb the builder's tabs.
@@ -4163,7 +4166,8 @@ export default function NetworkCanvasWorkspace({
   );
 
   // ── Simulation layer (embedded in Simulation Config) ──────────────────────
-  const [showRunLegend, setShowRunLegend] = useState(true);
+  // Closed by default: the Details rail's canvas legend already covers run results.
+  const [showRunLegend, setShowRunLegend] = useState(false);
   const sim = useSimulationLayer({
     cyRef,
     cyReady,
@@ -4432,16 +4436,18 @@ export default function NetworkCanvasWorkspace({
         onToggleCollapsed={() => (canvasFocusMode ? setFocusRibbonOpen((v) => !v) : setShowRibbon((v) => !v))}
       />
     );
-    // The workspace tab bar (builder only) and the ribbon both live in the
-    // app-wide toolbar slot, so they span the page and the side rails start
-    // underneath them.
+    // Builder: the workspace tab bar and the ribbon live in the app-wide
+    // toolbar slot, so they span the page and the side rails start underneath
+    // them. Embedded: the ribbon heads the canvas frame instead.
+    if (!isBuilder) {
+      setEmbeddedChrome(<div className="nb-chrome nb-chrome--embedded">{ribbon}</div>);
+      return;
+    }
     setToolbar(
       <div className="nb-chrome">
-        {isBuilder && (
-          <TabStripBoundary>
-            <WorkspaceTabs />
-          </TabStripBoundary>
-        )}
+        <TabStripBoundary>
+          <WorkspaceTabs />
+        </TabStripBoundary>
         {ribbon}
       </div>
     );
@@ -4498,7 +4504,7 @@ export default function NetworkCanvasWorkspace({
       ? "Trace HP — click a handover point or delivery node"
       : null;
 
-  return (
+  const page = (
     <div className={`nb-page nb-page--${mode}${canvasFocusMode ? " nb-page--canvas-focus" : ""}`}>
       <input
         ref={fileInputRef}
@@ -4788,7 +4794,8 @@ export default function NetworkCanvasWorkspace({
           )}
 
           {findOpen && (
-            <div className="nb-find">
+            <div className="nb-find" role="search">
+              <Search size={14} className="nb-find__icon" aria-hidden="true" />
               <input
                 autoFocus
                 type="search"
@@ -4802,12 +4809,13 @@ export default function NetworkCanvasWorkspace({
                   if (e.key === "Escape") { setFindOpen(false); setFindQuery(""); }
                 }}
               />
-              <button onClick={() => { setFindOpen(false); setFindQuery(""); }} aria-label="Close find">×</button>
+              <button type="button" onClick={() => { setFindOpen(false); setFindQuery(""); }} aria-label="Close find" title="Close (Esc)"><X size={14} aria-hidden="true" /></button>
             </div>
           )}
 
           {realNodeCount === 0 && (
             <div className="nb-canvas__empty">
+              <span className="nb-canvas__empty-icon" aria-hidden="true"><Spline size={22} /></span>
               <h3>Build a network</h3>
               <p>Insert assets from the toolbar or pick from the library, then connect them with pipes.</p>
             </div>
@@ -4827,8 +4835,8 @@ export default function NetworkCanvasWorkspace({
               <strong>Validation</strong>
               <span className="cr-count">{validationIssues.filter((i) => i.severity !== "success").length} issue(s)</span>
               <span className="cr-spacer" />
-              <button type="button" className="cr-btn cr-btn--sm" onClick={handleValidateNetwork}>Re-validate</button>
-              <button type="button" className="cr-btn cr-btn--sm cr-btn--icon" onClick={() => setValidationDockOpen(false)} aria-label="Close validation dock">×</button>
+              <button type="button" className="cr-btn cr-btn--sm" onClick={handleValidateNetwork}><RefreshCw size={12} aria-hidden="true" /> Re-validate</button>
+              <button type="button" className="cr-btn cr-btn--sm cr-btn--icon" onClick={() => setValidationDockOpen(false)} aria-label="Close validation dock"><X size={14} aria-hidden="true" /></button>
             </header>
             <div className="nb-validation-dock__body">
               <table className="cr-table">
@@ -5091,6 +5099,14 @@ export default function NetworkCanvasWorkspace({
           onSubmit={submitPipe}
         />
       )}
+    </div>
+  );
+
+  if (isBuilder) return page;
+  return (
+    <div className={`nb-embed${canvasFocusMode ? " nb-embed--focus" : ""}`}>
+      {embeddedChrome}
+      {page}
     </div>
   );
 }

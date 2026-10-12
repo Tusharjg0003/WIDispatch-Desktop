@@ -429,6 +429,14 @@
   background: var(--acc-soft);
   color: var(--accTx);
 }
+.sl-tag--ok {
+  background: var(--ok-soft);
+  color: var(--okTx);
+}
+.sl-tag--warn {
+  background: var(--warn-soft);
+  color: var(--amberTx);
+}
 
 .sl-empty {
   margin: 16px 12px;

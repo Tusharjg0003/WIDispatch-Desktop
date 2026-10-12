@@ -61,3 +61,51 @@ test("closing the active tab activates its neighbour", () => {
   controller.closeTab(a);
   assert.equal(state().activeTabId, b);
 });
+
+test("restoring without a navigator leaves the URL alone, and syncUrl mirrors it later", () => {
+  state().reset();
+  const storage = new MemoryTabSessionStorage();
+  const controller = new TransmissionTabController({ storage });
+  // Transmission Systems view: no navigator registered while the session restores.
+  controller.restoreSession(null);
+  const id = controller.openPumpStation("pump-1", "A");
+  controller.setSubTab(id, "maintenance");
+
+  const navigator = makeNavigator();
+  controller.registerNavigator(navigator);
+  assert.deepEqual(navigator.paths, []);
+  controller.syncUrl();
+  assert.deepEqual(navigator.paths, ["/transmission/pump-stations/pump-1?tab=maintenance"]);
+});
+
+test("detaching stops URL mirroring", () => {
+  const { controller, navigator } = setup();
+  const before = navigator.paths.length;
+  controller.detach();
+  controller.openPumpStation("pump-2", "B");
+  assert.equal(navigator.paths.length, before);
+});
+
+
+test("a controller configured for systems uses its own store, path, list tab and sub-tabs", async () => {
+  const { systemTabStore } = await import("../systemTabs/systemTabStore.ts");
+  const { isSystemSubTab } = await import("../systemTabs/systemTab.types.ts");
+  systemTabStore.getState().reset();
+  const navigator = makeNavigator();
+  const systems = new TransmissionTabController({
+    storage: new MemoryTabSessionStorage(),
+    store: systemTabStore,
+    basePath: "/transmission/systems",
+    listTitle: "All Systems",
+    isSubTab: isSystemSubTab,
+    defaultSubTab: "overview",
+  });
+  systems.registerNavigator(navigator);
+  systems.restoreSession("sys-1", "lines");
+
+  const sys = systemTabStore.getState();
+  assert.deepEqual(sys.order.map((id) => sys.tabs[id].title), ["All Systems", "sys-1"]);
+  assert.equal(navigator.paths.at(-1), "/transmission/systems/sys-1?tab=lines");
+  // The pump-station store is untouched.
+  assert.ok(!state().order.some((id) => state().tabs[id].key === "sys-1"));
+});

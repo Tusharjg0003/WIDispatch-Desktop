@@ -1289,12 +1289,19 @@
 
 
 /* Simulation mode: run bar, read-only notice, bottlenecks list */
-.nb-run-bar { flex: 0 0 auto; display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; border-top: 1px solid var(--line); background: var(--panel); }
-.nb-run-bar__row { display: flex; align-items: center; gap: 6px; }
-.nb-run-bar__legend { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.nb-run-bar { flex: 0 0 auto; display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border-top: 1px solid var(--line); background: var(--panel); }
+.nb-run-bar__row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.nb-run-bar__legend { display: flex; flex-wrap: wrap; gap: 4px; }
+.nb-run-bar__legend .simcanvas__legend-row { height: 22px; padding: 0 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel2); color: var(--tx2); font-size: 11px; }
 .nb-swatch--gap-binding { background: var(--err); }
 .nb-swatch--gap-spare { background: transparent; border: 2px solid var(--ok); height: 10px; }
 .nb-readonly-notice { flex: 0 0 auto; padding: 5px 10px; border-bottom: 1px solid var(--amber-border); background: var(--amber-soft); color: var(--amberTx); font-size: 11px; font-weight: 600; }
+
+/* Embedded canvas (Simulation Config): the ribbon heads the canvas frame,
+   and full screen lifts the whole frame over the app. */
+.nb-embed { display: flex; flex-direction: column; min-height: 0; background: var(--panel); }
+.nb-chrome--embedded > .nb-ribbon { border-bottom: 1px solid var(--line); }
+.nb-embed--focus { position: fixed; inset: 0; z-index: 1400; }
 .nb-bottleneck-float { left: auto; right: 10px; width: 340px; }
 .nb-run-details { overflow: auto; }
 
@@ -1383,3 +1390,303 @@ body.is-resizing-sidebar * {
   cursor: col-resize !important;
   user-select: none !important;
 }
+
+
+/* ═════════════════════════════════════════════════════════════════════════
+   Secondary surfaces in the app's card language: the empty canvas, toast,
+   find box, validation dock, flow-trace and georeference panels, the table
+   view, and the legacy control-room (cr-*) controls these panels and the
+   canvas windows (FloatingPanel .fp) still use. Scoped to the builder and
+   its windows so other pages' cr-* styling is untouched. Global tokens only.
+   ═════════════════════════════════════════════════════════════════════════ */
+
+/* Empty canvas */
+.nb-canvas__empty { gap: 8px; color: var(--mut); }
+.nb-canvas__empty-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  margin-bottom: 2px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--acc) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--acc) 30%, transparent);
+  color: var(--acc);
+}
+.nb-canvas__empty h3 { color: var(--tx1); font-size: 15px; font-weight: 700; }
+.nb-canvas__empty p { color: var(--mut); font-size: 12.5px; line-height: 1.5; }
+
+/* Toast */
+.nb-toast {
+  padding: 8px 14px;
+  border: 1px solid var(--line2);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--tx1);
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.22);
+}
+
+/* Find box: a 32px search field like the side panels'. */
+.nb-find {
+  top: 10px;
+  /* Clear of the view controls (top-right, ~92px wide). */
+  right: 112px;
+  gap: 6px;
+  height: 34px;
+  box-sizing: border-box;
+  padding: 0 4px 0 10px;
+  border: 1px solid var(--line2);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.22);
+}
+.nb-find:focus-within { border-color: var(--acc); box-shadow: 0 0 0 2px color-mix(in srgb, var(--acc) 22%, transparent), 0 10px 28px rgba(15, 23, 42, 0.22); }
+.nb-find__icon { flex-shrink: 0; color: var(--mut); }
+.nb-find input { width: 240px; height: 30px; color: var(--tx1); font: inherit; font-size: 12.5px; }
+.nb-find input::placeholder { color: var(--mut2); }
+.nb-find button { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; color: var(--mut); }
+.nb-find button:hover { background: color-mix(in srgb, var(--acc) 10%, transparent); color: var(--tx1); }
+
+/* Mode banner (placing, routing, tracing): an accent-tinted card with a Cancel button. */
+.nb-mode-banner {
+  top: 10px;
+  gap: 10px;
+  min-height: 34px;
+  box-sizing: border-box;
+  padding: 4px 4px 4px 12px;
+  border: 1px solid color-mix(in srgb, var(--acc) 40%, var(--line2));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--acc) 12%, var(--panel));
+  color: var(--accTx, var(--acc));
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.22);
+}
+.nb-mode-banner__cancel {
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--line2);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--tx2);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.nb-mode-banner__cancel:hover { border-color: color-mix(in srgb, var(--acc) 40%, var(--line2)); background: color-mix(in srgb, var(--acc) 10%, transparent); color: var(--tx1); }
+
+/* ── cr-* controls inside the builder and its windows ────────────────────── */
+:is(.nb-page, .nb-embed, .fp) .cr-count { color: var(--mut); font-size: 11px; font-variant-numeric: tabular-nums; }
+:is(.nb-page, .nb-embed, .fp) .cr-subtitle { color: var(--tx2); font-size: 12px; line-height: 1.5; }
+:is(.nb-page, .nb-embed, .fp) .cr-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--line2);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--tx2);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+:is(.nb-page, .nb-embed, .fp) .cr-btn--sm { height: 26px; padding: 0 9px; font-size: 11px; }
+:is(.nb-page, .nb-embed, .fp) .cr-btn--icon { width: 26px; padding: 0; border-color: transparent; background: transparent; }
+:is(.nb-page, .nb-embed, .fp) .cr-btn:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--acc) 40%, var(--line2));
+  background: color-mix(in srgb, var(--acc) 10%, transparent);
+  color: var(--tx1);
+}
+:is(.nb-page, .nb-embed, .fp) .cr-btn:disabled { cursor: default; opacity: 0.5; }
+:is(.nb-page, .nb-embed, .fp) .cr-btn:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+:is(.nb-page, .nb-embed, .fp) .cr-btn--primary { border-color: var(--acc); background: var(--acc); color: var(--on-accent, #fff); }
+:is(.nb-page, .nb-embed, .fp) .cr-link { color: var(--accTx, var(--acc)); font-size: 11.5px; font-weight: 600; }
+:is(.nb-page, .nb-embed, .fp) .cr-link:hover { text-decoration: underline; }
+
+:is(.nb-page, .nb-embed, .fp) .cr-input,
+:is(.nb-page, .nb-embed, .fp) .cr-select {
+  height: 28px;
+  box-sizing: border-box;
+  padding: 0 8px;
+  border: 1px solid var(--line2);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--tx1);
+  font: inherit;
+  font-size: 12px;
+}
+:is(.nb-page, .nb-embed, .fp) .cr-input:focus,
+:is(.nb-page, .nb-embed, .fp) .cr-select:focus { outline: none; border-color: var(--acc); box-shadow: 0 0 0 2px color-mix(in srgb, var(--acc) 22%, transparent); }
+
+:is(.nb-page, .nb-embed, .fp) .cr-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border: 1px solid var(--line2);
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+:is(.nb-page, .nb-embed, .fp) .cr-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+:is(.nb-page, .nb-embed, .fp) .cr-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  height: auto;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel2);
+  color: var(--mut);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+:is(.nb-page, .nb-embed, .fp) .cr-table td { height: auto; padding: 6px 10px; border-bottom: 1px solid var(--line); color: var(--tx2); vertical-align: middle; }
+:is(.nb-page, .nb-embed, .fp) .cr-table tbody tr:last-child td { border-bottom: 0; }
+:is(.nb-page, .nb-embed, .fp) .cr-table tbody tr:hover td { background: color-mix(in srgb, var(--acc) 5%, transparent); }
+:is(.nb-page, .nb-embed, .fp) .cr-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+:is(.nb-page, .nb-embed, .fp) .cr-td--strong { color: var(--tx1); font-weight: 600; }
+:is(.nb-page, .nb-embed, .fp) .cr-td--muted { color: var(--mut); }
+:is(.nb-page, .nb-embed, .fp) .cr-td--mono { font-family: var(--mono); font-size: 11.5px; }
+
+/* ── Validation dock (bottom) ────────────────────────────────────────────── */
+.nb-validation-dock { border-top: 1px solid var(--line); background: var(--panel); }
+.nb-validation-dock__head { gap: 8px; min-height: 40px; padding: 6px 8px 6px 12px; background: var(--panel); font-size: 12px; }
+.nb-validation-dock__head strong {
+  color: var(--mut);
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ── Floating panels on the canvas: flow traces, georeference ───────────── */
+.nb-trace-float,
+.nb-geo-panel {
+  border: 1px solid var(--line2);
+  border-radius: 10px;
+  background: var(--panel);
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.28);
+}
+.nb-trace-float { top: 10px; left: 10px; width: 340px; overflow: hidden; }
+.nb-trace-float__head,
+.nb-geo-panel__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 6px 6px 6px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+  font-size: 12px;
+}
+.nb-trace-float__head strong,
+.nb-geo-panel__head strong {
+  color: var(--mut);
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.nb-trace-float__body { gap: 8px; padding: 10px; }
+.nb-trace-legend { gap: 6px; flex-wrap: wrap; font-size: 11px; }
+.nb-trace-legend span {
+  height: 20px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel2);
+  color: var(--tx2);
+}
+.nb-trace-card { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.nb-trace-card__head { gap: 6px; }
+.nb-trace-card__name { overflow: hidden; color: var(--tx1); font-size: 12.5px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.nb-trace-card__meta { margin: 4px 0 6px; color: var(--mut); font-size: 11px; }
+.nb-trace-card__section { gap: 1px; margin-top: 6px; }
+.nb-trace-card__label { margin-bottom: 2px; font-size: 10px; font-weight: 650; letter-spacing: 0.08em; }
+.nb-trace-card__row { padding: 4px 6px; border-radius: 5px; color: var(--tx2); font-size: 12px; }
+.nb-trace-card__row:hover { background: color-mix(in srgb, var(--acc) 8%, transparent); color: var(--tx1); }
+.nb-trace-card__empty { color: var(--mut2); font-size: 11px; }
+
+.nb-geo-panel { top: 10px; right: 10px; width: 270px; gap: 0; padding: 0; overflow: hidden; color: var(--tx2); font-size: 12px; }
+.nb-geo-panel > :not(.nb-geo-panel__head) { margin-left: 12px; margin-right: 12px; }
+.nb-geo-panel > :nth-child(2) { margin-top: 10px; }
+.nb-geo-panel > :last-child { margin-bottom: 12px; }
+.nb-geo-panel > * + *:not(.nb-geo-panel__head) { margin-top: 8px; }
+.nb-geo-panel__hint, .nb-geo-panel__derived, .nb-geo-panel__count { color: var(--mut); font-size: 11.5px; line-height: 1.45; }
+.nb-geo-panel__name { color: var(--tx1); font-size: 12.5px; font-weight: 650; }
+.nb-geo-panel__field { grid-template-columns: 70px 1fr; color: var(--mut); font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+.nb-geo-panel__actions { gap: 6px; }
+
+/* ── Table view (View → Table) ───────────────────────────────────────────── */
+.nb-table-view { gap: 10px; padding: 10px; background: var(--panel2); }
+.nb-table-view .cr-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+.nb-table-view .cr-card-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+.nb-table-view .cr-search { display: flex; align-items: center; gap: 6px; }
+.nb-table-view .cr-search input {
+  width: 100%;
+  height: 30px;
+  box-sizing: border-box;
+  padding: 0 10px;
+  border: 1px solid var(--line2);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--tx1);
+  font: inherit;
+  font-size: 12px;
+}
+.nb-table-view .cr-search input:focus { outline: none; border-color: var(--acc); box-shadow: 0 0 0 2px color-mix(in srgb, var(--acc) 22%, transparent); }
+.nb-table-view .cr-card__body { flex: 1; min-height: 0; overflow: auto; }
+/* Inline-editable cells read as text until hovered / focused (beats the scoped .cr-input box). */
+.nb-table-view .cr-input.nb-table-input { width: 100%; min-width: 90px; height: 26px; padding: 0 6px; border: 1px solid transparent; border-radius: 5px; background: transparent; color: var(--tx1); font: inherit; font-size: 12px; box-shadow: none; }
+.nb-table-view .cr-input.nb-table-input:hover { border-color: var(--line2); }
+.nb-table-view .cr-input.nb-table-input:focus { outline: none; border-color: var(--acc); background: var(--panel); box-shadow: 0 0 0 2px color-mix(in srgb, var(--acc) 22%, transparent); }
+.nb-table-view .cr-input.nb-table-input--num { text-align: right; font-variant-numeric: tabular-nums; }
+/* Names are the widest column; give them room to read in full. */
+.nb-table-view td:first-child .cr-input.nb-table-input { min-width: 170px; font-weight: 600; }
+
+/* Figures strip above the table: KPI cells with an uppercase label. */
+.nb-table-view .cr-kpi-strip { border-radius: 8px; }
+.nb-table-view .cr-kpi { padding: 9px 12px; }
+.nb-table-view .cr-kpi__label { font-size: 10px; font-weight: 650; letter-spacing: 0.08em; }
+.nb-table-view .cr-kpi__value { margin-top: 4px; font-size: 17px; font-weight: 700; }
+.nb-table-view .cr-kpi__unit { font-size: 11px; }
+.nb-table-view .cr-kpi__note { margin-top: 3px; color: var(--mut); font-size: 11px; }
+
+/* Assets / Pipes switch in the toolbar. */
+.nb-table-view .cr-segmented { padding: 2px; border: 1px solid var(--line2); border-radius: 7px; background: var(--panel2); }

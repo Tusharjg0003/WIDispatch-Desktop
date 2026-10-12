@@ -128,10 +128,9 @@
 .app-shell .economics-table th { height: var(--density-row); padding-inline: 6px; }
 .app-shell .economics-table__identity { min-width: 210px; }
 .app-shell .ppl--comfortable .ppl__table td { padding-block: 4px; }
-.app-shell .simt__empty,
 .app-shell .ledger__empty,
 .app-shell .economics-table__empty { padding: 10px !important; }
-.app-shell :is(.simt__chip, .simt__badge, .q-flag) { min-height: var(--density-badge); padding: 1px 5px; border-radius: 9px; font-size: 10px; }
+.app-shell .q-flag { min-height: var(--density-badge); padding: 1px 5px; border-radius: 9px; font-size: 10px; }
 
 .app-shell .form-container { padding-inline: 0; }
 .app-shell .form-content { padding: 6px; margin-bottom: 6px; }
@@ -160,20 +159,7 @@
 .app-shell .af__field textarea { min-height: 52px; padding: 4px 6px; font-size: 11px; }
 
 /* Command center and operational modules ------------------------------- */
-.app-shell .operations-page { gap: 6px; }
-.app-shell .operations-page__header button { height: var(--density-control); padding-inline: 6px; }
-.app-shell .operations-kpis,
-.app-shell .operations-main-grid,
-.app-shell .operations-bottom-grid { gap: 6px; }
-.app-shell .operations-panel { border-radius: var(--density-radius); }
-.app-shell .operations-panel > header { min-height: var(--density-panel-header); gap: 6px; padding: 4px 7px; }
-.app-shell .operations-panel > header h2 { font-size: var(--density-section-font); }
-.app-shell .operations-panel__count { min-width: 22px; height: 22px; padding: 0 5px; font-size: 10px; }
-.app-shell .operations-position__row { gap: 3px 6px; padding: 5px 7px 0; }
 .app-shell :is(.operations-exception, .operations-run) { min-height: 34px; padding: 5px 7px; }
-.app-shell .operations-pending button { padding: 6px 7px; }
-.app-shell .operations-quick-action { min-height: 34px; padding: 5px 7px; }
-.app-shell .operations-quick-action__icon { width: 24px; height: 24px; }
 
 .app-shell :is(.production-page--boxy, .demand-page--boxy) .metric__head { min-height: 38px; margin-bottom: 6px; padding-inline: 8px; }
 .app-shell :is(.production-page--boxy, .demand-page--boxy) .metric__title { font-size: var(--density-page-title); }
@@ -204,17 +190,6 @@
 .app-shell .ppl__table th:nth-child(8) { width: 124px; }
 .app-shell .ppl__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .app-shell .ppl__city { display: none; }
-.app-shell .transmission-tabs { margin-bottom: 6px; }
-.app-shell .transmission-tab { gap: 4px; min-height: 28px; padding: 3px 8px; font-size: 11px; }
-.app-shell .transmission-systems-layout { grid-template-columns: minmax(0, 1.25fr) minmax(280px, .75fr); gap: 6px; }
-.app-shell .transmission-system-detail { min-height: 190px; }
-.app-shell .transmission-system-detail__head { padding: 6px 8px; }
-.app-shell .transmission-system-detail__head h2 { margin: 2px 0 1px; font-size: var(--density-section-font); }
-.app-shell .transmission-system-kpis { gap: 4px; padding: 6px; }
-.app-shell .transmission-system-kpis div { padding: 4px; }
-.app-shell .transmission-system-kpis strong { font-size: 13px; }
-.app-shell .transmission-system-detail__notice { margin: 0 6px 6px; padding: 4px 6px; }
-.app-shell .transmission-system-detail__section { padding: 0 6px 6px; }
 
 .app-shell .economics-page { gap: 6px; }
 .app-shell .economics-kpis { gap: 6px; }
@@ -263,25 +238,6 @@
 .app-shell .ns2-entity-row { min-height: 38px; padding: 5px 6px; }
 
 /* Simulation ------------------------------------------------------------ */
-.app-shell .scp__picker { min-width: 180px; height: var(--density-control); padding: 2px 6px; border-radius: var(--density-radius); font-size: 11px; }
-.app-shell .scp > .metric__notice:not(.metric__notice--error) { min-height: 64px; border-radius: var(--density-radius); }
-.app-shell .scp__setup { margin-bottom: 6px; }
-.app-shell .scp__setup-grid { grid-template-columns: repeat(3, minmax(150px, 1fr)); gap: 4px 6px; padding: 6px 8px; }
-.app-shell .scp__setup-grid label { gap: 2px; }
-.app-shell .scp__setup-grid label > span { font-size: 10px; }
-.app-shell .scp__setup-grid input,
-.app-shell .scp__setup-grid select { height: var(--density-control); padding: 2px 6px; border-radius: var(--density-radius); font-size: 11px; }
-.app-shell .scp__delete { min-height: var(--density-control); gap: 4px; padding: 2px 7px; border-radius: var(--density-radius); font-size: 11px; }
-.app-shell .scp__checks { gap: 3px; padding: 0 8px 6px; }
-.app-shell .scp__check { padding: 4px 6px; border-radius: var(--density-radius); font-size: 11px; }
-.app-shell .scp__tabs { top: 44px; gap: 2px; margin-bottom: 6px; }
-.app-shell .scp__tab { min-height: 28px; padding: 3px 8px; font-size: 11px; }
-.app-shell .simt__override { gap: 4px; }
-.app-shell .simt__override-input { width: 76px; height: 24px; padding: 2px 5px; border-radius: var(--density-radius); font-size: 11px; }
-.app-shell .simt__expand { width: 24px; height: 24px; padding: 0; }
-.app-shell .simt__breakdown { padding: 5px 6px 6px 30px; }
-.app-shell .simt__days th,
-.app-shell .simt__days td { height: 26px; padding: 3px 6px; }
 .app-shell .simcanvas { gap: 6px; }
 .app-shell .simcanvas__body { grid-template-columns: minmax(0, 1fr) var(--density-panel-simulation); gap: 6px; }
 .app-shell .simcanvas__stage { height: clamp(360px, 65vh, 720px); border-radius: var(--density-radius); }
@@ -319,7 +275,6 @@
   .app-shell .create-asset-page .form-grid,
   .app-shell .create-asset-page .form-grid.af__grid,
   .app-shell .af__grid,
-  .app-shell .scp__setup-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 1100px) {
@@ -330,7 +285,6 @@
   .app-shell .workspace-header__row { gap: 4px; }
   .app-shell .workspace-header__actions { gap: 3px; }
   .app-shell .workspace-header-button { flex: 0 1 auto; }
-  .app-shell .transmission-systems-layout { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 640px) {
@@ -343,11 +297,6 @@
   .app-shell .create-asset-page .form-grid,
   .app-shell .create-asset-page .form-grid.af__grid,
   .app-shell .af__grid,
-  .app-shell .scp__setup-grid { grid-template-columns: 1fr; }
-  .app-shell .scp__wide { grid-column: auto; }
-  .app-shell .operations-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .app-shell .operations-main-grid,
-  .app-shell .operations-bottom-grid { grid-template-columns: 1fr; }
   .app-shell .ppl__table { table-layout: auto; }
   .app-shell .ppl__table tbody { gap: 4px; }
   .app-shell .ppl__table tbody tr { border-radius: var(--density-radius); }

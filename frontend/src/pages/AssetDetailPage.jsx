@@ -84,9 +84,25 @@ function ProductionPlaceholder({ bars }) {
   );
 }
 
+/** Route wrapper (kept for direct use); the registry renders AssetDetailView inside its tabs. */
 export default function AssetDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  return (
+    <AssetDetailView
+      assetId={id}
+      onBack={() => navigate("/asset-registry")}
+      onEdit={(asset) => navigate(`/asset-registry/edit/${encodeURIComponent(asset.id)}`)}
+      onDeleted={() => navigate("/asset-registry")}
+    />
+  );
+}
+
+/**
+ * One asset's view page, driven by props so the Asset Registry can show it in
+ * a tab: Back closes the tab, Edit switches it to the form, Delete closes it.
+ */
+export function AssetDetailView({ assetId: id, onBack, onEdit, onDeleted, onLoaded, reloadKey = 0 }) {
   const [asset, setAsset] = useState(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
@@ -107,11 +123,16 @@ export default function AssetDetailPage() {
     setLoading(true);
     setError(null);
     fetchAsset(id)
-      .then((d) => !cancelled && setAsset(d))
+      .then((d) => {
+        if (cancelled) return;
+        setAsset(d);
+        onLoaded?.(d);
+      })
       .catch((e) => !cancelled && setError(e.message || "Couldn't load asset"))
       .finally(() => !cancelled && setLoading(false));
     return () => { cancelled = true; };
-  }, [id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, reloadKey]);
 
   if (loading) {
     return (
@@ -129,14 +150,12 @@ export default function AssetDetailPage() {
     );
   }
 
-  const backTo = "/asset-registry";
   const latitude = Number(asset.latitude);
   const longitude = Number(asset.longitude);
   const hasLocation = validCoord(latitude, longitude);
   const categoryLabel = CATEGORY_LABEL[asset.category] || asset.category;
   const showProduction = isProductionAsset(asset);
   const SummaryIcon = CATEGORY_ICONS[asset.category] || CircleDot;
-  const editTo = `/asset-registry/edit/${encodeURIComponent(asset.id)}`;
 
   const handleDelete = async () => {
     if (deleting) return;
@@ -146,7 +165,7 @@ export default function AssetDetailPage() {
     setActionError(null);
     try {
       await deleteAsset(asset.id);
-      navigate(backTo);
+      onDeleted?.(asset);
     } catch (e) {
       setActionError(e.message || "Couldn't delete asset");
     } finally {
@@ -164,10 +183,10 @@ export default function AssetDetailPage() {
         statusTone={STATUS_TONE[asset.status] || "default"}
         actions={(
           <>
-            <WorkspaceHeaderButton icon={ArrowLeft} onClick={() => navigate(backTo)} title="Back to list">
+            <WorkspaceHeaderButton icon={ArrowLeft} onClick={() => onBack?.()} title="Back to all assets">
               Back
             </WorkspaceHeaderButton>
-            <WorkspaceHeaderButton icon={Edit2} onClick={() => navigate(editTo)} title="Edit asset">
+            <WorkspaceHeaderButton icon={Edit2} onClick={() => onEdit?.(asset)} title="Edit asset">
               Edit
             </WorkspaceHeaderButton>
             <WorkspaceHeaderButton icon={Trash2} tone="danger" onClick={handleDelete} disabled={deleting} title="Delete asset">

@@ -18,13 +18,14 @@ test("makeEntitySymbol draws a 44px symbol tinted with the entity colour", () =>
   const svg = decode(makeEntitySymbol({ type: "plant", typeColor: ENTITY_TYPE_COLORS.plant }));
 
   assert.match(svg, new RegExp(`width="${SYMBOL_SIZE}" height="${SYMBOL_SIZE}"`));
-  assert.match(svg, /<circle cx="22" cy="22" r="20" fill="#3b82f6" opacity="0\.18"\/>/);
+  // Tinted tile with a ring in the type colour (same build as the app's icon tiles).
+  assert.match(svg, /<circle cx="22" cy="22" r="19" fill="#3b82f6" fill-opacity="0\.16" stroke="#3b82f6" stroke-opacity="0\.32"/);
   assert.match(svg, /stroke="#3b82f6"/);
 });
 
 test("makeEntitySymbol draws a rounded square when asked for a box", () => {
   const svg = decode(makeEntitySymbol({ type: "tank", symbolShape: "box" }));
-  assert.match(svg, /<rect x="2" y="2" width="40" height="40" rx="10"/);
+  assert.match(svg, /<rect x="3" y="3" width="38" height="38" rx="9" ry="9" fill="#6fa300" fill-opacity="0\.16"/);
 });
 
 test("makeEntitySymbol adds the amber dot only for capacity-limited assets", () => {

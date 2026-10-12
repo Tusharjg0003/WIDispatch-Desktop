@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { X } from "lucide-react";
 
 // View → Geo Anchor (port of SWIIMS GeoAnchorPanel): pin the selected asset to
 // its real latitude / longitude. Suggests the asset record's own coordinates,
@@ -33,7 +34,7 @@ export default function GeoAnchorPanel({ node, status, anchorCount, onSet, onCle
     >
       <header className="nb-geo-panel__head">
         <strong>Georeference</strong>
-        <button type="button" className="cr-btn cr-btn--sm cr-btn--icon" onClick={onClose} aria-label="Close georeference panel">×</button>
+        <button type="button" className="cr-btn cr-btn--sm cr-btn--icon" onClick={onClose} aria-label="Close georeference panel"><X size={14} aria-hidden="true" /></button>
       </header>
       <div className={`nb-geo-panel__status cr-pill cr-pill--${status.ok ? "ok" : "amber"}`}>{status.message}</div>
       {!node ? (

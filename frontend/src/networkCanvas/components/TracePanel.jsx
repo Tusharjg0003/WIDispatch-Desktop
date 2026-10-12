@@ -1,5 +1,10 @@
 import React, { useState } from "react";
+import { ChevronDown, ChevronRight, X } from "lucide-react";
 import { traceEndpointSections } from "../../cytoscape/multiTrace";
+import { ENTITY_TYPE_LABELS } from "../../cytoscape/buildCyStyle";
+
+// Same wording as the canvas legend ("City gate", not "Handover Point").
+const typeLabel = (type) => (type === "handover_point" ? "City gate" : ENTITY_TYPE_LABELS[type] || type);
 
 const DIRECTION_LABEL = { upstream: "Upstream", downstream: "Downstream", both: "Up + down" };
 const fmtFlow = (v) => {
@@ -22,7 +27,7 @@ export default function TracePanel({ infos, mode, onFocus, onRemove, onClear, on
         <button type="button" className="cr-btn cr-btn--sm" onClick={() => onExport(infos, "xlsx")} title="Export these traces as Excel">Excel</button>
         <button type="button" className="cr-btn cr-btn--sm" onClick={onClear}>Clear</button>
         <button type="button" className="cr-btn cr-btn--sm cr-btn--icon" onClick={() => setCollapsed((v) => !v)} aria-label={collapsed ? "Expand" : "Collapse"}>
-          {collapsed ? "▸" : "▾"}
+          {collapsed ? <ChevronRight size={14} aria-hidden="true" /> : <ChevronDown size={14} aria-hidden="true" />}
         </button>
       </header>
       {!collapsed && (
@@ -40,10 +45,10 @@ export default function TracePanel({ infos, mode, onFocus, onRemove, onClear, on
                 <span className="cr-spacer" />
                 <button type="button" className="cr-btn cr-btn--sm" onClick={() => onExport([info], "pdf")} title="This trace as PDF">PDF</button>
                 <button type="button" className="cr-btn cr-btn--sm" onClick={() => onExport([info], "xlsx")} title="This trace as Excel">XLS</button>
-                <button type="button" className="cr-btn cr-btn--sm cr-btn--icon" onClick={() => onRemove(info.rootId)} aria-label={`Stop tracing ${info.rootName}`}>×</button>
+                <button type="button" className="cr-btn cr-btn--sm cr-btn--icon" onClick={() => onRemove(info.rootId)} aria-label={`Stop tracing ${info.rootName}`}><X size={13} aria-hidden="true" /></button>
               </div>
               <div className="nb-trace-card__meta">
-                {info.rootType} · {info.upCount} upstream · {info.downCount} downstream
+                {typeLabel(info.rootType)} · {info.upCount} upstream · {info.downCount} downstream
               </div>
               {traceEndpointSections(info).map((section) => (
                 <div key={section.key} className="nb-trace-card__section">

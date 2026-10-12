@@ -1,7 +1,17 @@
+/* Production & Capacity chart (Overview). Tooltip and legend in app tokens. */
 .cap-chart { width: 100%; }
-.cap-tip { background: var(--panel); border: 1px solid var(--line); border-radius: 2px; padding: 8px 12px; font-size: 12px; min-width: 180px; color: var(--tx1); box-shadow: 0 8px 24px rgba(0,0,0,.15); }
-.cap-tip p { margin: 2px 0; }
-.cap-tip__title { font-weight: 600; margin-bottom: 6px; }
-.cap-tip__flag { color: var(--errTx); font-weight: 600; margin: 6px 0 2px; border-top: 1px solid var(--line); padding-top: 4px; }
-.cap-legend { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 16px; padding-top: 8px; font-size: 11px; color: var(--tx2); }
+.cap-tip {
+  min-width: 200px;
+  padding: 8px 10px;
+  border: 1px solid var(--line2);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
+  color: var(--tx1);
+  font-size: 11.5px;
+}
+.cap-tip p { margin: 2px 0; font-variant-numeric: tabular-nums; }
+.cap-tip__title { margin-bottom: 6px !important; color: var(--tx1); font-size: 12px; font-weight: 650; }
+.cap-tip__flag { margin: 6px 0 2px; padding-top: 5px; border-top: 1px solid var(--line); color: var(--errTx); font-weight: 600; }
+.cap-legend { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 14px; padding-top: 8px; color: var(--tx2); font-size: 11px; }
 .cap-legend__item { display: inline-flex; align-items: center; gap: 6px; }

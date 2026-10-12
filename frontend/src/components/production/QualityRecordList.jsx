@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
-import { Download } from "lucide-react";
+import { CheckCircle2, Download, FlaskConical, ShieldCheck, TriangleAlert } from "lucide-react";
+import RecordKpis from "./RecordKpis";
 import { buildQualityRows, filterQualityByCompliance, computeQualityStats, qualityRowsToCsv } from "../../lib/qualityRecords";
 import "./QualityRecordList.css";
 import "./ProductionInputTable.css"; // shared prod-* table/badge/kpi/filter classes
@@ -40,13 +41,23 @@ export default function QualityRecordList({ plantId, bundle }) {
 
   return (
     <div className="qrl">
-      <div className="prod-strip">
-        <div className="prod-strip-cell"><div className="prod-kpi-label">Total Tests</div><div className="prod-kpi-value">{stats.total}</div></div>
-        <div className="prod-strip-cell"><div className="prod-kpi-label">Compliance Rate</div><div className="prod-kpi-value prod-kpi--green">{stats.complianceRate.toFixed(0)}%</div></div>
-        <div className="prod-strip-cell"><div className="prod-kpi-label">Within Spec</div><div className="prod-kpi-value prod-kpi--green">{stats.within}</div></div>
-        <div className="prod-strip-cell"><div className="prod-kpi-label">Out of Spec</div><div className="prod-kpi-value prod-kpi--red">{stats.out}</div></div>
-      </div>
+      <RecordKpis
+        items={[
+          { label: "Total tests", value: stats.total, icon: FlaskConical, tone: "neutral", sub: "Samples in range" },
+          {
+            label: "Compliance rate",
+            value: stats.total ? `${stats.complianceRate.toFixed(0)}%` : "—",
+            icon: ShieldCheck,
+            tone: !stats.total ? "neutral" : stats.complianceRate >= 95 ? "ok" : stats.complianceRate >= 80 ? "warn" : "err",
+            meter: stats.total ? stats.complianceRate : undefined,
+            sub: stats.total ? undefined : "No samples yet",
+          },
+          { label: "Within spec", value: stats.within, icon: CheckCircle2, tone: "ok" },
+          { label: "Out of spec", value: stats.out, icon: TriangleAlert, tone: stats.out > 0 ? "err" : "neutral" },
+        ]}
+      />
 
+      <section className="prod-card">
       <div className="prod-filters">
         <label>Start Date<input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></label>
         <label>End Date<input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} /></label>
@@ -69,7 +80,7 @@ export default function QualityRecordList({ plantId, bundle }) {
           </thead>
           <tbody>
             {rows.map((r, i) => (
-              <tr key={r.id || i}>
+              <tr key={r.id || i} className={r.compliance_flag === "within_spec" ? undefined : "qrl__row--out"}>
                 <td className="nowrap">{fmtDT(r.sampling_datetime)}</td>
                 <td className="ta-r mono">{cell(r.ph, 2)}</td>
                 <td className="ta-r mono">{cell(r.alkalinity, 1)}</td>
@@ -87,6 +98,7 @@ export default function QualityRecordList({ plantId, bundle }) {
           </tbody>
         </table>
       </div>
+      </section>
     </div>
   );
 }

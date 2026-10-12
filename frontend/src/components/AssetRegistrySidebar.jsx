@@ -34,8 +34,10 @@ const formatTypeLabel = (type) =>
 // (SidebarList.css). Fetches its own asset list independent of the main
 // content's filters; clicking an asset opens its detail page. Map / List live
 // in the page header.
-export default function AssetRegistrySidebar({ view, onShowMap, onShowList, onCreate, onShowHelp, onExport }) {
+export default function AssetRegistrySidebar({ view, onShowMap, onShowList, onCreate, onShowHelp, onExport, onOpenAsset, refreshKey = 0 }) {
   const navigate = useNavigate();
+  // The registry opens assets in tabs; on its own, fall back to the view page.
+  const openAsset = (asset) => (onOpenAsset ? onOpenAsset(asset) : navigate(`/asset-registry/view/${encodeURIComponent(asset.id)}`));
   const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -48,7 +50,7 @@ export default function AssetRegistrySidebar({ view, onShowMap, onShowList, onCr
       .catch(() => !cancelled && setAssets([]))
       .finally(() => !cancelled && setLoading(false));
     return () => { cancelled = true; };
-  }, []);
+  }, [refreshKey]);
 
   const assetsByType = useMemo(() => {
     const grouped = {};
@@ -160,11 +162,11 @@ export default function AssetRegistrySidebar({ view, onShowMap, onShowList, onCr
                           role="button"
                           tabIndex={0}
                           className="sl-row ar-browse__asset"
-                          onClick={() => navigate(`/asset-registry/view/${encodeURIComponent(asset.id)}`)}
+                          onClick={() => openAsset(asset)}
                           onKeyDown={(e) => {
                             if (e.key !== "Enter" && e.key !== " ") return;
                             e.preventDefault();
-                            navigate(`/asset-registry/view/${encodeURIComponent(asset.id)}`);
+                            openAsset(asset);
                           }}
                           title={`${asset.name || asset.id} · open details`}
                         >

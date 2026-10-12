@@ -42,6 +42,10 @@
 .app-shell .create-asset-page.asset-form-roomy .view-asset-top-row { grid-area: location; }
 .app-shell .create-asset-page.asset-form-roomy .view-asset-split { grid-area: main; display: flex; flex-direction: column; gap: var(--asf-gap); }
 .app-shell .create-asset-page.asset-form-roomy .view-asset-split__main { display: flex; flex-direction: column; gap: var(--asf-gap); }
+/* Cards clip (overflow: hidden), which lets a flex item shrink to nothing —
+   keep each card at its content height. */
+.app-shell .create-asset-page.asset-form-roomy .view-asset-split > *,
+.app-shell .create-asset-page.asset-form-roomy .view-asset-split__main > * { flex-shrink: 0; }
 .app-shell .create-asset-page.asset-form-roomy .swa-info-section { grid-area: swa; }
 .app-shell .create-asset-page.asset-form-roomy .af__error,
 .app-shell .create-asset-page.asset-form-roomy .af__success { grid-column: 1 / -1; }
@@ -213,6 +217,7 @@
   flex-wrap: wrap;
   gap: 6px;
   min-height: 32px;
+  height: auto; /* options wrap rather than clip */
   align-items: center;
 }
 .app-shell .create-asset-page.asset-form-roomy .af__radio {

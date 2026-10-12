@@ -1,8 +1,9 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
 
-async function request(path, method = "GET", payload) {
+async function request(path, method = "GET", payload, signal) {
   const res = await fetch(`${API_BASE}${path}`, {
     method,
+    signal,
     ...(payload === undefined
       ? {}
       : { headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }),
@@ -39,6 +40,14 @@ export function deleteSimulationConfig(id) {
 
 export function runSimulation(id, body = {}) {
   return request(`/api/simulation-configs/${encodeURIComponent(id)}/run`, "POST", body);
+}
+
+/**
+ * Dispatch a config without storing a plan, to fill the tables while the
+ * operator picks a network and dates. `networkId` may be an unsaved pick.
+ */
+export function previewSimulation(id, body = {}, { signal } = {}) {
+  return request(`/api/simulation-configs/${encodeURIComponent(id)}/run`, "POST", { ...body, preview: true }, signal);
 }
 
 export function fetchDispatchPlan(id) {

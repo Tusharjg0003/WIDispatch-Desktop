@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { format, parseISO, startOfDay, subDays } from "date-fns";
-import { Check, Download, X } from "lucide-react";
+import { Activity, Check, Clock3, Download, Gauge, Percent, TriangleAlert, Waves, X } from "lucide-react";
+import RecordKpis from "../production/RecordKpis";
 import { buildProductionRows, filterRows, computeTotals } from "../../lib/productionRows";
 import {
   demandApprovedDemand,
@@ -56,6 +57,10 @@ export default function DemandInputTable({ cityGate, cityGateId, bundle }) {
   );
   const totals = useMemo(() => computeTotals(visibleRows), [visibleRows]);
   const requiredTotal = useMemo(() => visibleRows.reduce((s, r) => s + (r.requested ?? 0), 0), [visibleRows]);
+  const pendingDecisions = useMemo(
+    () => visibleRows.filter((r) => r.input && !["approved", "rejected"].includes(demandDesktopStatus(r.input))).length,
+    [visibleRows],
+  );
 
   const setDesktopApproval = async (input, nextStatus) => {
     if (!input?.id) return;
@@ -95,21 +100,24 @@ export default function DemandInputTable({ cityGate, cityGateId, bundle }) {
 
   return (
     <div className="prod-input">
-      <div className="prod-strip">
-        {[
-          ["Contracted (m³)", num(totals.contracted), ""],
-          ["Available (m³)", num(totals.available), "prod-kpi--blue"],
-          ["Required (m³)", num(requiredTotal), "prod-kpi--green"],
-          ["Total Loss (m³)", num(totals.loss), "prod-kpi--red"],
-          ["Avg Availability", `${totals.availabilityPct.toFixed(0)}%`, ""],
-        ].map(([label, value, tone]) => (
-          <div className="prod-strip-cell" key={label}>
-            <div className="prod-kpi-label">{label}</div>
-            <div className={`prod-kpi-value ${tone}`}>{value}</div>
-          </div>
-        ))}
-      </div>
+      <RecordKpis
+        items={[
+          { label: "Contracted", value: num(totals.contracted), unit: "m³", icon: Gauge, tone: "neutral" },
+          { label: "Available", value: num(totals.available), unit: "m³", icon: Activity, tone: "acc" },
+          { label: "Required", value: num(requiredTotal), unit: "m³", icon: Waves, tone: "ok" },
+          { label: "Total loss", value: num(totals.loss), unit: "m³", icon: TriangleAlert, tone: totals.loss > 0 ? "err" : "neutral" },
+          {
+            label: "Pending decisions",
+            value: pendingDecisions,
+            icon: Clock3,
+            tone: pendingDecisions > 0 ? "warn" : "ok",
+            sub: pendingDecisions > 0 ? "Days awaiting Accept / Reject" : "Every day decided",
+          },
+          { label: "Avg availability", value: `${totals.availabilityPct.toFixed(0)}%`, icon: Percent, tone: "acc", meter: totals.availabilityPct },
+        ]}
+      />
 
+      <section className="prod-card">
       <div className="prod-filters">
         <label>Start Date
           <input type="date" value={isoInput(startDate)} onChange={(e) => e.target.value && setStartDate(startOfDay(parseISO(e.target.value)))} />
@@ -137,7 +145,7 @@ export default function DemandInputTable({ cityGate, cityGateId, bundle }) {
               <th className="ta-r">Outage Loss</th><th className="ta-r">Variance</th><th className="ta-r">Available Capacity</th>
               <th className="ta-r">Required Demand</th><th className="ta-r">Approved Demand</th>
               <th>Responsible User</th><th>Submitted At</th><th>Website Approved At</th>
-              <th>Desktop Approval</th><th>Desktop Approved At</th><th>Actions</th>
+              <th>Desktop Approval</th><th>Desktop Approved At</th><th className="mrl__sticky">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -161,12 +169,13 @@ export default function DemandInputTable({ cityGate, cityGateId, bundle }) {
                   <td className="nowrap">{fmtDateTime(r.approvedAt)}</td>
                   <td>{desktop ? <span className={`prod-badge prod-badge--${desktop}`}>{humanStatus(desktop)}</span> : "—"}</td>
                   <td className="nowrap">{input ? fmtDateTime(input.desktop_approved_at) : "—"}</td>
-                  <td>
+                  <td className="mrl__sticky">
                     {input?.id ? (
-                      <div className="mrl__actions">
+                      <div className="mrl__actions" role="group" aria-label={`Desktop approval for ${r.iso}`}>
                         <button
                           type="button"
-                          className="mrl__approval-btn mrl__approval-btn--accept"
+                          className={`mrl__approval-btn mrl__approval-btn--accept${desktop === "approved" ? " is-on" : ""}`}
+                          aria-pressed={desktop === "approved"}
                           onClick={() => setDesktopApproval(input, "approved")}
                           disabled={busy || desktop === "approved"}
                         >
@@ -174,7 +183,8 @@ export default function DemandInputTable({ cityGate, cityGateId, bundle }) {
                         </button>
                         <button
                           type="button"
-                          className="mrl__approval-btn mrl__approval-btn--reject"
+                          className={`mrl__approval-btn mrl__approval-btn--reject${desktop === "rejected" ? " is-on" : ""}`}
+                          aria-pressed={desktop === "rejected"}
                           onClick={() => setDesktopApproval(input, "rejected")}
                           disabled={busy || desktop === "rejected"}
                         >
@@ -192,10 +202,13 @@ export default function DemandInputTable({ cityGate, cityGateId, bundle }) {
           </tbody>
         </table>
       </div>
-      {approvalError && <div className="mrl__error">{approvalError}</div>}
-      <div className="prod-caption">
-        {visibleRows.length === 0 ? "No days match the selected range/filters." : `Showing ${visibleRows.length} day${visibleRows.length === 1 ? "" : "s"}`}
-      </div>
+      </section>
+      {approvalError && (
+        <div className="mrl__error" role="alert"><TriangleAlert size={14} aria-hidden="true" /><span>{approvalError}</span></div>
+      )}
+      {visibleRows.length > 0 && (
+        <div className="prod-caption">Showing {visibleRows.length} day{visibleRows.length === 1 ? "" : "s"}</div>
+      )}
     </div>
   );
 }

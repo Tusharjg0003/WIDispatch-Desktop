@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Factory } from "lucide-react";
+import { ENTITY_TYPE_COLORS } from "../cytoscape/buildCyStyle";
 import { fetchPlantBundle } from "../api/production";
 import { StatusBadge } from "../components/ui/WorkspacePrimitives";
 import PlantOverview from "../components/production/PlantOverview";
@@ -49,12 +50,13 @@ export default function ProductionPlantDetail({
 
   return (
     <div className="ppd">
-      <header className="ppd__identity">
+      <header className="ppd__identity" style={{ "--ppd-colour": ENTITY_TYPE_COLORS.plant }}>
         {onBack && (
           <button type="button" className="ppd__back" onClick={onBack} title="Back to Plants" aria-label="Back to Plants">
             <ArrowLeft size={16} />
           </button>
         )}
+        <span className="ppd__icon" aria-hidden="true"><Factory size={18} /></span>
         <h1 className="ppd__name">{plant?.name || plantId}</h1>
         {plant?.status && <StatusBadge status={plant.status} />}
         {plant?.external_id && <span className="ppd__extid mono">{plant.external_id}</span>}
