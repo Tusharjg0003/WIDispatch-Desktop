@@ -260,12 +260,6 @@
 .app-shell .route-failure__actions a,
 .app-shell .not-found-page__actions button { height: var(--density-control); padding: 0 7px; border-radius: var(--density-radius); }
 
-@media (max-width: 1200px) {
-  .app-shell .create-asset-page .form-grid,
-  .app-shell .create-asset-page .form-grid.af__grid,
-  .app-shell .af__grid,
-}
-
 @media (max-width: 1100px) {
   .app-shell .simcanvas__body { grid-template-columns: minmax(0, 1fr); }
 }

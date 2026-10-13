@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import ProductionPlantList from "./ProductionPlantList";
@@ -93,6 +93,18 @@ export default function ProductionPage() {
   }, []);
 
   useTabShortcuts(productionTabController);
+
+  // A change of address while the page is open (a link, the back button)
+  // opens that record too; the first render is handled by the restore above.
+  const followedRouteRef = useRef(true);
+  useEffect(() => {
+    if (followedRouteRef.current) {
+      followedRouteRef.current = false;
+      return;
+    }
+    if (plantId && productionTabController.getActiveTab()?.key !== plantId) productionTabController.openPlant(plantId, plantId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plantId]);
 
   const openPlant = useCallback((plant) => {
     productionTabController.openPlant(plant.id, plant.name || plant.id);

@@ -1,3 +1,4 @@
+import { confirmDiscard } from "../../components/dialog/appDialog.js";
 import { RecordTabController } from "../../tabs/controller/RecordTabController.ts";
 import { createTabSessionStorage } from "../../tabs/persistence/tabSessionStorage.ts";
 import { assetTabStore } from "./assetTabStore.ts";
@@ -20,7 +21,7 @@ export const assetTabController = new RecordTabController<AssetTabState>({
   },
   // Form input is not stored, so a reloaded tab is never "unsaved".
   parseState: (_raw, base) => ({ ...base, dirty: false }),
-  beforeClose: (tab) => !tab.state.dirty || window.confirm(`Discard unsaved changes to "${tab.title}"?`),
+  beforeClose: (tab) => !tab.state.dirty || confirmDiscard(tab.title),
 });
 
 let newSeq = 0;

@@ -7,7 +7,7 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
+import type { DragEndEvent } from "@dnd-kit/core";
 import {
   restrictToHorizontalAxis,
   restrictToParentElement,
@@ -89,6 +89,10 @@ export default function TabStrip({
   // the strip, so the drop point has to be tracked separately).
   const pointerRef = useRef<{ clientX: number; clientY: number; screenX: number; screenY: number } | null>(null);
   const stopTrackingRef = useRef<(() => void) | null>(null);
+  // Set when a release tore a tab off, so the drag's own end doesn't also reorder.
+  const tornRef = useRef(false);
+  const tabsRef = useRef(tabs);
+  tabsRef.current = tabs;
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
 
@@ -102,39 +106,60 @@ export default function TabStrip({
 
   const ids = tabs.map((tab) => tab.id);
 
-  const handleDragStart = useCallback(
-    (event: DragStartEvent) => {
-      if (!onDetach) return;
-      const start = event.activatorEvent as PointerEvent | undefined;
-      pointerRef.current = start
-        ? { clientX: start.clientX, clientY: start.clientY, screenX: start.screenX, screenY: start.screenY }
-        : null;
-      const track = (e: PointerEvent) => {
+  // Track the pointer from the press itself, not from when the drag library
+  // reports the drag started: a fast drag can be a press, one jump to the drop
+  // point and a release, all before that report arrives. The last position
+  // (the release point included) is kept for handleDragEnd.
+  const trackFromPress = useCallback(
+    (event: React.PointerEvent) => {
+      if (!onDetach || event.button !== 0) return;
+      // Only a press on a tab itself (its buttons are clicks, not drags).
+      const target = event.target as HTMLElement;
+      if (target.closest("button.tab__close, button.tab__detach, input")) return;
+      const tabId = target.closest<HTMLElement>("[data-tab-id]")?.dataset.tabId;
+      if (!tabId) return;
+      stopTrackingRef.current?.();
+      tornRef.current = false;
+      const startX = event.clientX;
+      const startY = event.clientY;
+      const note = (e: PointerEvent | React.PointerEvent) => {
         pointerRef.current = { clientX: e.clientX, clientY: e.clientY, screenX: e.screenX, screenY: e.screenY };
       };
-      window.addEventListener("pointermove", track, true);
-      stopTrackingRef.current = () => window.removeEventListener("pointermove", track, true);
+      note(event);
+      const onMove = (e: PointerEvent) => note(e);
+      // Decided here, at the release, rather than in the drag library's end
+      // event: a fast drag can start and end before the library reports it.
+      const onUp = (e: PointerEvent) => {
+        note(e);
+        window.removeEventListener("pointermove", onMove, true);
+        window.removeEventListener("pointerup", onUp, true);
+        const moved = Math.hypot(e.clientX - startX, e.clientY - startY) > 8;
+        const rect = stripRef.current?.getBoundingClientRect();
+        const outside = e.clientX < 0 || e.clientY < 0 || e.clientX > window.innerWidth || e.clientY > window.innerHeight;
+        const away = rect ? e.clientY < rect.top - TEAR_OFF_PX || e.clientY > rect.bottom + TEAR_OFF_PX : false;
+        const tab = tabsRef.current.find((t) => t.id === tabId);
+        if (moved && (outside || away) && tab && !tab.permanent && !tab.windowed) {
+          tornRef.current = true;
+          onDetach(tab.id, { x: e.screenX, y: e.screenY });
+        }
+      };
+      window.addEventListener("pointermove", onMove, true);
+      window.addEventListener("pointerup", onUp, true);
+      stopTrackingRef.current = () => {
+        window.removeEventListener("pointermove", onMove, true);
+        window.removeEventListener("pointerup", onUp, true);
+      };
     },
     [onDetach]
   );
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
-      stopTrackingRef.current?.();
-      stopTrackingRef.current = null;
-      const pointer = pointerRef.current;
       pointerRef.current = null;
-      if (onDetach && pointer) {
-        const rect = stripRef.current?.getBoundingClientRect();
-        const outside =
-          pointer.clientX < 0 || pointer.clientY < 0 ||
-          pointer.clientX > window.innerWidth || pointer.clientY > window.innerHeight;
-        const torn = rect && (pointer.clientY < rect.top - TEAR_OFF_PX || pointer.clientY > rect.bottom + TEAR_OFF_PX);
-        const tab = tabs.find((t) => t.id === String(event.active.id));
-        if ((outside || torn) && tab && !tab.permanent && !tab.windowed) {
-          onDetach(tab.id, { x: pointer.screenX, y: pointer.screenY });
-          return;
-        }
+      // Torn off at the release (trackFromPress): not a reorder.
+      if (tornRef.current) {
+        tornRef.current = false;
+        return;
       }
       const { active, over } = event;
       if (!over || active.id === over.id) return;
@@ -143,7 +168,7 @@ export default function TabStrip({
       if (from === -1 || to === -1) return;
       onReorder(from, to);
     },
-    [ids, onReorder, onDetach, tabs]
+    [ids, onReorder]
   );
 
   const dismissMenu = useCallback(() => setMenu(null), []);
@@ -156,6 +181,7 @@ export default function TabStrip({
   return (
     <div
       ref={stripRef}
+      onPointerDownCapture={trackFromPress}
       className={["tab-strip", className].filter(Boolean).join(" ")}
       role="tablist"
       aria-label={ariaLabel}
@@ -164,7 +190,6 @@ export default function TabStrip({
         sensors={sensors}
         collisionDetection={closestCenter}
         modifiers={[restrictToHorizontalAxis, restrictToParentElement]}
-        onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         onDragCancel={() => {
           stopTrackingRef.current?.();

@@ -67,6 +67,8 @@ export class WorkspaceController {
   #pendingRecordWrites = new Set<string>();
   /** Workspaces out in their own windows: their recovery records are theirs. */
   #detached = new Set<string>();
+  /** Asked before a workspace closes (unsaved changes); false keeps it. */
+  #beforeClose: ((workspace: WorkspaceInstance) => boolean | Promise<boolean>) | null = null;
   #switchToken = 0;
   #recoveryTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -204,7 +206,8 @@ export class WorkspaceController {
     if (!next) return;
 
     // A document seen for the first time with nothing drawn yet opens on its sheet.
-    const sheet = next.document.canvas ? areaRectPx(next.document.canvas) : null;
+    const nextArea = normalizeCanvasArea(next.document.canvas);
+    const sheet = nextArea ? areaRectPx(nextArea) : null;
     this.#canvas.restoreViewport(next.ui.viewport, sheet);
     // After the restore: the asset filter applies classes to elements that
     // must already exist.
@@ -287,11 +290,13 @@ export class WorkspaceController {
     return workspace.id;
   }
 
-  async closeWorkspace(id: string): Promise<void> {
-    const store = workspaceStore.getState();
-    if (!store.instances[id]) return;
+  async closeWorkspace(id: string, { force = false }: { force?: boolean } = {}): Promise<void> {
+    if (!workspaceStore.getState().instances[id]) return;
     // Out in its own window: it's closed from there.
     if (this.#detached.has(id)) return;
+    if (!force && !(await this.#mayClose(id))) return;
+    const store = workspaceStore.getState();
+    if (!store.instances[id]) return;
 
     // Capture the live graph first when closing the displayed workspace, so
     // reopening restores what was on screen rather than the last autosave.
@@ -335,7 +340,10 @@ export class WorkspaceController {
   }
 
   async #closeMany(candidates: string[], survivorId: string): Promise<void> {
-    const doomed = candidates.filter((id) => !this.#detached.has(id));
+    const doomed: string[] = [];
+    for (const id of candidates) {
+      if (!this.#detached.has(id) && (await this.#mayClose(id))) doomed.push(id);
+    }
     if (!doomed.length) return;
     // Activate the survivor first so each removal is a plain metadata delete
     // rather than a chain of switch transactions.
@@ -362,7 +370,13 @@ export class WorkspaceController {
       store.setCanvasArea(id, fromDoc, { dirty: false });
       return;
     }
-    if (normalizeCanvasArea(workspace.document.canvas)) return;
+    // A recovered area is kept; one in the older km/m form is stored in px
+    // from here on (same size, nothing marked unsaved).
+    const kept = normalizeCanvasArea(workspace.document.canvas);
+    if (kept) {
+      store.setCanvasArea(id, kept, { dirty: false });
+      return;
+    }
     const nodes = this.#canvas.getCy()?.nodes();
     const bounds = nodes && nodes.length ? nodes.boundingBox({ includeLabels: false } as never) : null;
     store.setCanvasArea(id, fitAreaToBounds(bounds), { dirty: Boolean(bounds) && !loadError });
@@ -576,6 +590,21 @@ export class WorkspaceController {
       return;
     }
     await this.createWorkspace("Untitled 1");
+  }
+
+  /** Ask before closing a workspace (e.g. "Discard unsaved changes?"). */
+  setBeforeClose(fn: ((workspace: WorkspaceInstance) => boolean | Promise<boolean>) | null): void {
+    this.#beforeClose = fn;
+  }
+
+  async #mayClose(id: string): Promise<boolean> {
+    const workspace = workspaceStore.getState().instances[id];
+    if (!workspace || !this.#beforeClose) return Boolean(workspace);
+    try {
+      return (await this.#beforeClose(workspace)) !== false;
+    } catch {
+      return false;
+    }
   }
 
   // ── Tabs in their own windows (windows/tabWindows.ts) ───────────────────

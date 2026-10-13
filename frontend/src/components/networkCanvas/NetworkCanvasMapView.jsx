@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { MapContainer, Marker, Polyline, TileLayer, Tooltip, useMap, useMapEvents } from "react-leaflet";
+import { MapContainer, Marker, Polyline, Tooltip, useMap, useMapEvents } from "react-leaflet";
+import BaseMapLayer from "../BaseMapLayer";
 import { ENTITY_TYPE_COLORS } from "../../cytoscape/buildCyStyle";
 import { useThemeColors } from "../../lib/useCssVar";
 import "./NetworkCanvasMapView.css";
@@ -98,10 +99,7 @@ export default function NetworkCanvasMapView({
         <div className="ncm-empty">At least two valid geo anchors are required before geographic positions can be calculated.</div>
       ) : (
         <MapContainer center={SAUDI_CENTER} zoom={6} className="ncm-map" preferCanvas>
-          <TileLayer
-            attribution="&copy; OpenStreetMap contributors"
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
+          <BaseMapLayer storageKey="network-map" />
           <FitGeography nodes={nodes} />
           <MapRouteClick active={drawing && Boolean(draft.sourceId)} onVertex={(step) => setDraft((value) => ({ ...value, steps: [...value.steps, step] }))} />
           {edges.map((edge) => edge.positions.length >= 2 && (
@@ -115,6 +113,7 @@ export default function NetworkCanvasMapView({
               key={node.id}
               position={[node.lat, node.lng]}
               icon={markerIcon(node.type, node.isAnchor)}
+              title={`${node.label || node.name || node.id}${node.isAnchor ? " (geo anchor)" : ""}`}
               draggable={!readOnly}
               eventHandlers={{
                 click: (event) => handleMarkerClick(node, event),

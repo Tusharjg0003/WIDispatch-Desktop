@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { confirmDialog } from "../components/dialog/appDialog";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Cylinder, Download, Droplets, Factory, MapPinned, Network as NetworkIcon, Route, Search as SearchIcon, Spline } from "lucide-react";
 import { fetchAssets, fetchTransmissionLines, fetchTransmissionSystems, deleteTransmissionLine } from "../api/metrics";
@@ -73,6 +74,18 @@ export default function TransmissionSystemsView() {
   }, []);
 
   useTabShortcuts(systemTabController);
+
+  // A change of address while the page is open (a link, the back button)
+  // opens that record too; the first render is handled by the restore above.
+  const followedRouteRef = useRef(true);
+  useEffect(() => {
+    if (followedRouteRef.current) {
+      followedRouteRef.current = false;
+      return;
+    }
+    if (systemId && systemTabController.getActiveTab()?.key !== systemId) systemTabController.openRecord(systemId, systemId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [systemId]);
 
   // ── Data ────────────────────────────────────────────────────────────────
   const [systems, setSystems] = useState([]);
@@ -156,7 +169,8 @@ export default function TransmissionSystemsView() {
 
   const handleDeleteLine = async (line, label) => {
     if (!line?.id || deletingLineId) return;
-    if (!window.confirm(`Delete "${label}"? This removes it from canvas segments too.`)) return;
+    const sure = await confirmDialog({ title: `Delete "${label}"?`, message: "This removes it from canvas segments too.", confirmLabel: "Delete", tone: "danger" });
+    if (!sure) return;
     setDeletingLineId(line.id);
     setLineDeleteError(null);
     try {

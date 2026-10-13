@@ -1,8 +1,10 @@
 import React from "react";
 
-// A tiny trend line (no axes) for KPI cards and table rows. Nulls break the
-// line rather than dropping to zero.
-export default function Sparkline({ values = [], width = 96, height = 26, color = "var(--acc)", fill = true, className = "" }) {
+// A tiny trend line (no axes) for KPI cards and table rows. Days with no
+// value are skipped (the line joins across them) unless `connectNulls` is
+// false, when they break it — never drawn as zero.
+export default function Sparkline({ values: raw = [], width = 96, height = 26, color = "var(--acc)", fill = true, className = "", connectNulls = true }) {
+  const values = connectNulls ? raw.filter((v) => v != null && Number.isFinite(v)) : raw;
   const numbers = values.filter((v) => v != null && Number.isFinite(v));
   if (numbers.length < 2) return <svg className={`home-spark ${className}`} width={width} height={height} aria-hidden="true" />;
   const min = Math.min(...numbers);

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { MapContainer, Marker, TileLayer, Tooltip, useMap } from "react-leaflet";
+import { MapContainer, Marker, Tooltip, useMap } from "react-leaflet";
+import BaseMapLayer from "../BaseMapLayer";
 import "leaflet/dist/leaflet.css";
 import { assetMarkerIcon } from "../../lib/assetMarker";
 import { ENTITY_TYPE_COLORS } from "../../cytoscape/buildCyStyle";
@@ -100,13 +101,14 @@ export default function HomeNetworkMap({ assets, region, onOpen }) {
       </div>
       <div className="home-map__canvas">
         <MapContainer center={[24, 45]} zoom={5} style={{ height: "100%", width: "100%" }} scrollWheelZoom={false}>
-          <TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+          <BaseMapLayer storageKey="home" />
           <FitBounds points={points} signature={signature} />
           {shown.map((a) => (
             <Marker
               key={a.id}
               position={[a.latitude, a.longitude]}
               icon={assetMarkerIcon(a.category, a.status, 24)}
+              title={`${a.name || a.id}, ${STATUS_LABEL[a.status] || a.status || "status unknown"} — open`}
               eventHandlers={{ click: () => onOpen(a) }}
             >
               <Tooltip direction="top" offset={[0, -4]}>

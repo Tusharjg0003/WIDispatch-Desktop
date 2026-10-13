@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
-import { MapContainer, TileLayer, CircleMarker, Tooltip, useMap } from "react-leaflet";
+import { MapContainer, CircleMarker, Tooltip, useMap } from "react-leaflet";
+import BaseMapLayer from "../BaseMapLayer";
 import "leaflet/dist/leaflet.css";
 
 // Leaflet measures its box once; when the card around it grows or shrinks
@@ -35,10 +36,7 @@ export default function SinglePlantMap({ latitude, longitude, name, height = 220
   return (
     <div style={{ ...box, borderRadius: 2, overflow: "hidden", border: "1px solid var(--line)" }}>
       <MapContainer center={[lat, lng]} zoom={13} style={{ height: "100%", width: "100%" }} scrollWheelZoom={false}>
-        <TileLayer
-          attribution="Tiles &copy; Esri"
-          url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-        />
+        <BaseMapLayer storageKey="plant" defaultMode="satellite" />
         <FollowSize lat={lat} lng={lng} />
         <CircleMarker center={[lat, lng]} radius={8} pathOptions={{ color: "var(--acc)", fillColor: "var(--acc)", fillOpacity: 0.7 }}>
           {name && <Tooltip>{name}</Tooltip>}

@@ -52,6 +52,11 @@ export interface WorkspaceStoreState {
   setCanvasArea(id: string, area: CanvasArea | null, options?: { dirty?: boolean }): void;
   /** Replace a workspace's record in place (e.g. reloaded from recovery). */
   replaceWorkspace(workspace: WorkspaceInstance): void;
+  /**
+   * A saved network was deleted: workspaces showing it become unsaved
+   * documents, so the next save creates a network instead of failing.
+   */
+  unbindNetwork(networkId: string): void;
   markSaved(id: string, patch: { networkId?: string | null; name?: string }): void;
   setLoadError(id: string, loadError: boolean): void;
   updateWorkspaceUI(id: string, patch: Partial<WorkspaceUiState>): void;
@@ -144,6 +149,19 @@ export const workspaceStore = createStore<WorkspaceStoreState>((set, get) => ({
         workspace.document.description = patch.description;
         // Naming a workspace after the document it just loaded is not an edit
         // to that document, so dirty is deliberately untouched.
+      })
+    );
+  },
+
+  unbindNetwork(networkId) {
+    set(
+      produce((state: WorkspaceStoreState) => {
+        for (const workspace of Object.values(state.instances)) {
+          if (workspace.document.networkId !== networkId) continue;
+          workspace.document.networkId = null;
+          workspace.dirty = true;
+          touch(workspace);
+        }
       })
     );
   },

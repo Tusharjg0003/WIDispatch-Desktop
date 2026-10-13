@@ -1,24 +1,28 @@
-// A network's drawing area: a sheet of `width × height` real units (km or m)
-// on the canvas, where one grid square (CANVAS_GRID_PITCH model px) stands for
-// `resolution` units. It is a soft guide — nothing is clamped to it — and the
-// scale is for display only (pipe lengths stay what the user enters).
+// A network's drawing area: a sheet of `width × height` canvas pixels (model
+// px) with its top-left corner at `origin`, drawn over a grid of `grid`-px
+// squares. It is a soft guide — nothing is clamped to it. The grid size is the
+// network's grid: the canvas grid, snapping and arrow-key nudges all use it.
+//
+// Networks saved before sizes were in pixels stored km/m with `resolution`
+// units per 40 px grid square; those convert to the same pixels on load.
 //
 // Dependency-free so it stays unit-testable (see canvasArea.test.js).
 
 import { CANVAS_GRID_PITCH } from "./canvasGeometry.js";
 
-export const AREA_UNITS = ["km", "m"];
+export const MIN_GRID = 5;
+export const MAX_GRID = 400;
 
 export const DEFAULT_CANVAS_AREA = Object.freeze({
-  width: 100,
-  height: 70,
-  unit: "km",
-  resolution: 1,
+  width: 4000,
+  height: 2800,
+  grid: CANVAS_GRID_PITCH,
   origin: Object.freeze({ x: 0, y: 0 }),
 });
 
 // Room left around a drawing when an area is fitted to it.
 const FIT_MARGIN = 0.1;
+const LEGACY_UNITS = ["km", "m"];
 
 const positive = (value) => {
   const n = Number(value);
@@ -30,32 +34,42 @@ const finite = (value, fallback = 0) => {
   return Number.isFinite(n) ? n : fallback;
 };
 
+// Keep floating-point dust out of the stored sizes.
+const roundPx = (value) => Math.round(value * 1000) / 1000;
+
+const clampGrid = (value) => Math.min(MAX_GRID, Math.max(MIN_GRID, value));
+
 /** A valid area, or null when `raw` isn't one (e.g. a network saved before areas existed). */
 export const normalizeCanvasArea = (raw) => {
   if (!raw || typeof raw !== "object") return null;
-  const width = positive(raw.width);
-  const height = positive(raw.height);
-  const resolution = positive(raw.resolution);
-  if (!width || !height || !resolution) return null;
+  let width = positive(raw.width);
+  let height = positive(raw.height);
+  if (!width || !height) return null;
+  let grid = positive(raw.grid);
+  if (!grid && LEGACY_UNITS.includes(raw.unit)) {
+    // Old km/m sheet: `resolution` units per 40 px square.
+    const resolution = positive(raw.resolution);
+    if (!resolution) return null;
+    const k = CANVAS_GRID_PITCH / resolution;
+    width *= k;
+    height *= k;
+  }
+  grid = clampGrid(grid || CANVAS_GRID_PITCH);
   return {
-    width,
-    height,
-    unit: AREA_UNITS.includes(raw.unit) ? raw.unit : "km",
-    resolution,
+    width: roundPx(width),
+    height: roundPx(height),
+    grid,
     origin: { x: finite(raw.origin?.x), y: finite(raw.origin?.y) },
   };
 };
 
-/** Model px per real unit. */
-export const pxPerUnit = (area) => CANVAS_GRID_PITCH / area.resolution;
+/** The grid square size of an area, in px (the default grid with no area). */
+export const gridOf = (area) => (area && positive(area.grid)) || CANVAS_GRID_PITCH;
 
 /** The sheet in model px: { x1, y1, x2, y2, w, h }. */
 export const areaRectPx = (area) => {
-  const k = pxPerUnit(area);
-  const w = area.width * k;
-  const h = area.height * k;
   const { x, y } = area.origin;
-  return { x1: x, y1: y, x2: x + w, y2: y + h, w, h };
+  return { x1: x, y1: y, x2: x + area.width, y2: y + area.height, w: area.width, h: area.height };
 };
 
 const isBox = (bb) =>
@@ -66,47 +80,39 @@ const isBox = (bb) =>
  * number of grid squares wide/high and its corner on the grid. With no drawing
  * it is the default sheet.
  */
-export const fitAreaToBounds = (bb, { unit = DEFAULT_CANVAS_AREA.unit, resolution = DEFAULT_CANVAS_AREA.resolution } = {}) => {
+export const fitAreaToBounds = (bb, { grid = DEFAULT_CANVAS_AREA.grid } = {}) => {
   if (!isBox(bb)) {
-    return { ...DEFAULT_CANVAS_AREA, unit, resolution, origin: { ...DEFAULT_CANVAS_AREA.origin } };
+    return { ...DEFAULT_CANVAS_AREA, grid, origin: { ...DEFAULT_CANVAS_AREA.origin } };
   }
-  const pitch = CANVAS_GRID_PITCH;
-  const marginX = Math.max(pitch, (bb.x2 - bb.x1) * FIT_MARGIN);
-  const marginY = Math.max(pitch, (bb.y2 - bb.y1) * FIT_MARGIN);
-  const x1 = Math.floor((bb.x1 - marginX) / pitch) * pitch;
-  const y1 = Math.floor((bb.y1 - marginY) / pitch) * pitch;
-  const cellsX = Math.max(1, Math.ceil((bb.x2 + marginX - x1) / pitch));
-  const cellsY = Math.max(1, Math.ceil((bb.y2 + marginY - y1) / pitch));
+  const marginX = Math.max(grid, (bb.x2 - bb.x1) * FIT_MARGIN);
+  const marginY = Math.max(grid, (bb.y2 - bb.y1) * FIT_MARGIN);
+  const x1 = Math.floor((bb.x1 - marginX) / grid) * grid;
+  const y1 = Math.floor((bb.y1 - marginY) / grid) * grid;
+  const cellsX = Math.max(1, Math.ceil((bb.x2 + marginX - x1) / grid));
+  const cellsY = Math.max(1, Math.ceil((bb.y2 + marginY - y1) / grid));
   return {
-    width: roundUnits(cellsX * resolution),
-    height: roundUnits(cellsY * resolution),
-    unit,
-    resolution,
+    width: roundPx(cellsX * grid),
+    height: roundPx(cellsY * grid),
+    grid,
     origin: { x: x1, y: y1 },
   };
 };
 
-// Keep floating-point dust (0.1 * 3) out of the stored sizes.
-const roundUnits = (value) => Math.round(value * 1e6) / 1e6;
-
 /**
- * Re-anchor a resized area. The scale is unchanged; `anchor` says which point
- * stays put: "top-left" (grow right/down) or "center" (grow on every side).
+ * Re-anchor a resized area. `anchor` says which point stays put: "top-left"
+ * (grow right/down) or "center" (grow on every side).
  */
-export const resizeArea = (area, { width, height, unit, resolution }, anchor = "top-left") => {
+export const resizeArea = (area, { width, height, grid }, anchor = "top-left") => {
   const next = {
     width,
     height,
-    unit: unit ?? area.unit,
-    resolution: resolution ?? area.resolution,
+    grid: grid ?? area.grid,
     origin: { ...area.origin },
   };
   if (anchor === "center") {
-    const before = areaRectPx(area);
-    const after = areaRectPx(next);
     next.origin = {
-      x: before.x1 + (before.w - after.w) / 2,
-      y: before.y1 + (before.h - after.h) / 2,
+      x: area.origin.x + (area.width - width) / 2,
+      y: area.origin.y + (area.height - height) / 2,
     };
   }
   return next;
@@ -114,19 +120,18 @@ export const resizeArea = (area, { width, height, unit, resolution }, anchor = "
 
 /**
  * Does `area` still hold the drawing? Returns null when it does, otherwise the
- * smallest width/height (in the area's units, rounded up to grid squares) that
- * would hold it from the same corner.
+ * smallest width/height (px, rounded up to grid squares) that would hold it
+ * from the same corner.
  */
 export const shortfallForBounds = (area, bb) => {
   if (!isBox(bb)) return null;
   const rect = areaRectPx(area);
   if (bb.x1 >= rect.x1 && bb.y1 >= rect.y1 && bb.x2 <= rect.x2 && bb.y2 <= rect.y2) return null;
-  const k = pxPerUnit(area);
-  const step = area.resolution;
-  const need = (px) => Math.max(step, Math.ceil(px / k / step) * step);
+  const step = gridOf(area);
+  const need = (px) => Math.max(step, Math.ceil(px / step) * step);
   return {
-    width: roundUnits(need(Math.max(rect.w, bb.x2 - rect.x1))),
-    height: roundUnits(need(Math.max(rect.h, bb.y2 - rect.y1))),
+    width: roundPx(need(Math.max(rect.w, bb.x2 - rect.x1))),
+    height: roundPx(need(Math.max(rect.h, bb.y2 - rect.y1))),
     // The drawing sticks out on the top/left; growing won't help, moving will.
     startsBefore: bb.x1 < rect.x1 || bb.y1 < rect.y1,
   };
@@ -138,34 +143,13 @@ export const idsOutside = (rect, items) =>
     .filter(({ x, y }) => Number.isFinite(x) && Number.isFinite(y) && (x < rect.x1 || x > rect.x2 || y < rect.y1 || y > rect.y2))
     .map((item) => item.id);
 
-/** A real distance as text: "250 m", "1.5 km", "12 km". */
-export const formatDistance = (value, unit) => {
-  const metres = unit === "km" ? value * 1000 : value;
-  if (metres >= 1000) {
-    const km = metres / 1000;
-    return `${Number.isInteger(km) ? km : Number(km.toPrecision(3))} km`;
-  }
-  return `${Number.isInteger(metres) ? metres : Number(metres.toPrecision(3))} m`;
-};
+const fmtPx = (value) => Math.round(value).toLocaleString("en-US");
 
-/**
- * A scale bar no longer than `maxScreenPx`: the longest 1/2/5 × 10ⁿ distance
- * that fits. `unitsPerScreenPx` is in the area's unit.
- */
-export const niceScaleBar = (unitsPerScreenPx, unit, maxScreenPx = 120) => {
-  if (!Number.isFinite(unitsPerScreenPx) || unitsPerScreenPx <= 0) return null;
-  const metresPerPx = unit === "km" ? unitsPerScreenPx * 1000 : unitsPerScreenPx;
-  const maxMetres = metresPerPx * maxScreenPx;
-  const pow = 10 ** Math.floor(Math.log10(maxMetres));
-  const step = [5, 2, 1].map((m) => m * pow).find((s) => s <= maxMetres) ?? pow;
-  return {
-    px: step / metresPerPx,
-    label: formatDistance(step, "m"),
-  };
-};
+/** "4,000 × 2,800 px" */
+export const describeArea = (area) => `${fmtPx(area.width)} × ${fmtPx(area.height)} px`;
 
-/** "100 × 70 km" */
-export const describeArea = (area) => `${area.width} × ${area.height} ${area.unit}`;
+/** "40 px grid" */
+export const describeGrid = (area) => `${fmtPx(gridOf(area))} px grid`;
 
 // ── Dragging the sheet's edges ───────────────────────────────────────────────
 
@@ -202,16 +186,13 @@ export const dragSheetRect = (rect, handle, point, { keep = null, free = false, 
   return { x1, y1, x2, y2, w: x2 - x1, h: y2 - y1 };
 };
 
-/** The area a dragged rectangle describes (same unit and scale). */
-export const areaFromRect = (area, rect) => {
-  const k = pxPerUnit(area);
-  return {
-    ...area,
-    width: roundUnits(rect.w / k),
-    height: roundUnits(rect.h / k),
-    origin: { x: rect.x1, y: rect.y1 },
-  };
-};
+/** The area a dragged rectangle describes (same grid). */
+export const areaFromRect = (area, rect) => ({
+  ...area,
+  width: roundPx(rect.w),
+  height: roundPx(rect.h),
+  origin: { x: rect.x1, y: rect.y1 },
+});
 
 /** The bounds of the points that are on the sheet now (null when none are). */
 export const onSheetBounds = (rect, items) => {
@@ -224,5 +205,5 @@ export const onSheetBounds = (rect, items) => {
 
 export const sameArea = (a, b) =>
   Boolean(a && b) &&
-  a.width === b.width && a.height === b.height && a.unit === b.unit &&
-  a.resolution === b.resolution && a.origin.x === b.origin.x && a.origin.y === b.origin.y;
+  a.width === b.width && a.height === b.height && a.grid === b.grid &&
+  a.origin.x === b.origin.x && a.origin.y === b.origin.y;

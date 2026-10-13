@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Archive, FilePen, FilePlus2, List, Map, PanelLeft, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { notifyDataChanged, onDataChanged } from "../windows/tabWindows";
+import { confirmDialog, confirmDiscard } from "../components/dialog/appDialog";
+import { addLeaveGuard } from "../lib/leaveGuard";
 import { fetchAssets, fetchAsset } from "../api/metrics";
 import { computeCategoryKpis } from "../lib/assetFilters";
 import { filterAllowedAssets } from "../lib/assetTypes";
@@ -17,7 +19,7 @@ import { useStatusItems } from "../components/StatusBar";
 import TabStripBoundary from "../tabs/components/TabStripBoundary";
 import { useTabShortcuts } from "../tabs/hooks/useTabShortcuts";
 import AssetRegistryTabs from "../assetRegistry/tabs/AssetRegistryTabs";
-import { useAssetTabStore } from "../assetRegistry/tabs/assetTabStore";
+import { assetTabStore, useAssetTabStore } from "../assetRegistry/tabs/assetTabStore";
 import { assetTabController, openNewAssetTab } from "../assetRegistry/tabs/assetTabControllerInstance";
 import { isNewAssetKey } from "../assetRegistry/tabs/assetTab.types";
 import { AssetDetailView } from "./AssetDetailPage";
@@ -126,9 +128,9 @@ function AssetTabPane({ tab, onListChanged }) {
             setReloadKey((k) => k + 1);
             onListChanged();
           }}
-          onCancel={() => {
+          onCancel={async () => {
             const current = assetTabController.findByKey(tab.key);
-            if (current?.state.dirty && !window.confirm(`Discard unsaved changes to "${tab.title}"?`)) return;
+            if (current?.state.dirty && !(await confirmDiscard(tab.title))) return;
             assetTabController.setTabState(tab.id, { subTab: "view", dirty: false });
           }}
         />
@@ -163,6 +165,32 @@ export default function AssetRegistryPage({ mode = "list" }) {
   const activeTabId = useAssetTabStore((state) => state.activeTabId);
   const activeTab = activeTabId ? tabs[activeTabId] ?? null : null;
   const onListTab = !activeTab || activeTab.permanent;
+
+  // Form edits live only in this page: leaving it (or closing the browser
+  // tab) would lose them, so ask first. Once the page is gone, so is the work
+  // — the tabs' unsaved marks are cleared to match.
+  useEffect(() => {
+    const unsaved = () => Object.values(assetTabStore.getState().tabs).filter((t) => t?.state.dirty);
+    const remove = addLeaveGuard(
+      () => unsaved().length > 0,
+      () => {
+        const names = unsaved().map((t) => `"${t.title}"`);
+        return confirmDialog({
+          title: "Leave with unsaved changes?",
+          message: `${names.join(", ")} ${names.length === 1 ? "has" : "have"} changes that haven't been saved. They'll be lost if you leave.`,
+          confirmLabel: "Leave and discard",
+          cancelLabel: "Stay",
+          tone: "danger",
+        });
+      }
+    );
+    return () => {
+      remove();
+      for (const t of Object.values(assetTabStore.getState().tabs)) {
+        if (t?.state.dirty) assetTabController.setTabState(t.id, { dirty: false });
+      }
+    };
+  }, []);
 
   useEffect(() => {
     assetTabController.registerNavigator({ replace: (path) => navigate(path, { replace: true }) });

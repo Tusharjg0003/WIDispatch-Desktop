@@ -26,6 +26,7 @@ import {
 } from "./simulationConfigs.js";
 import { getOperationsOverview } from "./operations.js";
 import { searchWorkspace } from "./search.js";
+import { parseDateRange, parseLimit } from "./requestValidation.js";
 
 const app = express();
 const PORT = Number(process.env.PORT ?? 4000);
@@ -51,9 +52,10 @@ app.get("/api/search", async (req, res) => {
   }
 });
 
+// Throws a 400 for a malformed or reversed date range.
 function filtersFrom(req) {
   const { from, to, plant } = req.query;
-  return { from: from || undefined, to: to || undefined, plant: plant || undefined };
+  return { ...parseDateRange({ from, to }), plant: plant || undefined };
 }
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
@@ -64,6 +66,7 @@ for (const domain of Object.keys(DOMAINS)) {
     try {
       res.json(await buildSummary(domain, filtersFrom(req)));
     } catch (err) {
+      if (err.statusCode === 400) return res.status(400).json({ error: err.message });
       console.error(`${domain} summary error:`, err);
       res.status(500).json({ error: `Failed to build ${domain} summary` });
     }
@@ -73,6 +76,7 @@ for (const domain of Object.keys(DOMAINS)) {
     try {
       res.json(await buildRecords(domain, filtersFrom(req)));
     } catch (err) {
+      if (err.statusCode === 400) return res.status(400).json({ error: err.message });
       console.error(`${domain} records error:`, err);
       res.status(500).json({ error: `Failed to fetch ${domain} records` });
     }
@@ -182,9 +186,11 @@ app.get("/api/economics/plant/:id/bundle", async (req, res) => {
 
 app.get("/api/assets", async (req, res) => {
   try {
-    const { category, status, region, q, limit } = req.query;
+    const { category, status, region, q } = req.query;
+    const limit = parseLimit(req.query.limit, { fallback: 300, max: 5000 });
     res.json(await listAssets({ category, status, region, q, limit }));
   } catch (err) {
+    if (err.statusCode === 400) return res.status(400).json({ error: err.message });
     console.error("assets list error:", err);
     res.status(500).json({ error: "Failed to list assets" });
   }
@@ -445,6 +451,24 @@ app.post("/api/dispatch-plans/:id/publish", async (req, res) => {
     console.error(`dispatch plan publish error (id=${req.params.id}):`, err);
     res.status(err.statusCode || 500).json({ error: err.message || "Failed to publish dispatch plan" });
   }
+});
+
+// Anything else under /api is a JSON 404, not Express's HTML page.
+app.use("/api", (req, res) => {
+  res.status(404).json({ error: `No API route for ${req.method} ${req.originalUrl}` });
+});
+
+// A body that isn't valid JSON (or any other unhandled error) answers in JSON.
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, _next) => {
+  if (err.type === "entity.parse.failed") {
+    return res.status(400).json({ error: "The request body is not valid JSON" });
+  }
+  if (err.type === "entity.too.large") {
+    return res.status(413).json({ error: "The request body is too large" });
+  }
+  console.error("unhandled API error:", err);
+  res.status(err.statusCode || err.status || 500).json({ error: err.expose ? err.message : "Internal server error" });
 });
 
 app.listen(PORT, () => {

@@ -13,6 +13,9 @@ import { updateDemandDesktopApproval } from "../../api/demand";
 import "../production/ProductionInputTable.css"; // shared prod-* table/badge/kpi/filter classes
 import "../production/MaintenanceRecordList.css"; // shared mrl__ action-button classes
 import "./DemandInputTable.css";
+import DateInput from "../DateInput";
+import { defaultDataRange, fileSlug, fmtDateTime as fmtStamp, fmtDayLabel } from "../../lib/displayDates";
+import { confirmDialog } from "../dialog/appDialog";
 
 const num = (v) => Math.round(v).toLocaleString();
 const isoInput = (d) => format(d, "yyyy-MM-dd");
@@ -22,8 +25,9 @@ export default function DemandInputTable({ cityGate, cityGateId, bundle }) {
   const { demandInputs, maintenanceRecords, outages, contractedCapacities, users } = bundle;
 
   const [localInputs, setLocalInputs] = useState(demandInputs);
-  const [startDate, setStartDate] = useState(startOfDay(subDays(new Date(), 30)));
-  const [endDate, setEndDate] = useState(startOfDay(new Date()));
+  // The 30 days up to the latest data (approved data lags behind today).
+  const [startDate, setStartDate] = useState(() => defaultDataRange(demandInputs).start);
+  const [endDate, setEndDate] = useState(() => defaultDataRange(demandInputs).end);
   const [requestedStatus, setRequestedStatus] = useState("all");
   const [pendingApprovals, setPendingApprovals] = useState({});
   const [approvalError, setApprovalError] = useState("");
@@ -38,7 +42,7 @@ export default function DemandInputTable({ cityGate, cityGateId, bundle }) {
   const fmtDateTime = (v) => {
     if (!v) return "N/A";
     const d = parseISO(v);
-    return Number.isNaN(d.getTime()) ? "N/A" : format(d, "yyyy-MM-dd HH:mm");
+    return Number.isNaN(d.getTime()) ? "N/A" : fmtStamp(d);
   };
 
   // Reuse the production per-day engine: it walks every day in [start, end]
@@ -64,6 +68,17 @@ export default function DemandInputTable({ cityGate, cityGateId, bundle }) {
 
   const setDesktopApproval = async (input, nextStatus) => {
     if (!input?.id) return;
+    // Changing a decision already made (here or by a published plan) asks first.
+    const current = demandDesktopStatus(input);
+    if (current && current !== "pending" && current !== nextStatus) {
+      const sure = await confirmDialog({
+        title: `Change this decision to ${nextStatus === "approved" ? "Accepted" : "Rejected"}?`,
+        message: `${fmtDayLabel(input.date)} is currently ${current === "adjusted" ? "Adjusted" : current === "approved" ? "Accepted" : current === "rejected" ? "Rejected" : current}. The new decision replaces it.`,
+        confirmLabel: nextStatus === "approved" ? "Accept instead" : "Reject instead",
+        tone: nextStatus === "rejected" ? "danger" : "default",
+      });
+      if (!sure) return;
+    }
     setApprovalError("");
     setPendingApprovals((current) => ({ ...current, [input.id]: nextStatus }));
 
@@ -93,7 +108,7 @@ export default function DemandInputTable({ cityGate, cityGateId, bundle }) {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `demand-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    link.download = `demand-${fileSlug(cityGate?.name || cityGateId)}-${format(new Date(), "yyyy-MM-dd")}.csv`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -120,10 +135,10 @@ export default function DemandInputTable({ cityGate, cityGateId, bundle }) {
       <section className="prod-card">
       <div className="prod-filters">
         <label>Start Date
-          <input type="date" value={isoInput(startDate)} onChange={(e) => e.target.value && setStartDate(startOfDay(parseISO(e.target.value)))} />
+          <DateInput required value={isoInput(startDate)} onChange={(e) => e.target.value && setStartDate(startOfDay(parseISO(e.target.value)))} />
         </label>
         <label>End Date
-          <input type="date" value={isoInput(endDate)} onChange={(e) => e.target.value && setEndDate(startOfDay(parseISO(e.target.value)))} />
+          <DateInput required value={isoInput(endDate)} onChange={(e) => e.target.value && setEndDate(startOfDay(parseISO(e.target.value)))} />
         </label>
         <label>Required Status
           <select value={requestedStatus} onChange={(e) => setRequestedStatus(e.target.value)}>
@@ -156,7 +171,7 @@ export default function DemandInputTable({ cityGate, cityGateId, bundle }) {
               const busy = input?.id ? !!pendingApprovals[input.id] : false;
               return (
                 <tr key={r.iso}>
-                  <td className="nowrap">{format(parseISO(r.iso), "EEE, MMM dd")}</td>
+                  <td className="nowrap">{fmtDayLabel(r.iso)}</td>
                   <td className="ta-r mono">{num(r.contracted)}</td>
                   <td className="ta-r mono">{r.maintenanceLoss > 0 ? num(r.maintenanceLoss) : "—"}</td>
                   <td className="ta-r mono">{r.outageLoss > 0 ? num(r.outageLoss) : "—"}</td>

@@ -8,6 +8,7 @@ import HandoverPointFields from "./HandoverPointFields";
 import TankFields from "./TankFields";
 import { allowedAssetTypesForCategory, canonicalizeAssetType } from "../lib/assetTypes";
 import "./AssetForm.css";
+import DateInput from "./DateInput";
 
 const CATEGORIES = [
   { value: "plant", label: "Plant" },
@@ -379,8 +380,8 @@ export default function AssetForm({ mode = "create", defaultCategory = "plant", 
                     onChange={(v) => setForm((f) => ({ ...f, active: v }))}
                   />
                 )}
-                <Field label="Commissioning Date"><input type="date" value={form.commissioning_date} onChange={set("commissioning_date")} /></Field>
-                <Field label="Decommissioning Date"><input type="date" value={form.decommissioning_date} onChange={set("decommissioning_date")} /></Field>
+                <Field label="Commissioning Date"><DateInput value={form.commissioning_date} onChange={set("commissioning_date")} /></Field>
+                <Field label="Decommissioning Date"><DateInput value={form.decommissioning_date} onChange={set("decommissioning_date")} /></Field>
               </div>
             </div>
 

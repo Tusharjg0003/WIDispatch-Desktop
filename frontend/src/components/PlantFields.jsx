@@ -1,5 +1,6 @@
 import React from "react";
 import { Field } from "./AssetFormControls";
+import DateInput from "./DateInput";
 
 const PLANT_CATEGORIES = [
   { value: "production", label: "Production Plant" },
@@ -90,7 +91,7 @@ export default function PlantFields({ spec, set, commissioningDate, decommission
           <h3>Asset Specifications</h3>
           <div className="form-grid af__grid">
             <Field label="Maximum Capacity (m³/day)"><input type="number" step="any" value={spec.maximum_capacity ?? ""} onChange={set("maximum_capacity")} /></Field>
-            <Field label="Expansion Date"><input type="date" value={spec.expansion_date || ""} onChange={set("expansion_date")} /></Field>
+            <Field label="Expansion Date"><DateInput value={spec.expansion_date || ""} onChange={set("expansion_date")} /></Field>
             <Field label="Treatment Level"><input value={spec.treatment_level || ""} onChange={set("treatment_level")} /></Field>
             <Field label="Design Capacity (m³/day)"><input type="number" step="any" value={spec.design_capacity ?? ""} onChange={set("design_capacity")} /></Field>
             <Field label="Expansion Capacity (m³/day)"><input type="number" step="any" value={spec.expansion_capacity ?? ""} onChange={set("expansion_capacity")} /></Field>

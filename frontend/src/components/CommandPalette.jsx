@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { confirmLeave } from "../lib/leaveGuard";
 import { useNavigate } from "react-router-dom";
 import { Box, Braces, Command, LoaderCircle, Network, Search, SlidersHorizontal, X } from "lucide-react";
 import { fetchWorkspaceSearch } from "../api/operations";
@@ -68,9 +69,10 @@ export default function CommandPalette({ open, onClose }) {
 
   if (!open) return null;
 
-  const choose = (item) => {
-    navigate(item.path);
+  const choose = async (item) => {
     onClose();
+    if (!(await confirmLeave())) return;
+    navigate(item.path);
   };
 
   const handleKeyDown = (event) => {

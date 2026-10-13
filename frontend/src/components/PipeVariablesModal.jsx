@@ -3,6 +3,7 @@ import FloatingPanel from "./FloatingPanel";
 import { Field, Toggle } from "./AssetFormControls";
 import TransmissionLinePicker from "./TransmissionLinePicker";
 import { lineBelongsToSystem } from "../lib/transmissionLines";
+import DateInput from "./DateInput";
 
 const MATERIALS = [
   { value: "steel", label: "Steel" },
@@ -119,10 +120,10 @@ export default function PipeVariablesModal({ systems, lines, routeSegments = 0, 
             <input type="text" value={form.infraSource} onChange={set("infraSource")} />
           </Field>
           <Field label="Commissioning Date">
-            <input type="date" value={form.commissioningDate} onChange={set("commissioningDate")} />
+            <DateInput value={form.commissioningDate} onChange={set("commissioningDate")} />
           </Field>
           <Field label="Decommissioning Date">
-            <input type="date" value={form.decommissioningDate} onChange={set("decommissioningDate")} />
+            <DateInput value={form.decommissioningDate} onChange={set("decommissioningDate")} />
           </Field>
           <Toggle label="Active" checked={form.active} onChange={setChecked("active")} />
           <Toggle label="Bidirectional" checked={form.bidirectional} onChange={setChecked("bidirectional")} />

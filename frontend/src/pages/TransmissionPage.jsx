@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { fetchTransmissionPumpStations } from "../api/metrics";
 import { activeFunctionalPumps, backupPumps, totalDesignCapacity } from "../lib/pumpStation";
@@ -107,6 +107,18 @@ export default function TransmissionPage({ mode }) {
   }, []);
 
   useTabShortcuts(transmissionTabController, !systemsView);
+
+  // A change of address while the page is open (a link, the back button)
+  // opens that record too; the first render is handled by the restore above.
+  const followedRouteRef = useRef(true);
+  useEffect(() => {
+    if (followedRouteRef.current) {
+      followedRouteRef.current = false;
+      return;
+    }
+    if (!systemsView && pumpStationId && transmissionTabController.getActiveTab()?.key !== pumpStationId) transmissionTabController.openPumpStation(pumpStationId, pumpStationId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pumpStationId]);
 
   const openPumpStation = useCallback((station) => {
     transmissionTabController.openPumpStation(station.id, station.name || station.id);

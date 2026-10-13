@@ -15,7 +15,7 @@ const GROUP_PADDING = 50;
 //    pan and zoom, grows with its text, and moves by its grip (Alt skips snap);
 //  - a group box carries the nodes inside it when dragged, and resizes from
 //    its corner handle.
-export default function useAnnotationOverlays({ cyRef, cyReady, snapToGridRef, readOnly, onCommit }) {
+export default function useAnnotationOverlays({ cyRef, cyReady, snapToGridRef, gridPitchRef, readOnly, onCommit }) {
   const [overlays, setOverlays] = useState({ notes: [], boxes: [] });
   const activeEditorRef = useRef(null);
   const commitRef = useRef(onCommit);
@@ -189,7 +189,7 @@ export default function useAnnotationOverlays({ cyRef, cyReady, snapToGridRef, r
       const origin = { ...node.position() };
       const onMove = (e) => {
         let next = { x: origin.x + (e.clientX - start.x) / zoom, y: origin.y + (e.clientY - start.y) / zoom };
-        if (snapToGridRef?.current && !e.altKey) next = snapPosition(next);
+        if (snapToGridRef?.current && !e.altKey) next = snapPosition(next, gridPitchRef?.current);
         node.position(next);
       };
       const onUp = () => {
@@ -200,7 +200,7 @@ export default function useAnnotationOverlays({ cyRef, cyReady, snapToGridRef, r
       window.addEventListener("mousemove", onMove);
       window.addEventListener("mouseup", onUp);
     },
-    [cyRef, readOnly, snapToGridRef]
+    [cyRef, readOnly, snapToGridRef, gridPitchRef]
   );
 
   /** Resize a note or group box from its bottom-right handle, top-left fixed. */

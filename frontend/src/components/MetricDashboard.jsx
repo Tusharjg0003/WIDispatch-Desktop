@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { fetchSummary, fetchRecords } from "../api/metrics";
 import WorkspaceHeader from "./WorkspaceHeader";
 import "./MetricDashboard.css";
+import DateInput from "./DateInput";
 
 const nf = new Intl.NumberFormat("en-US");
 export const fmtM3 = (v) => (v == null ? "—" : nf.format(Math.round(v)));
@@ -164,12 +165,12 @@ export default function MetricDashboard({ domain, config }) {
           <div className="metric__filters">
             <label>
               <span>From</span>
-              <input type="date" value={filters.from}
+              <DateInput value={filters.from}
                 onChange={(e) => setFilters((f) => ({ ...f, from: e.target.value }))} />
             </label>
             <label>
               <span>To</span>
-              <input type="date" value={filters.to}
+              <DateInput value={filters.to}
                 onChange={(e) => setFilters((f) => ({ ...f, to: e.target.value }))} />
             </label>
             <label>

@@ -79,6 +79,7 @@ export default function Tab({
   return (
     <div
       ref={setNodeRef}
+      data-tab-id={tab.id}
       className={className}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       onContextMenu={onContextMenu}

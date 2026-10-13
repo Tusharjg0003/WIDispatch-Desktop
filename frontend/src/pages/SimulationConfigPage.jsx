@@ -21,6 +21,7 @@ import {
   findTabWindow, focusTabWindow, isTabWindow, notifyDataChanged, onDataChanged, openTabWindow, thisTabWindow, useTabWindows,
 } from "../windows/tabWindows";
 import { startTearOff } from "../windows/tearOff";
+import { confirmDialog, confirmDiscard } from "../components/dialog/appDialog";
 import { countOverrides, validateConfig } from "../lib/simulationRows";
 import {
   createSimulationConfig, deleteSimulationConfig, fetchDispatchPlan, fetchSimulationConfig,
@@ -30,6 +31,7 @@ import {
 import { fetchNetwork, fetchNetworks, saveNetwork } from "../api/networks";
 import "../components/MetricDashboard.css";
 import "./SimulationConfigPage.css";
+import DateInput from "../components/DateInput";
 
 // Simulation Config: saved simulations in the left rail (Drafts / Published),
 // the setup card, then the tables. Picking a network and dates fills the
@@ -130,7 +132,7 @@ export default function SimulationConfigPage() {
     simTabController.registerNavigator({ replace: (path) => navigate(path, { replace: true }) });
     simTabController.syncUrl();
     // A tab with unsaved setup asks before it closes.
-    simTabController.setBeforeClose((t) => !t.state.dirty || window.confirm(`Discard unsaved changes to "${t.title}"?`));
+    simTabController.setBeforeClose((t) => !t.state.dirty || confirmDiscard(t.title));
     return () => simTabController.detach();
   }, [navigate]);
 
@@ -435,7 +437,13 @@ export default function SimulationConfigPage() {
 
   const handleDelete = async () => {
     if (!config) return;
-    if (!window.confirm(`Delete "${config.name}"? Its runs stay in the dispatch history, but the configuration is removed.`)) return;
+    const sure = await confirmDialog({
+      title: `Delete "${config.name}"?`,
+      message: "Its runs stay in the dispatch history, but the configuration is removed.",
+      confirmLabel: "Delete simulation",
+      tone: "danger",
+    });
+    if (!sure) return;
     setError(null);
     try {
       await deleteSimulationConfig(config.id);
@@ -480,6 +488,18 @@ export default function SimulationConfigPage() {
 
   const handlePublish = async () => {
     if (!plan) return;
+    // Publishing writes every decision to the portals and can't be undone.
+    const counts = [
+      plan.plantAllocations?.length ? `${plan.plantAllocations.length} production allocations` : null,
+      plan.demandVerdicts?.length ? `${plan.demandVerdicts.length} demand decisions` : null,
+      plan.maintenanceVerdicts?.length ? `${plan.maintenanceVerdicts.length} maintenance decision${plan.maintenanceVerdicts.length === 1 ? "" : "s"}` : null,
+    ].filter(Boolean);
+    const sure = await confirmDialog({
+      title: "Publish these decisions?",
+      message: `${counts.length ? `This sends ${counts.length > 1 ? `${counts.slice(0, -1).join(", ")} and ${counts.at(-1)}` : counts[0]} to the portals. ` : ""}Published decisions replace the current ones on each record and can't be withdrawn here.`,
+      confirmLabel: "Publish",
+    });
+    if (!sure) return;
     setPublishing(true);
     setPublishError(null);
     try {
@@ -755,11 +775,11 @@ export default function SimulationConfigPage() {
                 </label>
                 <label className="scp-field">
                   <span>From</span>
-                  <input type="date" value={config.from || ""} onChange={(e) => patch({ from: e.target.value })} />
+                  <DateInput value={config.from || ""} onChange={(e) => patch({ from: e.target.value })} />
                 </label>
                 <label className="scp-field">
                   <span>To {days ? <em className="scp-field__note">{days} day{days === 1 ? "" : "s"}</em> : null}</span>
-                  <input type="date" value={config.to || ""} min={config.from || undefined} onChange={(e) => patch({ to: e.target.value })} />
+                  <DateInput value={config.to || ""} min={config.from || undefined} onChange={(e) => patch({ to: e.target.value })} />
                 </label>
                 <label className="scp-field">
                   <span>Strategic storage min. (%)</span>

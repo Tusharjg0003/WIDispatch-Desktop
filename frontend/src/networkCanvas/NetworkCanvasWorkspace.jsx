@@ -24,7 +24,8 @@ import { Keyboard, Map as MapIcon, Maximize2, Minimize2, PanelLeft, PanelRight, 
 import CanvasLegend from "./components/CanvasLegend";
 import CanvasSheet from "./components/CanvasSheet";
 import CanvasAreaDialog from "./components/CanvasAreaDialog";
-import { areaRectPx, fitAreaToBounds, normalizeCanvasArea, sameArea } from "../cytoscape/canvasArea.js";
+import { promptDialog } from "../components/dialog/appDialog";
+import { areaRectPx, fitAreaToBounds, gridOf, normalizeCanvasArea, sameArea } from "../cytoscape/canvasArea.js";
 import SelectionInspector from "./components/SelectionInspector";
 import ValidationPanel from "./components/ValidationPanel";
 import IsolationPanel from "./components/IsolationPanel";
@@ -107,7 +108,7 @@ import {
 import { useLayout } from "../contexts/LayoutContext";
 import { ENTITY_TYPE_COLORS, ENTITY_TYPE_LABELS, currentCyPalette } from "../cytoscape/buildCyStyle";
 import { applyEntitySymbol, getEntitySymbolShape, setEntitySymbolShape } from "../cytoscape/entitySymbol";
-import { SNAP_TO_GRID_STORAGE_KEY, projectPointOntoPolyline } from "../cytoscape/canvasGeometry";
+import { SHOW_DRAWING_AREA_STORAGE_KEY, SNAP_TO_GRID_STORAGE_KEY, projectPointOntoPolyline } from "../cytoscape/canvasGeometry";
 import { bendPointsToPairs, planPipeSplit, splitPipeSpecs } from "../cytoscape/pipeSplit";
 import { LOD_CLASSES, applyZoomLod as applyZoomLodTo } from "../cytoscape/lod";
 import {
@@ -118,7 +119,6 @@ import {
   traceNeighbours,
 } from "../cytoscape/trace";
 import {
-  CANVAS_GRID_PITCH,
   computeGridPitch,
   snapPosition,
   wrapOffset,
@@ -645,6 +645,10 @@ export default function NetworkCanvasWorkspace({
   );
   const drawingAreaRef = useRef(area);
   drawingAreaRef.current = area;
+  // The network's grid square, in px: the canvas grid, snapping and nudges.
+  const gridPitch = gridOf(area);
+  const gridPitchRef = useRef(gridPitch);
+  gridPitchRef.current = gridPitch;
   // A change to the drawing area is a document edit: it marks the network
   // unsaved (and, in the builder, lands in the recovery snapshot).
   const setAreaState = useCallback(
@@ -683,11 +687,36 @@ export default function NetworkCanvasWorkspace({
     },
     [setAreaState]
   );
-  // Stable: the footer's Reset frames whatever the area is at click time.
-  const getSheetRect = useCallback(
-    () => (drawingAreaRef.current ? areaRectPx(drawingAreaRef.current) : null),
-    []
-  );
+  // Showing the drawing area is the user's choice (remembered on this
+  // device). Hidden, it is still kept and saved with the network; the views
+  // that frame it frame the drawing instead.
+  const [showDrawingArea, setShowDrawingArea] = useState(() => {
+    try {
+      return window.localStorage.getItem(SHOW_DRAWING_AREA_STORAGE_KEY) !== "false";
+    } catch {
+      return true;
+    }
+  });
+  const showDrawingAreaRef = useRef(showDrawingArea);
+  showDrawingAreaRef.current = showDrawingArea;
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(SHOW_DRAWING_AREA_STORAGE_KEY, String(showDrawingArea));
+    } catch {
+      // Storage unavailable: the toggle still works for this session.
+    }
+  }, [showDrawingArea]);
+  // Stable: Reset frames whatever is shown at click time — the drawing area,
+  // or (with it hidden) the drawing itself.
+  const getSheetRect = useCallback(() => {
+    if (showDrawingAreaRef.current) {
+      return drawingAreaRef.current ? areaRectPx(drawingAreaRef.current) : null;
+    }
+    const cy = cyRef.current;
+    if (!cy || !cy.elements().length) return null;
+    const bb = cy.elements().boundingBox();
+    return { x1: bb.x1, y1: bb.y1, x2: bb.x2, y2: bb.y2, w: bb.w, h: bb.h };
+  }, []);
   const applyAreaRef = useRef(applyArea);
   applyAreaRef.current = applyArea;
   const [snapToGrid, setSnapToGrid] = useState(() => {
@@ -1294,7 +1323,7 @@ export default function NetworkCanvasWorkspace({
 
     const pan = cy.pan();
     const zoom = cy.zoom();
-    const { minor, major, minorAlpha } = computeGridPitch(zoom, CANVAS_GRID_PITCH);
+    const { minor, major, minorAlpha } = computeGridPitch(zoom, gridPitchRef.current);
     const minorPx = minor * zoom;
     const majorPx = major * zoom;
 
@@ -1306,6 +1335,11 @@ export default function NetworkCanvasWorkspace({
     wrap.style.setProperty("--grid-major-offset-x", `${wrapOffset(pan.x, majorPx)}px`);
     wrap.style.setProperty("--grid-major-offset-y", `${wrapOffset(pan.y, majorPx)}px`);
   }, []);
+
+  // A new grid size redraws the grid straight away.
+  useEffect(() => {
+    updateGridBackground();
+  }, [gridPitch, updateGridBackground]);
 
   const applyZoomLod = useCallback(() => {
     applyZoomLodTo(cyRef.current);
@@ -1910,7 +1944,7 @@ export default function NetworkCanvasWorkspace({
 
     const snapOnDrop = (node) => {
       const raw = node.position();
-      const snapped = snapPosition(raw, CANVAS_GRID_PITCH);
+      const snapped = snapPosition(raw, gridPitchRef.current);
       const dx = snapped.x - raw.x;
       const dy = snapped.y - raw.y;
       if (!dx && !dy) return;
@@ -2458,7 +2492,7 @@ export default function NetworkCanvasWorkspace({
     const cy = cyRef.current;
     if (!cy) return;
     // Fit the drawing together with its sheet (just the sheet when empty).
-    const sheet = drawingAreaRef.current ? areaRectPx(drawingAreaRef.current) : null;
+    const sheet = drawingAreaRef.current && showDrawingAreaRef.current ? areaRectPx(drawingAreaRef.current) : null;
     const bb = cy.elements().length ? cy.elements().boundingBox() : null;
     if (!sheet) {
       if (bb) cy.fit(undefined, 48);
@@ -3224,7 +3258,7 @@ export default function NetworkCanvasWorkspace({
     [georefAnchors]
   );
 
-  const handlePinGeoAnchor = useCallback(() => {
+  const handlePinGeoAnchor = useCallback(async () => {
     const cy = cyRef.current;
     if (!cy) return;
     const sel = cy.$("node:selected").filter((n) => !ANNOTATION_TYPES.includes(n.data("type")));
@@ -3241,7 +3275,13 @@ export default function NetworkCanvasWorkspace({
       let lat = Number(meta.latitude);
       let lng = Number(meta.longitude);
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-        const input = window.prompt("Latitude, longitude for this anchor (e.g. 24.71, 46.67):", "");
+        const input = await promptDialog({
+          title: "Pin a geo anchor",
+          message: "This asset has no coordinates. Enter its latitude and longitude.",
+          placeholder: "e.g. 24.71, 46.67",
+          confirmLabel: "Pin anchor",
+          validate: (text) => (text.split(",").map((s) => Number(s.trim())).filter(Number.isFinite).length === 2 ? null : "Enter two numbers: latitude, longitude."),
+        });
         if (input == null) return;
         const [rawLat, rawLng] = input.split(",").map((s) => Number(s.trim()));
         lat = rawLat;
@@ -3270,7 +3310,7 @@ export default function NetworkCanvasWorkspace({
         node.data("meta", { ...meta, latitude: Number(geo.lat), longitude: Number(geo.lng) });
       } else {
         const px = geoToPixel(geo, transform);
-        node.position(snapToGrid ? snapPosition(px) : px);
+        node.position(snapToGrid ? snapPosition(px, gridPitchRef.current) : px);
       }
       scheduleCommit();
       setGeoTick((v) => v + 1);
@@ -3487,12 +3527,23 @@ export default function NetworkCanvasWorkspace({
       }
       let name = network.name.trim();
       if (asNew) {
-        const proposed = window.prompt("Save a copy as:", name ? `${name} copy` : "Untitled network");
+        const proposed = await promptDialog({
+          title: "Save a copy",
+          message: "The copy is saved as a new network; this one stays as it is.",
+          defaultValue: name ? `${name} copy` : "Untitled network",
+          confirmLabel: "Save copy",
+        });
         if (proposed == null) return;
         name = proposed.trim();
-      } else if (!name) {
-        // No name yet — ask for one on the first save.
-        const proposed = window.prompt("Name this network:", "Untitled network");
+      } else if (!network.id) {
+        // Never saved: ask for a real name (new tabs start as "Untitled N").
+        const proposed = await promptDialog({
+          title: "Name this network",
+          message: "It will appear under this name in the saved networks and in Simulation Config.",
+          defaultValue: name && !/^Untitled( \d+)?$/.test(name) ? name : "",
+          placeholder: "e.g. Riyadh trunk network",
+          confirmLabel: "Save",
+        });
         if (proposed == null) return;
         name = proposed.trim();
       }
@@ -3533,8 +3584,20 @@ export default function NetworkCanvasWorkspace({
   // re-render this page), which would re-trigger WorkspaceRecordSidebar's
   // load effect constantly.
   const networkSidebarApi = useMemo(
-    () => ({ list: () => fetchNetworks().then((d) => d.networks || []), remove: deleteNetwork }),
-    []
+    () => ({
+      list: () => fetchNetworks().then((d) => d.networks || []),
+      // A deleted network may be open in a tab: unlink it there, so saving
+      // creates a network rather than updating one that no longer exists.
+      remove: (networkId) =>
+        deleteNetwork(networkId).then((result) => {
+          const store = workspaceStore.getState();
+          const showing = store.activeWorkspaceId && store.instances[store.activeWorkspaceId]?.document.networkId === networkId;
+          store.unbindNetwork(networkId);
+          if (showing) navigate("/network-builder", { replace: true });
+          return result;
+        }),
+    }),
+    [navigate]
   );
 
   const handleExportJSON = useCallback(() => {
@@ -3933,7 +3996,7 @@ export default function NetworkCanvasWorkspace({
       // Select
       if (mod && lower === "a") { e.preventDefault(); handleSelectAll(); return; }
       if (lower === "arrowleft" || lower === "arrowright" || lower === "arrowup" || lower === "arrowdown") {
-        const step = (e.shiftKey ? 10 : 1) * CANVAS_GRID_PITCH;
+        const step = (e.shiftKey ? 10 : 1) * gridPitchRef.current;
         const dx = lower === "arrowleft" ? -step : lower === "arrowright" ? step : 0;
         const dy = lower === "arrowup" ? -step : lower === "arrowdown" ? step : 0;
         if (nudgeSelection(dx, dy)) e.preventDefault();
@@ -4084,7 +4147,7 @@ export default function NetworkCanvasWorkspace({
   // ── Rename (Home → File → Rename) ──────────────────────────────────────────
   const handleRename = useCallback(async () => {
     const current = network.name || "";
-    const proposed = window.prompt("Rename network:", current || "Untitled network");
+    const proposed = await promptDialog({ title: "Rename network", defaultValue: current || "Untitled network", confirmLabel: "Rename" });
     if (proposed == null) return;
     const name = proposed.trim();
     if (!name || name === current) return;
@@ -4119,6 +4182,7 @@ export default function NetworkCanvasWorkspace({
     cyRef,
     cyReady,
     snapToGridRef,
+    gridPitchRef,
     readOnly,
     onCommit: () => {
       scheduleCommit();
@@ -4489,6 +4553,7 @@ export default function NetworkCanvasWorkspace({
     zoomToSelection: handleZoomToSelection,
     toggleLabels: () => setShowLabels((v) => !v),
     toggleGrid: () => setShowGrid((v) => !v),
+    toggleDrawingArea: area ? () => setShowDrawingArea((v) => !v) : null,
     toggleTable: ribbonExtras.toggleTable,
     toggleMap: () => setViewMode((v) => (v === "map" ? "schematic" : "map")),
     toggleGeoPanel: ribbonExtras.toggleGeoPanel || handlePinGeoAnchor,
@@ -4548,6 +4613,7 @@ export default function NetworkCanvasWorkspace({
       isolationActive,
       showLabels,
       showGrid,
+      showDrawingArea,
       snapToGrid,
       areaDialogOpen,
       traceReportOpen,
@@ -4595,7 +4661,7 @@ export default function NetworkCanvasWorkspace({
     setToolbar, isBuilder, workspaceMode, readOnly, ribbonTab, mode, pendingEntity, saveStatus, canUndo, canRedo,
     hasSelection, hasPipeSelection, hasDeletableSelection, selectedEl, isNoteSel, realNodeCount, counts.edges,
     showLibrary, canvasFocusMode, showInspector, rightPanelTab, shortcutsOpen, findOpen, isolationActive,
-    showLabels, showGrid, snapToGrid, areaDialogOpen, traceReportOpen, Boolean(area), viewMode, ribbonState, histTick, showRibbon, setShowRibbon, focusRibbonOpen,
+    showLabels, showGrid, showDrawingArea, snapToGrid, areaDialogOpen, traceReportOpen, Boolean(area), viewMode, ribbonState, histTick, showRibbon, setShowRibbon, focusRibbonOpen,
   ]);
 
   useEffect(() => {
@@ -4721,7 +4787,7 @@ export default function NetworkCanvasWorkspace({
           onDragOver={handleLibraryDragOver}
           onDrop={handleLibraryDrop}
         >
-          {viewMode !== "map" && (
+          {viewMode !== "map" && showDrawingArea && (
             <CanvasSheet
               cy={cyReady ? cyRef.current : null}
               area={area}

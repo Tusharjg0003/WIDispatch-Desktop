@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import FloatingPanel from "../../components/FloatingPanel";
 import { Field, Toggle } from "../../components/AssetFormControls";
+import DateInput from "../../components/DateInput";
 
 // Canvas entity editor — port of SWIIMS NetworkSimulation2Page's entity modal
 // (`entityFormFields`). Edits the canvas node itself: name, category, status,
@@ -215,10 +216,10 @@ export default function CanvasEntityModal({ type, data = null, mode = "edit", on
                     <input type="text" value={form.asset_type} onChange={set("asset_type")} />
                   </Field>
                   <Field label="Commissioning Date">
-                    <input type="date" value={form.commissioning_date} onChange={set("commissioning_date")} />
+                    <DateInput value={form.commissioning_date} onChange={set("commissioning_date")} />
                   </Field>
                   <Field label="Decommissioning Date">
-                    <input type="date" value={form.decommissioning_date} onChange={set("decommissioning_date")} />
+                    <DateInput value={form.decommissioning_date} onChange={set("decommissioning_date")} />
                   </Field>
                   <Toggle label="Active" checked={form.active} onChange={(v) => setForm((f) => ({ ...f, active: v }))} />
                 </>

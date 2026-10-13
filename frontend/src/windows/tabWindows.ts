@@ -17,6 +17,7 @@
 // window hands its tab over on open, the window hands it back when it closes.
 
 import { useSyncExternalStore } from "react";
+import { alertDialog } from "../components/dialog/appDialog.js";
 
 export interface TabWindowInfo {
   /** Window id (also its sessionStorage identity across reloads). */
@@ -264,7 +265,7 @@ export const openTabWindow = ({ domain, key, sub = null, title, path, tab, at }:
   const win = window.open(url, windowName(record), `popup=yes,width=${width},height=${height},left=${left},top=${top}`);
   if (!win) {
     storageSet(local, HANDOFF_PREFIX + id, null);
-    window.alert("The new window was blocked by the browser. Allow pop-ups for this site and try again.");
+    void alertDialog({ title: "Window blocked", message: "The browser blocked the new window. Allow pop-ups for this site and try again.", tone: "danger" });
     return false;
   }
   // Mark it out straight away; the window's own heartbeat keeps it so.

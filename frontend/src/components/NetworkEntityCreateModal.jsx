@@ -7,6 +7,7 @@ import PumpStationFields from "./PumpStationFields";
 import HandoverPointFields from "./HandoverPointFields";
 import TankFields from "./TankFields";
 import { allowedAssetTypesForCategory } from "../lib/assetTypes";
+import DateInput from "./DateInput";
 
 const STATUSES = ["operational", "maintenance", "under_construction", "planned", "decommissioned"];
 const HANDOVER_STATUSES = ["planned", "under_construction", "operational", "decommissioned", "inactive"];
@@ -211,10 +212,10 @@ export default function NetworkEntityCreateModal({ type, initialForm = null, onC
             </>
           )}
           <Field label="Commissioning Date">
-            <input type="date" value={form.commissioning_date} onChange={set("commissioning_date")} />
+            <DateInput value={form.commissioning_date} onChange={set("commissioning_date")} />
           </Field>
           <Field label="Decommissioning Date">
-            <input type="date" value={form.decommissioning_date} onChange={set("decommissioning_date")} />
+            <DateInput value={form.decommissioning_date} onChange={set("decommissioning_date")} />
           </Field>
           <Toggle
             label="Active"

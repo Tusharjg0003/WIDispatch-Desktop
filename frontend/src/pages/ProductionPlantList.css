@@ -105,7 +105,56 @@
 .ppl__title { margin: 0; color: var(--tx1); font-size: 16px; font-weight: 700; }
 .ppl__subtitle { margin: 2px 0 0; color: var(--mut); font-size: 11.5px; }
 
-.ppl__map { flex: 1; min-height: 420px; }
+/* Map view (AssetMapView). Its base sizing lives with the Asset Registry
+   page, which isn't loaded here, so the map fills this box on its own. */
+.ppl__map { display: flex; flex: 1; flex-direction: column; min-height: 420px; }
+.ppl__map .map-view-container {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+.ppl__map .map-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.ppl__map .map-header h3 {
+  margin: 0;
+  color: var(--mut);
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.ppl__map .map-header p {
+  margin: 0;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--panel2);
+  color: var(--tx2);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+.ppl__map .map-container {
+  flex: 1;
+  width: 100%;
+  height: auto;
+  position: relative;
+  min-height: 360px;
+  border: 0;
+  border-radius: 0;
+}
+/* A percentage height doesn't resolve in a flex item; pin the map instead. */
+.ppl__map .map-container > .leaflet-container { position: absolute !important; inset: 0; height: auto !important; }
 .ppl__state { padding: 28px; color: var(--mut); font-size: 12.5px; text-align: center; }
 .ppl__state--err { color: var(--errTx); }
 

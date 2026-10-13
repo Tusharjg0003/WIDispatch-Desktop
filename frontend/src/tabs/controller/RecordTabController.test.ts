@@ -110,3 +110,19 @@ test("parseState keeps extra tab state through a reload", () => {
   assert.deepEqual(restored.state.draft, { name: "edited" });
   assert.equal(restored.state.dirty, true);
 });
+
+test("beforeClose may ask asynchronously (an in-app dialog)", async () => {
+  let answer: (ok: boolean) => void = () => {};
+  const { controller, state } = setup({ beforeClose: () => new Promise<boolean>((resolve) => { answer = resolve; }) });
+  controller.restoreSession(null);
+  const id = controller.openRecord("a", "A");
+  controller.closeTab(id);
+  assert.ok(state().tabs[id], "still open while the question is pending");
+  answer(false);
+  await new Promise((r) => setTimeout(r, 0));
+  assert.ok(state().tabs[id], "kept when the answer is no");
+  controller.closeTab(id);
+  answer(true);
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(state().tabs[id], undefined, "closed when the answer is yes");
+});

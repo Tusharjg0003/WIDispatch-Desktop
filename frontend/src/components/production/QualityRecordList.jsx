@@ -1,12 +1,14 @@
 import React, { useMemo, useState } from "react";
+import { fileSlug, fmtDateTime, fmtShortDateTime, recordName } from "../../lib/displayDates";
 import { format, parseISO } from "date-fns";
 import { CheckCircle2, Download, FlaskConical, ShieldCheck, TriangleAlert } from "lucide-react";
 import RecordKpis from "./RecordKpis";
 import { buildQualityRows, filterQualityByCompliance, computeQualityStats, qualityRowsToCsv } from "../../lib/qualityRecords";
 import "./QualityRecordList.css";
 import "./ProductionInputTable.css"; // shared prod-* table/badge/kpi/filter classes
+import DateInput from "../DateInput";
 
-const fmtDT = (v) => { if (!v) return "N/A"; const d = parseISO(v); return Number.isNaN(d.getTime()) ? "N/A" : format(d, "yyyy-MM-dd HH:mm"); };
+const fmtDT = (v) => fmtDateTime(v);
 const cell = (v, digits) => (v == null ? "—" : Number(v).toFixed(digits));
 
 export default function QualityRecordList({ plantId, bundle }) {
@@ -35,7 +37,7 @@ export default function QualityRecordList({ plantId, bundle }) {
     const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.href = url; link.download = `quality-records-${format(new Date(), "yyyy-MM-dd")}.csv`; link.click();
+    link.href = url; link.download = `quality-${fileSlug(recordName(bundle, plantId))}-${format(new Date(), "yyyy-MM-dd")}.csv`; link.click();
     URL.revokeObjectURL(url);
   };
 
@@ -59,8 +61,8 @@ export default function QualityRecordList({ plantId, bundle }) {
 
       <section className="prod-card">
       <div className="prod-filters">
-        <label>Start Date<input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></label>
-        <label>End Date<input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} /></label>
+        <label>Start Date<DateInput value={startDate} onChange={(e) => setStartDate(e.target.value)} /></label>
+        <label>End Date<DateInput value={endDate} onChange={(e) => setEndDate(e.target.value)} /></label>
         <label>Compliance
           <select value={compliance} onChange={(e) => setCompliance(e.target.value)}>
             <option value="all">All</option><option value="within_spec">Within Spec</option><option value="out_of_spec">Out of Spec</option>

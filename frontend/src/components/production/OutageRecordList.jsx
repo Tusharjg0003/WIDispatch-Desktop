@@ -1,13 +1,15 @@
 import React, { useMemo, useState } from "react";
+import { fileSlug, fmtDateTime, fmtShortDateTime, recordName } from "../../lib/displayDates";
 import { format, parseISO } from "date-fns";
 import { Ban, Download, Siren, TriangleAlert, Zap } from "lucide-react";
 import RecordKpis from "./RecordKpis";
 import { buildOutageRows, computeOutageStats, outageDurationHours, outageLossM3, outageRowsToCsv } from "../../lib/outageRecords";
 import "./OutageRecordList.css";
 import "./ProductionInputTable.css";
+import DateInput from "../DateInput";
 
-const fmtDT = (v) => { if (!v) return "N/A"; const d = parseISO(v); return Number.isNaN(d.getTime()) ? "N/A" : format(d, "yyyy-MM-dd HH:mm"); };
-const fmtShort = (v) => { if (!v) return "—"; const d = parseISO(v); return Number.isNaN(d.getTime()) ? "—" : format(d, "MMM dd, HH:mm"); };
+const fmtDT = (v) => fmtDateTime(v);
+const fmtShort = (v) => fmtShortDateTime(v);
 const num = (v) => Number(v || 0).toLocaleString();
 const label = (v) => (v ? String(v).replaceAll("_", " ") : "—");
 
@@ -48,7 +50,7 @@ export default function OutageRecordList({ plantId, bundle }) {
     const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.href = url; link.download = `outage-records-${format(new Date(), "yyyy-MM-dd")}.csv`; link.click();
+    link.href = url; link.download = `outages-${fileSlug(recordName(bundle, plantId))}-${format(new Date(), "yyyy-MM-dd")}.csv`; link.click();
     URL.revokeObjectURL(url);
   };
 
@@ -65,8 +67,8 @@ export default function OutageRecordList({ plantId, bundle }) {
 
       <section className="prod-card">
       <div className="prod-filters">
-        <label>Start Date<input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></label>
-        <label>End Date<input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} /></label>
+        <label>Start Date<DateInput value={startDate} onChange={(e) => setStartDate(e.target.value)} /></label>
+        <label>End Date<DateInput value={endDate} onChange={(e) => setEndDate(e.target.value)} /></label>
         <button type="button" className="prod-btn" onClick={exportCsv} disabled={rows.length === 0}><Download size={14} /> Export CSV</button>
       </div>
 

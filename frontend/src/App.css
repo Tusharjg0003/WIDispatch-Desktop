@@ -90,12 +90,14 @@
 /* Bottom status bar (StatusBar.jsx), shared by every page. Same language as
    the panels: colour dots + muted label + bold value, a status pill, a
    segmented zoom control and accent-tinted toggles. */
+:root { --app-status-bar-h: 28px; }
+
 .app-status-bar {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
-  height: 28px;
+  height: var(--app-status-bar-h);
   padding: 0 8px 0 10px;
   border-top: 1px solid var(--line);
   background: var(--panel);
@@ -256,3 +258,12 @@
   color: var(--accTx, var(--acc));
 }
 .sb-brand { color: var(--mut2); }
+
+/* Narrow screens: the bar keeps every metric reachable (it scrolls sideways
+   rather than cutting a label mid-word) and drops the brand label. */
+@media (max-width: 760px) {
+  .sb-left { overflow-x: auto; scrollbar-width: none; }
+  .sb-left::-webkit-scrollbar { display: none; }
+  .sb-brand { display: none; }
+  .sb-right { gap: 6px; }
+}

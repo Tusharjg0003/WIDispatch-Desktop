@@ -113,6 +113,7 @@ export const pointToBendPair = (srcPos, tgtPos, point) => {
 
 /** localStorage key for the canvas snap-to-grid preference. */
 export const SNAP_TO_GRID_STORAGE_KEY = "widispatch_canvas_snap_to_grid";
+export const SHOW_DRAWING_AREA_STORAGE_KEY = "widispatch_canvas_show_drawing_area";
 
 /** Discrete zoom ladder for the status-bar zoom buttons, within the canvas
     minZoom (0.05) and maxZoom (4). */

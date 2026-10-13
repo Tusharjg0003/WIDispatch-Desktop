@@ -367,7 +367,12 @@ export function buildCanvasRibbon(ctx) {
         id: "area",
         label: "Sheet",
         columns: [
-          { large: when(cmd.editArea, { id: "drawing-area", label: "Drawing area", icon: Ruler, active: ctx.areaDialogOpen, onClick: cmd.editArea, tip: "Set the drawing area's size in km or m." }) },
+          { large: when(cmd.editArea, { id: "drawing-area", label: "Drawing area", icon: Ruler, active: ctx.areaDialogOpen, onClick: cmd.editArea, tip: "Set the drawing area's size and grid, in px." }) },
+          {
+            rows: [
+              [when(cmd.toggleDrawingArea, { type: "check", id: "show-drawing-area", label: "Show area", checked: ctx.showDrawingArea, onChange: cmd.toggleDrawingArea, tip: "Show or hide the drawing area: its frame, size and resize handles." })],
+            ],
+          },
         ],
       },
       {

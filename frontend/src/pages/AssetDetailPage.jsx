@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { confirmDialog } from "../components/dialog/appDialog";
 import { useParams, useNavigate } from "react-router-dom";
 import { Archive, ArrowLeft, CircleDot, Cylinder, Droplets, Edit2, Factory, MapPinned, Trash2 } from "lucide-react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { MapContainer, Marker, Popup, useMap } from "react-leaflet";
+import BaseMapLayer from "../components/BaseMapLayer";
 import "leaflet/dist/leaflet.css";
 import { deleteAsset, fetchAsset } from "../api/metrics";
 import AssetDetailFields, { DetailCard, formatDate } from "../components/AssetDetailFields";
@@ -160,7 +162,8 @@ export function AssetDetailView({ assetId: id, onBack, onEdit, onDeleted, onLoad
   const handleDelete = async () => {
     if (deleting) return;
     const label = asset.name || asset.id;
-    if (!window.confirm(`Delete "${label}"? This cannot be undone.`)) return;
+    const sure = await confirmDialog({ title: `Delete "${label}"?`, message: "The asset is removed from the registry. This can't be undone.", confirmLabel: "Delete asset", tone: "danger" });
+    if (!sure) return;
     setDeleting(true);
     setActionError(null);
     try {
@@ -237,12 +240,9 @@ export function AssetDetailView({ assetId: id, onBack, onEdit, onDeleted, onLoad
               <>
                 <div className="ad-map">
                   <MapContainer center={[latitude, longitude]} zoom={10} className="ad-map__canvas">
-                    <TileLayer
-                      url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-                      maxZoom={18}
-                    />
+                    <BaseMapLayer storageKey="asset-detail" defaultMode="satellite" />
                     <FitToContainer />
-                    <Marker position={[latitude, longitude]} icon={assetMarkerIcon(asset.category, asset.status, 34)}>
+                    <Marker position={[latitude, longitude]} icon={assetMarkerIcon(asset.category, asset.status, 34)} title={asset.name || asset.id}>
                       <Popup>{asset.name || asset.id}<br />{latitude.toFixed(6)}, {longitude.toFixed(6)}</Popup>
                     </Marker>
                   </MapContainer>

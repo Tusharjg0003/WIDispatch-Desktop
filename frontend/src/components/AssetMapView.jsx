@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo } from "react";
-import { MapContainer, TileLayer, Marker, Tooltip, Popup, useMap } from "react-leaflet";
+import { MapContainer, Marker, Tooltip, Popup, useMap } from "react-leaflet";
+import BaseMapLayer from "./BaseMapLayer";
 import "leaflet/dist/leaflet.css";
 import { assetMarkerIcon } from "../lib/assetMarker";
 import "./AssetMapView.css";
@@ -39,10 +40,7 @@ export default function AssetMapView({ assets, onView, onEdit }) {
           <div className="map-loading"><p>None of these assets have valid coordinates to map.</p></div>
         ) : (
           <MapContainer center={[24, 45]} zoom={5} style={{ height: "100%", width: "100%" }} scrollWheelZoom>
-            <TileLayer
-              attribution="&copy; OpenStreetMap contributors"
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
+            <BaseMapLayer storageKey="assets" />
             <FitBounds points={points} />
             {located.map((a) => {
               const body = (

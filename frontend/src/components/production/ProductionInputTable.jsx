@@ -5,6 +5,8 @@ import RecordKpis from "./RecordKpis";
 import { buildProductionRows, filterRows, computeTotals } from "../../lib/productionRows";
 import { productionRowsToCsv } from "../../lib/productionCsv";
 import "./ProductionInputTable.css";
+import DateInput from "../DateInput";
+import { defaultDataRange, fileSlug, fmtDateTime as fmtStamp, fmtDayLabel } from "../../lib/displayDates";
 
 const num = (v) => Math.round(v).toLocaleString();
 const isoInput = (d) => format(d, "yyyy-MM-dd");
@@ -12,8 +14,9 @@ const isoInput = (d) => format(d, "yyyy-MM-dd");
 export default function ProductionInputTable({ plant, plantId, bundle }) {
   const { productionInputs, maintenanceRecords, outages, contractedCapacities, users } = bundle;
 
-  const [startDate, setStartDate] = useState(startOfDay(subDays(new Date(), 30)));
-  const [endDate, setEndDate] = useState(startOfDay(new Date()));
+  // The 30 days up to the latest data (approved data lags behind today).
+  const [startDate, setStartDate] = useState(() => defaultDataRange(productionInputs).start);
+  const [endDate, setEndDate] = useState(() => defaultDataRange(productionInputs).end);
   const [deliveredStatus, setDeliveredStatus] = useState("all");
   const [requestedStatus, setRequestedStatus] = useState("all");
 
@@ -25,7 +28,7 @@ export default function ProductionInputTable({ plant, plantId, bundle }) {
   const fmtDateTime = (v) => {
     if (!v) return "N/A";
     const d = parseISO(v);
-    return Number.isNaN(d.getTime()) ? "N/A" : format(d, "yyyy-MM-dd HH:mm");
+    return Number.isNaN(d.getTime()) ? "N/A" : fmtStamp(d);
   };
 
   const rows = useMemo(
@@ -41,7 +44,7 @@ export default function ProductionInputTable({ plant, plantId, bundle }) {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `production-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    link.download = `production-${fileSlug(plant?.name || plantId)}-${format(new Date(), "yyyy-MM-dd")}.csv`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -61,10 +64,10 @@ export default function ProductionInputTable({ plant, plantId, bundle }) {
       <section className="prod-card">
       <div className="prod-filters">
         <label>Start Date
-          <input type="date" value={isoInput(startDate)} onChange={(e) => e.target.value && setStartDate(startOfDay(parseISO(e.target.value)))} />
+          <DateInput required value={isoInput(startDate)} onChange={(e) => e.target.value && setStartDate(startOfDay(parseISO(e.target.value)))} />
         </label>
         <label>End Date
-          <input type="date" value={isoInput(endDate)} onChange={(e) => e.target.value && setEndDate(startOfDay(parseISO(e.target.value)))} />
+          <DateInput required value={isoInput(endDate)} onChange={(e) => e.target.value && setEndDate(startOfDay(parseISO(e.target.value)))} />
         </label>
         <label>Delivered Status
           <select value={deliveredStatus} onChange={(e) => setDeliveredStatus(e.target.value)}>
@@ -95,7 +98,7 @@ export default function ProductionInputTable({ plant, plantId, bundle }) {
           <tbody>
             {visibleRows.map((r) => (
               <tr key={r.iso}>
-                <td className="nowrap">{format(parseISO(r.iso), "EEE, MMM dd")}</td>
+                <td className="nowrap">{fmtDayLabel(r.iso)}</td>
                 <td className="ta-r mono">{num(r.contracted)}</td>
                 <td className="ta-r mono">{r.maintenanceLoss > 0 ? num(r.maintenanceLoss) : "—"}</td>
                 <td className="ta-r mono">{r.outageLoss > 0 ? num(r.outageLoss) : "—"}</td>

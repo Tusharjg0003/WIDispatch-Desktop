@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
-import { MapContainer, TileLayer, CircleMarker, useMap, useMapEvents } from "react-leaflet";
+import { MapContainer, CircleMarker, useMap, useMapEvents } from "react-leaflet";
+import BaseMapLayer from "./BaseMapLayer";
 import "leaflet/dist/leaflet.css";
 
 // Default view centered on Saudi Arabia, used until a coordinate is set —
@@ -64,10 +65,7 @@ export default function MapLocationPicker({
         className={canvasClassName}
         scrollWheelZoom
       >
-        <TileLayer
-          attribution="&copy; OpenStreetMap contributors"
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+        <BaseMapLayer storageKey="location-picker" />
         <ClickCapture onPick={onChange} />
         <Recenter lat={lat} lng={lng} />
         {hasPoint && (

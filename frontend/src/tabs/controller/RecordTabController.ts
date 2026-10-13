@@ -43,11 +43,19 @@ export interface RecordTabControllerDeps<TState extends RecordTabState> {
    * Use it to keep extra state (e.g. an unsaved draft) across reloads.
    */
   parseState?: (raw: unknown, fallback: TState) => TState;
-  /** Veto a close (e.g. unsaved changes). Return false to keep the tab. */
-  beforeClose?: (tab: TabInstance<TState>) => boolean;
+  /**
+   * Veto a close (e.g. unsaved changes). Return false to keep the tab — or a
+   * promise of it, to ask first (an in-app dialog).
+   */
+  beforeClose?: BeforeClose<TState>;
   /** Name used in console warnings about a bad stored session. */
   label?: string;
 }
+
+export type BeforeClose<TState extends RecordTabState> = (tab: TabInstance<TState>) => boolean | Promise<boolean>;
+
+const isThenable = (value: unknown): value is Promise<boolean> =>
+  Boolean(value) && typeof (value as { then?: unknown }).then === "function";
 
 export class RecordTabController<TState extends RecordTabState = RecordTabState> {
   #storage: TabSessionStorage;
@@ -59,7 +67,7 @@ export class RecordTabController<TState extends RecordTabState = RecordTabState>
   #listTab: boolean;
   #pathFor?: (tab: TabInstance<TState>) => string;
   #parseState?: (raw: unknown, fallback: TState) => TState;
-  #beforeClose?: (tab: TabInstance<TState>) => boolean;
+  #beforeClose?: BeforeClose<TState>;
   #label: string;
   #navigator: TabNavigator = noopNavigator;
   #restoredOnce = false;
@@ -79,7 +87,7 @@ export class RecordTabController<TState extends RecordTabState = RecordTabState>
   }
 
   /** Set (or replace) the close veto — pages register it once they know about unsaved work. */
-  setBeforeClose(fn: ((tab: TabInstance<TState>) => boolean) | undefined): void {
+  setBeforeClose(fn: BeforeClose<TState> | undefined): void {
     this.#beforeClose = fn;
   }
 
@@ -191,17 +199,29 @@ export class RecordTabController<TState extends RecordTabState = RecordTabState>
     this.#persist();
   }
 
-  #mayClose(id: string): boolean {
+  /** true / false, or a promise of it when the veto asks first. */
+  #mayClose(id: string): boolean | Promise<boolean> {
     const tab = this.#store.getState().tabs[id];
     if (!tab || tab.permanent) return false;
-    return this.#beforeClose ? this.#beforeClose(tab) !== false : true;
+    if (!this.#beforeClose) return true;
+    const answer = this.#beforeClose(tab);
+    return isThenable(answer) ? answer.then((ok) => ok !== false, () => false) : answer !== false;
   }
 
   closeTab(id: string, { force = false }: { force?: boolean } = {}): void {
     const store = this.#store.getState();
     const tab = store.tabs[id];
     if (!tab || tab.permanent) return;
-    if (!force && !this.#mayClose(id)) return;
+    if (!force) {
+      const ok = this.#mayClose(id);
+      if (isThenable(ok)) {
+        void ok.then((yes) => {
+          if (yes) this.closeTab(id, { force: true });
+        });
+        return;
+      }
+      if (!ok) return;
+    }
 
     const wasActive = store.activeTabId === id;
     const successor = wasActive ? neighbourAfterClose(store.order, id) : null;
@@ -243,11 +263,23 @@ export class RecordTabController<TState extends RecordTabState = RecordTabState>
   }
 
   #closeMany(candidates: string[], survivorId: string): void {
-    const doomed = candidates.filter((id) => this.#mayClose(id));
-    if (!doomed.length) return;
-    this.activateTab(survivorId);
-    doomed.forEach((id) => this.#store.getState().removeTab(id));
-    this.#afterMutation();
+    const answers = candidates.map((id) => [id, this.#mayClose(id)] as const);
+    const finish = (doomed: string[]) => {
+      if (!doomed.length) return;
+      this.activateTab(survivorId);
+      doomed.forEach((id) => this.#store.getState().removeTab(id));
+      this.#afterMutation();
+    };
+    if (!answers.some(([, ok]) => isThenable(ok))) {
+      finish(answers.filter(([, ok]) => ok).map(([id]) => id));
+      return;
+    }
+    // Ask about each tab with unsaved work in turn, then close the agreed ones.
+    void (async () => {
+      const doomed: string[] = [];
+      for (const [id, ok] of answers) if (await ok) doomed.push(id);
+      finish(doomed);
+    })();
   }
 
   reopenLastClosed(): string | null {

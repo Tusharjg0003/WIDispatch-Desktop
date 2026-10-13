@@ -40,13 +40,12 @@ export interface WorkspaceUiState {
 
 /**
  * The network's drawing area (see cytoscape/canvasArea.js): `width × height`
- * real units, `resolution` units per grid square, top-left corner in model px.
+ * canvas px on a `grid`-px grid, top-left corner in model px.
  */
 export interface CanvasArea {
   width: number;
   height: number;
-  unit: "km" | "m";
-  resolution: number;
+  grid: number;
   origin: { x: number; y: number };
 }
 

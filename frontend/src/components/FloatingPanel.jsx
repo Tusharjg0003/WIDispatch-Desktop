@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { ExternalLink, GripHorizontal, PanelTopClose, X } from "lucide-react";
 import "./assetFormFields.css";
 import "./FloatingPanel.css";
+import { alertDialog } from "./dialog/appDialog";
 
 // Non-blocking floating window for canvas forms (asset details, pipe
 // variables, group lines…). It floats over the page instead of sitting in the
@@ -157,7 +158,7 @@ export default function FloatingPanel({
     const top = Math.round(window.screenY + (rect?.top || 80));
     const win = window.open("", `fp-${storageKey}`, `popup=yes,width=${w},height=${h},left=${left},top=${top}`);
     if (!win) {
-      window.alert("The pop-out window was blocked by the browser. Allow pop-ups for this site and try again.");
+      void alertDialog({ title: "Window blocked", message: "The browser blocked the pop-out window. Allow pop-ups for this site and try again.", tone: "danger" });
       return;
     }
     win.document.title = typeof title === "string" ? title : "Details";

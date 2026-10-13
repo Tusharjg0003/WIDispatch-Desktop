@@ -7,6 +7,7 @@ import {
 import CommandPalette from "./CommandPalette";
 import HelpDrawer from "./HelpDrawer";
 import BrandLockup from "./layout/BrandLockup";
+import { confirmLeave } from "../lib/leaveGuard";
 import { useTheme } from "../contexts/ThemeContext";
 import "./TopNavigationBar.css";
 
@@ -91,7 +92,11 @@ export default function TopNavigationBar() {
     return () => document.removeEventListener("mousedown", closeOutside);
   }, []);
 
-  const go = (path) => navigate(path);
+  // Unsaved work on the page asks first (lib/leaveGuard.js).
+  const go = async (path) => {
+    if (path !== location.pathname && !(await confirmLeave())) return;
+    navigate(path);
+  };
 
   return (
     <>

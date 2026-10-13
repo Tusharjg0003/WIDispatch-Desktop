@@ -42,7 +42,7 @@ export function computeOutageStats(rows) {
 }
 
 const OUTAGE_HEADERS = [
-  "outage_type", "outage_scope", "failure_type", "description", "Start", "End", "Duration (hours)",
+  "Outage Type", "Scope", "Failure Type", "Description", "Start", "End", "Duration (hours)",
   "Loss (m³)", "Responsible User", "Submitted At",
 ];
 

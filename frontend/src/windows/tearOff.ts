@@ -28,6 +28,7 @@ export const startTearOff = (
     }
   };
   const up = (e: PointerEvent) => {
+    move(e); // where it was released counts, even after a quick flick
     window.removeEventListener("pointermove", move, true);
     window.removeEventListener("pointerup", up, true);
     target?.classList.remove("is-tearing");

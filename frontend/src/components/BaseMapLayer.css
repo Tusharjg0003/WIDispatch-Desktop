@@ -1,0 +1,42 @@
+/* Map / Satellite switch in a Leaflet map's corner: the app's segmented
+   control on a panel background, so it reads over streets and imagery. */
+.leaflet-control.basemap-switch {
+  margin: 8px;
+  border: 1px solid var(--line2, rgba(15, 23, 42, 0.2));
+  border-radius: 7px;
+  background: var(--panel, #fff);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.22);
+  overflow: hidden;
+}
+.basemap-switch__group {
+  display: flex;
+}
+.basemap-switch__group button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 9px;
+  border: 0;
+  background: transparent;
+  color: var(--tx2, #334155);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.basemap-switch__group button + button {
+  border-left: 1px solid var(--line, rgba(15, 23, 42, 0.12));
+}
+.basemap-switch__group button:hover {
+  background: var(--panel2, #f1f5f9);
+  color: var(--tx1, #0f172a);
+}
+.basemap-switch__group button.is-active {
+  background: color-mix(in srgb, var(--acc, #00a3e0) 16%, transparent);
+  color: var(--acc, #00a3e0);
+}
+.basemap-switch__group button:focus-visible {
+  outline: 2px solid var(--acc, #00a3e0);
+  outline-offset: -2px;
+}

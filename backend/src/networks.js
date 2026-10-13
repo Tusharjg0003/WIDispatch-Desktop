@@ -83,7 +83,7 @@ export async function createNetwork(body = {}) {
     description: body.description ? String(body.description) : "",
     nodes: asArray(body.nodes),
     edges: asArray(body.edges),
-    // The drawing area (size + resolution); older clients send none.
+    // The drawing area (size + grid, in px); older clients send none.
     canvas: sanitizeCanvasArea(body.canvas),
     createdAt: now,
     updatedAt: now,

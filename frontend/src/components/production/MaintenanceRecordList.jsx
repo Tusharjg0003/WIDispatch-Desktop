@@ -5,10 +5,13 @@ import RecordKpis from "./RecordKpis";
 import { updateMaintenanceDesktopApproval } from "../../api/production";
 import { buildMaintenanceRows, filterMaintenanceByStatus, computeMaintenanceStats, maintenanceDurationHours, maintenanceRowsToCsv } from "../../lib/maintenanceRecords";
 import "./MaintenanceRecordList.css";
+import { fileSlug, fmtDateTime, fmtShortDateTime, recordName } from "../../lib/displayDates";
+import { confirmDialog } from "../dialog/appDialog";
 import "./ProductionInputTable.css";
+import DateInput from "../DateInput";
 
-const fmtDT = (v) => { if (!v) return "N/A"; const d = parseISO(v); return Number.isNaN(d.getTime()) ? "N/A" : format(d, "yyyy-MM-dd HH:mm"); };
-const fmtShort = (v) => { if (!v) return "—"; const d = parseISO(v); return Number.isNaN(d.getTime()) ? "—" : format(d, "MMM dd, HH:mm"); };
+const fmtDT = (v) => fmtDateTime(v);
+const fmtShort = (v) => fmtShortDateTime(v);
 const num = (v) => (v == null ? "—" : Number(v).toLocaleString());
 const humanStatus = (v) => (v ? String(v).replaceAll("_", " ") : "pending");
 const desktopStatus = (r) => r.desktop_approval_status || r.desktop_decision_status || r.desktop_approval || "pending";
@@ -46,6 +49,17 @@ export default function MaintenanceRecordList({ plantId, bundle, readOnly = fals
 
   const setDesktopApproval = async (record, nextStatus) => {
     if (!record.id) return;
+    // Changing a decision already made asks first.
+    const current = desktopStatus(record);
+    if (current !== "pending" && current !== nextStatus) {
+      const sure = await confirmDialog({
+        title: `Change this decision to ${nextStatus === "approved" ? "Accepted" : "Rejected"}?`,
+        message: `"${record.description || "This maintenance request"}" is currently ${current === "approved" ? "Accepted" : current === "rejected" ? "Rejected" : current}. The new decision replaces it.`,
+        confirmLabel: nextStatus === "approved" ? "Accept instead" : "Reject instead",
+        tone: nextStatus === "rejected" ? "danger" : "default",
+      });
+      if (!sure) return;
+    }
     setApprovalError("");
     setPendingApprovals((current) => ({ ...current, [record.id]: nextStatus }));
 
@@ -76,7 +90,7 @@ export default function MaintenanceRecordList({ plantId, bundle, readOnly = fals
     const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.href = url; link.download = `maintenance-records-${format(new Date(), "yyyy-MM-dd")}.csv`; link.click();
+    link.href = url; link.download = `maintenance-${fileSlug(recordName(bundle, plantId))}-${format(new Date(), "yyyy-MM-dd")}.csv`; link.click();
     URL.revokeObjectURL(url);
   };
 
@@ -93,8 +107,8 @@ export default function MaintenanceRecordList({ plantId, bundle, readOnly = fals
 
       <section className="prod-card">
       <div className="prod-filters">
-        <label>Start Date<input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></label>
-        <label>End Date<input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} /></label>
+        <label>Start Date<DateInput value={startDate} onChange={(e) => setStartDate(e.target.value)} /></label>
+        <label>End Date<DateInput value={endDate} onChange={(e) => setEndDate(e.target.value)} /></label>
         <label>Status
           <select value={status} onChange={(e) => setStatus(e.target.value)}>
             <option value="all">All</option><option value="draft">Draft</option><option value="submitted">Submitted</option>

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
+import { alertDialog, confirmDialog } from "./dialog/appDialog";
 import { Plus, Search, Trash2, Waypoints } from "lucide-react";
 import { applyRangeFilter, applySort } from "./SidebarActionToolbar";
 import "./SidebarList.css";
@@ -90,7 +91,13 @@ export default function WorkspaceRecordSidebar({
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0 || deleting) return;
     const n = selectedIds.size;
-    if (!window.confirm(`Delete ${n} selected ${recordLabel.toLowerCase()}${n === 1 ? "" : "s"}?`)) return;
+    const sure = await confirmDialog({
+      title: `Delete ${n} ${recordLabel.toLowerCase()}${n === 1 ? "" : "s"}?`,
+      message: "This can't be undone.",
+      confirmLabel: "Delete",
+      tone: "danger",
+    });
+    if (!sure) return;
     const ids = Array.from(selectedIds);
     setDeleting(true);
     // allSettled (not all): one id failing (e.g. already gone) must not stop
@@ -110,10 +117,13 @@ export default function WorkspaceRecordSidebar({
     setDeleting(false);
     if (failed.length > 0) {
       failed.forEach((r) => console.error(`[WorkspaceRecordSidebar:${recordLabel}] Delete failed:`, r.reason));
-      window.alert(
-        `Deleted ${succeeded.size} of ${n} ${recordLabel.toLowerCase()}${n === 1 ? "" : "s"}. ` +
-        `${failed.length} failed — it may already be deleted elsewhere. Try refreshing the list.`
-      );
+      void alertDialog({
+        title: "Some deletions failed",
+        message:
+          `Deleted ${succeeded.size} of ${n} ${recordLabel.toLowerCase()}${n === 1 ? "" : "s"}. ` +
+          `${failed.length} failed — it may already be deleted elsewhere. Try refreshing the list.`,
+        tone: "danger",
+      });
     } else {
       setDeleteMode(false);
     }

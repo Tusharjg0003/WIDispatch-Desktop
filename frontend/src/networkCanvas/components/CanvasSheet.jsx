@@ -4,16 +4,16 @@ import {
   areaFromRect,
   areaRectPx,
   describeArea,
+  describeGrid,
   dragSheetRect,
+  gridOf,
   idsOutside,
-  niceScaleBar,
   onSheetBounds,
 } from "../../cytoscape/canvasArea.js";
-import { CANVAS_GRID_PITCH } from "../../cytoscape/canvasGeometry.js";
 import "./CanvasSheet.css";
 
 // The network's drawing area under the graph: a framed sheet with the outside
-// dimmed, a scale bar that follows the zoom, and a count of whatever sits off
+// dimmed, its size and grid in px, and a count of whatever sits off
 // the sheet (a soft guide — nothing is held inside it).
 //
 // The frame is positioned straight from Cytoscape's viewport events rather
@@ -32,7 +32,6 @@ export default function CanvasSheet({ cy, area, onEdit, onResize }) {
   const handlesRef = useRef(null);
   const dragRef = useRef(null); // { rect } while a handle is dragged
   const placeRef = useRef(() => {});
-  const [bar, setBar] = useState(null);
   const [outside, setOutside] = useState([]);
   const [drag, setDrag] = useState(null); // { area, x, y } while dragging
 
@@ -50,8 +49,6 @@ export default function CanvasSheet({ cy, area, onEdit, onResize }) {
         el.style.width = `${r.w * zoom}px`;
         el.style.height = `${r.h * zoom}px`;
       }
-      const next = niceScaleBar(area.resolution / (CANVAS_GRID_PITCH * zoom), area.unit);
-      setBar((prev) => (prev && next && prev.label === next.label && Math.abs(prev.px - next.px) < 0.5 ? prev : next));
     };
 
     let timer = null;
@@ -90,7 +87,7 @@ export default function CanvasSheet({ cy, area, onEdit, onResize }) {
       const zoom = cy.zoom();
       const pan = cy.pan();
       const point = { x: (e.clientX - box.left - pan.x) / zoom, y: (e.clientY - box.top - pan.y) / zoom };
-      const next = dragSheetRect(rect, handle, point, { keep, free: e.altKey });
+      const next = dragSheetRect(rect, handle, point, { keep, free: e.altKey, pitch: gridOf(area) });
       dragRef.current = { rect: next };
       placeRef.current();
       setDrag({ area: areaFromRect(area, next), x: e.clientX - box.left, y: e.clientY - box.top });
@@ -148,15 +145,9 @@ export default function CanvasSheet({ cy, area, onEdit, onResize }) {
       )}
 
       <div className="nb-sheet-hud">
-        {bar && (
-          <div className="nb-scalebar" title="Scale at the current zoom">
-            <span className="nb-scalebar__bar" style={{ width: `${bar.px}px` }} />
-            <span className="nb-scalebar__label">{bar.label}</span>
-          </div>
-        )}
         {onEdit && (
           <button type="button" className="nb-sheet-hud__btn" onClick={onEdit} title="Drawing area size">
-            <Ruler size={12} aria-hidden="true" /> {area.width} × {area.height} {area.unit}
+            <Ruler size={12} aria-hidden="true" /> {describeArea(area)} · {describeGrid(area)}
           </button>
         )}
         {outside.length > 0 && (

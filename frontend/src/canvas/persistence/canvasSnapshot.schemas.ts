@@ -75,8 +75,11 @@ export const WorkspaceInstanceSchema = z.object({
       .object({
         width: z.number().positive(),
         height: z.number().positive(),
-        unit: z.enum(["km", "m"]),
-        resolution: z.number().positive(),
+        grid: z.number().positive().optional(),
+        // Recovery records written before sizes were in px (km/m); they are
+        // converted to px when the workspace loads (normalizeCanvasArea).
+        unit: z.enum(["km", "m"]).optional(),
+        resolution: z.number().positive().optional(),
         origin: z.object({ x: z.number(), y: z.number() }),
       })
       .nullable()

@@ -1,7 +1,7 @@
 import React from "react";
 import { ArrowDownUp, CalendarDays, LayoutList, Plus, Search, Trash2, X } from "lucide-react";
 
-const ICON_ROOT = "/All Icons Zipped";
+const ICON_ROOT = "/icons";
 const ICONS = {
   add: `${ICON_ROOT}/15 UI Utility Icons (System-Level)/Add/SVG/Add_20px.svg`,
   search: `${ICON_ROOT}/01 Core Navigation-System/Search/SVG/Search_20px.svg`,

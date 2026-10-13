@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import DemandCityGateList from "./DemandCityGateList";
@@ -71,6 +71,18 @@ export default function DemandPage() {
   }, []);
 
   useTabShortcuts(demandTabController);
+
+  // A change of address while the page is open (a link, the back button)
+  // opens that record too; the first render is handled by the restore above.
+  const followedRouteRef = useRef(true);
+  useEffect(() => {
+    if (followedRouteRef.current) {
+      followedRouteRef.current = false;
+      return;
+    }
+    if (cityGateId && demandTabController.getActiveTab()?.key !== cityGateId) demandTabController.openGate(cityGateId, cityGateId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cityGateId]);
 
   const openGate = useCallback((gate) => {
     demandTabController.openGate(gate.id, gate.name || gate.id);

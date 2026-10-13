@@ -4,6 +4,7 @@ import { useWorkspaceStore } from "../store/workspaceStore.ts";
 import { workspaceController } from "../services/workspaceControllerInstance.ts";
 import { useEffect, useMemo } from "react";
 import { useTabWindowStrip } from "../../windows/useTabWindowStrip.ts";
+import { confirmDiscard } from "../../components/dialog/appDialog.js";
 
 const CAPABILITIES: TabCapabilities = {
   rename: true,
@@ -42,6 +43,12 @@ export default function WorkspaceTabs() {
     onNoneLeft: () => void workspaceController.createWorkspace(),
   });
   useEffect(() => workspaceController.setDetached(win.windowedIds), [win.windowedIds]);
+  // A network with unsaved changes asks before its tab closes (the work is
+  // also recoverable with Ctrl+Shift+T).
+  useEffect(() => {
+    workspaceController.setBeforeClose((workspace) => !workspace.dirty || confirmDiscard(workspace.document.name));
+    return () => workspaceController.setBeforeClose(null);
+  }, []);
 
   // The workspace shape is richer than the strip's view model; mapping it here
   // keeps the strip domain-neutral and leaves the canvas store untouched.

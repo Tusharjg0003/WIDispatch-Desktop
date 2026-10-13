@@ -7,6 +7,7 @@ import OutageNotificationToast from "./components/production/OutageNotificationT
 import ErrorBoundary from "./components/ErrorBoundary";
 import RouteLoading from "./components/RouteLoading";
 import TabWindowHeader from "./windows/TabWindowHeader";
+import AppDialogHost from "./components/dialog/AppDialogHost";
 import { isTabWindow } from "./windows/tabWindows";
 import "./App.css";
 
@@ -71,6 +72,7 @@ export default function App() {
         </div>
 
         <StatusBar />
+        <AppDialogHost />
       </div>
     </ErrorBoundary>
   );

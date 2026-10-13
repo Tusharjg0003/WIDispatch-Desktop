@@ -22,6 +22,7 @@ import {
   dataBounds, dayDetail, resolvePeriod,
 } from "../lib/homeInsights";
 import "./HomePage.css";
+import DateInput from "../components/DateInput";
 
 // Operations home, for operators and managers: the position for the chosen
 // period and region (KPIs with trend and change), supply vs demand over time,
@@ -502,10 +503,10 @@ export default function HomePage() {
         </div>
         {filters.period.key === "custom" && (
           <div className="home-dates">
-            <input type="date" value={filters.period.from || ""} min={bounds.first || undefined} max={bounds.last || undefined}
+            <DateInput value={filters.period.from || ""} min={bounds.first || undefined} max={bounds.last || undefined}
               onChange={(e) => setPeriod({ ...filters.period, from: e.target.value })} aria-label="From" />
             <span className="home-muted">to</span>
-            <input type="date" value={filters.period.to || ""} min={bounds.first || undefined} max={bounds.last || undefined}
+            <DateInput value={filters.period.to || ""} min={bounds.first || undefined} max={bounds.last || undefined}
               onChange={(e) => setPeriod({ ...filters.period, to: e.target.value })} aria-label="To" />
           </div>
         )}
