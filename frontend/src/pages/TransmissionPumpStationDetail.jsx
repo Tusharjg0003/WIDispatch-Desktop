@@ -125,8 +125,8 @@ function PumpStationOverview({ station, bundle }) {
             <h2>Location</h2>
             <p>Satellite view</p>
           </div>
-          <div className="tpsd__card-body">
-            <SinglePlantMap latitude={station?.latitude} longitude={station?.longitude} name={station?.name} height={300} />
+          <div className="tpsd__card-body tpsd__card-body--map">
+            <SinglePlantMap latitude={station?.latitude} longitude={station?.longitude} name={station?.name} height="fill" />
           </div>
         </section>
       </div>

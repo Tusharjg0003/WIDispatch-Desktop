@@ -114,7 +114,6 @@
   --chart-axis: #7894a9;
 
   /* ---- Maps / logos ---- */
-  --wtco-filter: brightness(0) invert(1);
   --map-filter: saturate(0.72) brightness(0.72) contrast(1.08);
 }
 
@@ -195,7 +194,6 @@
   --chart-grid: #d9e4ec;
   --chart-axis: #607d91;
 
-  --wtco-filter: none;
   --map-filter: none;
 }
 

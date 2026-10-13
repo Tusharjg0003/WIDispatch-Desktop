@@ -6,6 +6,8 @@ import StatusBar from "./components/StatusBar";
 import OutageNotificationToast from "./components/production/OutageNotificationToast";
 import ErrorBoundary from "./components/ErrorBoundary";
 import RouteLoading from "./components/RouteLoading";
+import TabWindowHeader from "./windows/TabWindowHeader";
+import { isTabWindow } from "./windows/tabWindows";
 import "./App.css";
 
 const HomePage = lazy(() => import("./pages/HomePage"));
@@ -23,8 +25,10 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <div className="app-shell">
-        <TopNavigationBar />
+      {/* A tab taken out into its own window (windows/tabWindows.ts) shows just
+          that tab: a slim header instead of the navigation, no tab strips. */}
+      <div className={`app-shell${isTabWindow() ? " app-shell--tab-window" : ""}`}>
+        {isTabWindow() ? <TabWindowHeader /> : <TopNavigationBar />}
         <OutageNotificationToast />
 
         {toolbar && <header className="app-toolbar">{toolbar}</header>}

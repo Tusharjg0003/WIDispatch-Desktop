@@ -151,6 +151,33 @@ class SafeCanvasRepository implements CanvasRepository {
   }
 }
 
+/**
+ * A Network Builder tab taken out into its own window works on that one
+ * workspace's recovery record: it reads only that record and writes only it,
+ * and never the main window's session (open tabs, order). When the window
+ * closes, the main window reloads the record, unsaved edits and all.
+ */
+export const scopeRepositoryToWorkspace = (inner: CanvasRepository, workspaceId: string): CanvasRepository => ({
+  get available() {
+    return inner.available;
+  },
+  saveWorkspace: (record) => (record.workspaceId === workspaceId ? inner.saveWorkspace(record) : Promise.resolve()),
+  saveSession: async () => {},
+  deleteWorkspace: async () => {},
+  clear: async () => {},
+  loadAll: async () => {
+    const all = await inner.loadAll();
+    const workspaces = all.workspaces.filter((workspace) => workspace.id === workspaceId);
+    return {
+      ...all,
+      workspaces,
+      snapshots: new Map([...all.snapshots].filter(([id]) => id === workspaceId)),
+      order: workspaces.map((workspace) => workspace.id),
+      activeWorkspaceId: workspaces[0]?.id ?? null,
+    };
+  },
+});
+
 export const createCanvasRepository = (): CanvasRepository => {
   if (!isIndexedDbAvailable()) {
     console.warn(

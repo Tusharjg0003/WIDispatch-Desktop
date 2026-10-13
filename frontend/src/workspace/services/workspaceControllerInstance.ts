@@ -6,11 +6,18 @@
 
 import { WorkspaceController } from "./WorkspaceController.ts";
 import { canvasController } from "../../canvas/controller/CanvasController.ts";
-import { createCanvasRepository } from "../../canvas/persistence/CanvasRepository.ts";
+import { createCanvasRepository, scopeRepositoryToWorkspace } from "../../canvas/persistence/CanvasRepository.ts";
+import { isWindowFor, thisTabWindow } from "../../windows/tabWindows.ts";
 import { fetchNetwork } from "../../api/networks.js";
+
+// In a window holding one Network Builder tab, recovery covers only that tab.
+const repository =
+  isWindowFor("workspace") && thisTabWindow
+    ? scopeRepositoryToWorkspace(createCanvasRepository(), thisTabWindow.key)
+    : createCanvasRepository();
 
 export const workspaceController = new WorkspaceController({
   canvas: canvasController,
-  repository: createCanvasRepository(),
+  repository,
   fetchNetwork: (networkId: string) => fetchNetwork(networkId),
 });

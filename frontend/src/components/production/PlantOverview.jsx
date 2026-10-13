@@ -104,7 +104,7 @@ export default function PlantOverview({ plant, plantId, bundle, typeLabel = "Pla
         <UpcomingMaintenanceCard bundle={bundle} />
         <section className="pov__card pov__loc">
           <div className="pov__card-head"><h3>Location</h3><p>Satellite view</p></div>
-          <div className="pov__card-body"><SinglePlantMap latitude={plant?.latitude} longitude={plant?.longitude} name={plant?.name} height={300} /></div>
+          <div className="pov__card-body pov__card-body--map"><SinglePlantMap latitude={plant?.latitude} longitude={plant?.longitude} name={plant?.name} height="fill" /></div>
         </section>
       </div>
 

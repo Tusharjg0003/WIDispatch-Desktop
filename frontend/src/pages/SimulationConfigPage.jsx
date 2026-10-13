@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
-  AlertTriangle, CircleCheck, CircleX, Coins, Gauge, LoaderCircle, PanelLeft, PanelLeftClose, PanelLeftOpen, Play, Plus, Save, SlidersHorizontal,
+  AlertTriangle, AppWindow, CircleCheck, CircleX, Coins, ExternalLink, Gauge, LoaderCircle, PanelLeft, PanelLeftClose, PanelLeftOpen, Play, Plus, Save, SlidersHorizontal,
 } from "lucide-react";
 import WorkspaceHeader, { WorkspaceHeaderButton, WorkspaceHeaderChip } from "../components/WorkspaceHeader";
 import SimulationConfigSidebar from "../components/SimulationConfigSidebar";
@@ -17,6 +17,10 @@ import SimulationTabs from "../simulationConfig/tabs/SimulationTabs";
 import { simTabStore, useSimTabStore } from "../simulationConfig/tabs/simTabStore";
 import { openNewSimTab, openSimulation, simTabController } from "../simulationConfig/tabs/simTabControllerInstance";
 import { isNewSimKey } from "../simulationConfig/tabs/simTab.types";
+import {
+  findTabWindow, focusTabWindow, isTabWindow, notifyDataChanged, onDataChanged, openTabWindow, thisTabWindow, useTabWindows,
+} from "../windows/tabWindows";
+import { startTearOff } from "../windows/tearOff";
 import { countOverrides, validateConfig } from "../lib/simulationRows";
 import {
   createSimulationConfig, deleteSimulationConfig, fetchDispatchPlan, fetchSimulationConfig,
@@ -40,6 +44,8 @@ const TABS = [
 ];
 
 const RAIL_KEY = "scp.rail";
+// Same name as the strip's tab session (windows/tabWindows.ts).
+const SIM_WINDOW_DOMAIN = "simulation-config";
 const PREVIEW_DELAY_MS = 400;
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
@@ -78,6 +84,30 @@ const configBody = (c) => ({
   strategicStorageMinPct: c.strategicStorageMinPct ?? 70,
 });
 
+// Right-click menu of a Configuration / Results / Decisions / Canvas tab
+// (styled like the tab strips' menu).
+function SubTabMenu({ x, y, windowed, onOpen, onShow, onDismiss }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const down = (e) => { if (!ref.current?.contains(e.target)) onDismiss(); };
+    const key = (e) => { if (e.key === "Escape") onDismiss(); };
+    document.addEventListener("mousedown", down, true);
+    document.addEventListener("keydown", key);
+    return () => {
+      document.removeEventListener("mousedown", down, true);
+      document.removeEventListener("keydown", key);
+    };
+  }, [onDismiss]);
+  const item = (label, action) => (
+    <button type="button" className="tab-menu__item" onClick={() => { onDismiss(); action(); }}>{label}</button>
+  );
+  return (
+    <div ref={ref} className="tab-menu" style={{ left: x, top: y }} role="menu">
+      {windowed ? item("Show window", onShow) : item("Open in new window", onOpen)}
+    </div>
+  );
+}
+
 export default function SimulationConfigPage() {
   const { id: routeId } = useParams();
   const [searchParams] = useSearchParams();
@@ -89,10 +119,12 @@ export default function SimulationConfigPage() {
   const tabCount = useSimTabStore((state) => state.order.length);
   // A "New simulation" tab has no simulation behind it yet.
   const id = activeTab && !isNewSimKey(activeTab.key) ? activeTab.key : null;
-  const tab = activeTab?.state.subTab || "configuration";
+  // A window holding just one view (Results…) shows only that view.
+  const windowSub = thisTabWindow?.domain === SIM_WINDOW_DOMAIN ? thisTabWindow.sub ?? null : null;
+  const tab = windowSub || activeTab?.state.subTab || "configuration";
   const setTab = useCallback((next) => {
-    if (activeTabId) simTabController.setSubTab(activeTabId, next);
-  }, [activeTabId]);
+    if (activeTabId && !windowSub) simTabController.setSubTab(activeTabId, next);
+  }, [activeTabId, windowSub]);
 
   useEffect(() => {
     simTabController.registerNavigator({ replace: (path) => navigate(path, { replace: true }) });
@@ -200,6 +232,52 @@ export default function SimulationConfigPage() {
     return () => { cancelled = true; };
   }, [id]);
 
+  // ── Other windows (this simulation, or one of its views, taken out) ──────
+  // Unsaved setup and every save / run / decision travel between them, so a
+  // Results window follows the Configuration being edited elsewhere.
+  const configRef = useRef(config);
+  configRef.current = config;
+  const idRef = useRef(id);
+  idRef.current = id;
+  const remoteDraftRef = useRef(null); // the last draft that came from another window
+  useEffect(() => onDataChanged(SIM_WINDOW_DOMAIN, (key, payload) => {
+    if (!payload) return;
+    // The rail lists every simulation, so it follows any of them.
+    if (payload.config) updateListRow(payload.config.id, payload.config);
+    if (payload.plan && key) {
+      updateListRow(key, {
+        status: payload.plan.status === "published" ? "published" : "draft",
+        publishedAt: payload.plan.publishedAt ?? null,
+        latestPlanId: payload.plan.id,
+        latestRunAt: payload.plan.runAt,
+      });
+    }
+    if (key !== idRef.current) return;
+    if (payload.draft) {
+      const json = JSON.stringify(payload.draft);
+      const current = configRef.current;
+      if (current && json === JSON.stringify(configBody(current))) return;
+      remoteDraftRef.current = json;
+      setConfig((c) => (c && c.id === key ? { ...c, ...payload.draft, id: c.id } : c));
+      setDirty(true);
+    }
+    if (payload.config) {
+      setConfig(payload.config);
+      setDirty(false);
+      updateListRow(payload.config.id, payload.config);
+      remoteDraftRef.current = null;
+      const current = simTabController.findByKey(key);
+      if (current?.state.draft) simTabController.setTabState(current.id, { draft: null, dirty: false });
+    }
+    if (payload.plan) {
+      setPlan(payload.plan);
+      if (payload.plan.status !== "published") {
+        setPublished(null);
+        setPublishError(null);
+      }
+    }
+  }), [updateListRow]);
+
   // Mirror unsaved setup into the tab (dot + survives switching and reloads),
   // and keep the tab title on the simulation's name.
   useEffect(() => {
@@ -207,7 +285,11 @@ export default function SimulationConfigPage() {
     const timer = setTimeout(() => {
       const current = simTabController.getActiveTab();
       if (!current || current.id !== activeTabId) return;
-      if (dirty) simTabController.setTabState(activeTabId, { draft: configBody(config), dirty: true });
+      if (dirty) {
+        const draft = configBody(config);
+        simTabController.setTabState(activeTabId, { draft, dirty: true });
+        if (JSON.stringify(draft) !== remoteDraftRef.current) notifyDataChanged(SIM_WINDOW_DOMAIN, config.id, { draft });
+      }
       else if (current.state.dirty || current.state.draft) simTabController.setTabState(activeTabId, { draft: null, dirty: false });
       if (config.name) simTabController.adoptTitle(activeTabId, config.name);
     }, 250);
@@ -341,6 +423,7 @@ export default function SimulationConfigPage() {
       setConfig(saved);
       updateListRow(saved.id, saved);
       setDirty(false);
+      notifyDataChanged(SIM_WINDOW_DOMAIN, saved.id, { config: saved });
       return saved;
     } catch (e) {
       setError(e.message);
@@ -374,6 +457,7 @@ export default function SimulationConfigPage() {
     setPublished(null);
     setPublishError(null);
     updateListRow(cfg.id, { status: "draft", publishedAt: null, latestPlanId: result.id, latestRunAt: result.runAt });
+    notifyDataChanged(SIM_WINDOW_DOMAIN, cfg.id, { plan: result });
     return result;
   };
 
@@ -401,7 +485,11 @@ export default function SimulationConfigPage() {
     try {
       const result = await publishDispatchPlan(plan.id);
       setPublished(result);
-      setPlan((p) => ({ ...p, status: "published", publishedAt: result.publishedAt }));
+      setPlan((p) => {
+        const next = { ...p, status: "published", publishedAt: result.publishedAt };
+        notifyDataChanged(SIM_WINDOW_DOMAIN, next.configId || config?.id, { plan: next });
+        return next;
+      });
       updateListRow(plan.configId || config?.id, { status: "published", publishedAt: result.publishedAt });
     } catch (e) {
       setPublishError(e.message);
@@ -414,6 +502,7 @@ export default function SimulationConfigPage() {
     if (!plan) return;
     const updated = await updateDispatchDecisions(plan.id, changes);
     setPlan(updated);
+    notifyDataChanged(SIM_WINDOW_DOMAIN, updated.configId || config?.id, { plan: updated });
   };
 
   /**
@@ -437,6 +526,7 @@ export default function SimulationConfigPage() {
       setNetworks((list) => [{ ...savedNetwork, nodeCount: (payload?.nodes || []).length, edgeCount: (payload?.edges || []).length }, ...list]);
       const saved = await updateSimulationConfig(config.id, { ...configBody(config), networkId: savedNetwork.id });
       setConfig(saved);
+      notifyDataChanged(SIM_WINDOW_DOMAIN, saved.id, { config: saved });
       updateListRow(saved.id, saved);
       setDirty(false);
       setCanvasDirty(false);
@@ -478,6 +568,39 @@ export default function SimulationConfigPage() {
   const selectedNetwork = networks.find((n) => n.id === config?.networkId);
   // The Canvas tab is a workspace: it fills the pane instead of scrolling with the setup card.
   const canvasView = Boolean(config && tab === "canvas" && plan);
+
+  // ── Taking a view out into its own window ─────────────────────────────────
+  const subTabsRef = useRef(null);
+  const [subMenu, setSubMenu] = useState(null); // { key, x, y } right-click menu
+  const tabWindows = useTabWindows();
+  const canTakeOut = Boolean(id && config && !isTabWindow());
+  const subWindow = (key) => (id && !isTabWindow() ? findTabWindow(tabWindows, SIM_WINDOW_DOMAIN, id, key) : null);
+  const openSubWindow = (key, at = null) => {
+    if (!canTakeOut || !activeTab) return;
+    const label = TABS.find((t) => t.key === key)?.label || key;
+    const opened = openTabWindow({
+      domain: SIM_WINDOW_DOMAIN,
+      key: id,
+      sub: key,
+      title: config.name || label,
+      path: `/simulation-config/${encodeURIComponent(id)}?tab=${key}`,
+      // Carries the unsaved setup over; from then on edits sync live.
+      tab: { ...activeTab, state: { ...activeTab.state, subTab: key, draft: dirty ? configBody(config) : null, dirty } },
+      at,
+    });
+    if (opened && tab === key) {
+      const next = TABS.find((t) => t.key !== key && !subWindow(t.key) && (!t.needsRun || plan));
+      if (next) setTab(next.key);
+    }
+  };
+  // A view that is out isn't shown here too (e.g. after a reload).
+  const shownElsewhere = Boolean(subWindow(tab));
+  useEffect(() => {
+    if (!shownElsewhere) return;
+    const next = TABS.find((t) => !subWindow(t.key) && (!t.needsRun || plan));
+    if (next && next.key !== tab) setTab(next.key);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shownElsewhere, tab]);
 
   const header = (
     <WorkspaceHeader
@@ -539,6 +662,19 @@ export default function SimulationConfigPage() {
     <TabStripBoundary>
       <SimulationTabs onCreate={openNewSimTab} onDuplicate={handleDuplicate} />
     </TabStripBoundary>
+    {subMenu && (
+      <SubTabMenu
+        x={subMenu.x}
+        y={subMenu.y}
+        windowed={Boolean(subWindow(subMenu.key))}
+        onOpen={() => openSubWindow(subMenu.key)}
+        onShow={() => {
+          const out = subWindow(subMenu.key);
+          if (out) focusTabWindow(out);
+        }}
+        onDismiss={() => setSubMenu(null)}
+      />
+    )}
     <div className={`scp-shell${railOpen ? "" : " scp-shell--rail-collapsed"}`}>
       {!(config && tab === "canvas" && plan) && <ScpStatusItems items={statusItems} />}
       {railOpen && (
@@ -588,7 +724,7 @@ export default function SimulationConfigPage() {
 
         {!loading && config && (
           <>
-            {!canvasView && <section className="scp-card" aria-label="Setup">
+            {!canvasView && (!windowSub || windowSub === "configuration") && <section className="scp-card" aria-label="Setup">
               <header className="scp-card__head">
                 <h2>Setup</h2>
                 {plan && (
@@ -649,22 +785,44 @@ export default function SimulationConfigPage() {
               )}
             </section>}
 
-            <nav className="scp-tabs" role="tablist" aria-label="Simulation views">
+            <nav ref={subTabsRef} className="scp-tabs" role="tablist" aria-label="Simulation views" hidden={Boolean(windowSub)}>
               {TABS.map((t) => {
                 const disabled = t.needsRun && !plan;
+                const out = subWindow(t.key);
                 return (
-                  <button
-                    key={t.key}
-                    type="button"
-                    role="tab"
-                    aria-selected={tab === t.key}
-                    className={`scp-tab${tab === t.key ? " is-active" : ""}`}
-                    onClick={() => setTab(t.key)}
-                    title={disabled ? "Run the simulation first" : undefined}
-                  >
-                    {t.label}
-                    {disabled && <span className="scp-tab__hint">run first</span>}
-                  </button>
+                  <span key={t.key} className={`scp-tab-wrap${out ? " is-windowed" : ""}`}>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={tab === t.key}
+                      className={`scp-tab${tab === t.key ? " is-active" : ""}`}
+                      onClick={() => (out ? focusTabWindow(out) : setTab(t.key))}
+                      onPointerDown={(e) => {
+                        if (!out && canTakeOut) startTearOff(e, () => subTabsRef.current?.getBoundingClientRect(), (at) => openSubWindow(t.key, at));
+                      }}
+                      onContextMenu={(e) => {
+                        if (!canTakeOut) return;
+                        e.preventDefault();
+                        setSubMenu({ key: t.key, x: e.clientX, y: e.clientY });
+                      }}
+                      title={out ? `${t.label} is open in a separate window (click to show it)` : disabled ? "Run the simulation first" : undefined}
+                    >
+                      {t.label}
+                      {out && <AppWindow size={12} className="scp-tab__windowed" aria-label="In a separate window" />}
+                      {disabled && !out && <span className="scp-tab__hint">run first</span>}
+                    </button>
+                    {canTakeOut && !out && (
+                      <button
+                        type="button"
+                        className="scp-tab__detach"
+                        onClick={() => openSubWindow(t.key)}
+                        title={`Open ${t.label} in a new window`}
+                        aria-label={`Open ${t.label} in a new window`}
+                      >
+                        <ExternalLink size={11} aria-hidden="true" />
+                      </button>
+                    )}
+                  </span>
                 );
               })}
               <span className="scp-tabs__meta">

@@ -16,6 +16,11 @@ export interface TabContextMenuProps {
   permanent: boolean;
   canCloseOthers: boolean;
   canCloseToRight: boolean;
+  /** "Open in new window" (absent when the strip can't take tabs out). */
+  onDetach?: (() => void) | null;
+  /** The tab is already out: "Show window" instead. */
+  windowed?: boolean;
+  onShowWindow?: (() => void) | null;
   onRename(): void;
   onDuplicate(): void;
   onTogglePin(): void;
@@ -37,6 +42,9 @@ export default function TabContextMenu({
   permanent,
   canCloseOthers,
   canCloseToRight,
+  onDetach,
+  windowed = false,
+  onShowWindow,
   onRename,
   onDuplicate,
   onTogglePin,
@@ -85,11 +93,14 @@ export default function TabContextMenu({
 
   return (
     <div ref={ref} className="tab-menu" style={{ left: x, top: y }} role="menu">
+      {windowed && onShowWindow && item("Show window", onShowWindow)}
+      {!windowed && !permanent && onDetach && item("Open in new window", onDetach)}
+      {(windowed || (!permanent && onDetach)) && <div className="tab-menu__separator" />}
       {capabilities.rename && !permanent && item("Rename", onRename)}
       {capabilities.duplicate && !permanent && item("Duplicate", onDuplicate)}
       {capabilities.pin && !permanent && item(pinned ? "Unpin" : "Pin", onTogglePin)}
       <div className="tab-menu__separator" />
-      {item("Close", onClose, permanent)}
+      {item("Close", onClose, permanent || windowed)}
       {item("Close Others", onCloseOthers, !canCloseOthers)}
       {item("Close Tabs to the Right", onCloseToRight, !canCloseToRight)}
     </div>

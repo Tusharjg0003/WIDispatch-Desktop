@@ -50,6 +50,8 @@ export interface WorkspaceStoreState {
   adoptDocumentIdentity(id: string, patch: { name: string; description: string }): void;
   /** Set the drawing area; `dirty` when it is a change the network should save. */
   setCanvasArea(id: string, area: CanvasArea | null, options?: { dirty?: boolean }): void;
+  /** Replace a workspace's record in place (e.g. reloaded from recovery). */
+  replaceWorkspace(workspace: WorkspaceInstance): void;
   markSaved(id: string, patch: { networkId?: string | null; name?: string }): void;
   setLoadError(id: string, loadError: boolean): void;
   updateWorkspaceUI(id: string, patch: Partial<WorkspaceUiState>): void;
@@ -142,6 +144,15 @@ export const workspaceStore = createStore<WorkspaceStoreState>((set, get) => ({
         workspace.document.description = patch.description;
         // Naming a workspace after the document it just loaded is not an edit
         // to that document, so dirty is deliberately untouched.
+      })
+    );
+  },
+
+  replaceWorkspace(workspace) {
+    set(
+      produce((state: WorkspaceStoreState) => {
+        if (!state.instances[workspace.id]) return;
+        state.instances[workspace.id] = workspace;
       })
     );
   },

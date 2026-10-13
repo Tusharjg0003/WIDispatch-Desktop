@@ -319,6 +319,14 @@ export class RecordTabController<TState extends RecordTabState = RecordTabState>
     this.#persist();
   }
 
+  /** The URL a tab lives at (also what a taken-out window opens on). */
+  pathOf(tab: TabInstance<TState>): string {
+    if (this.#pathFor) return this.#pathFor(tab);
+    if (!tab.key) return this.#basePath;
+    const path = `${this.#basePath}/${encodeURIComponent(tab.key)}`;
+    return tab.state.subTab === this.#defaultSubTab ? path : `${path}?tab=${tab.state.subTab}`;
+  }
+
   #mirrorUrl(): void {
     const tab = this.getActiveTab();
     if (!tab) {
@@ -326,18 +334,7 @@ export class RecordTabController<TState extends RecordTabState = RecordTabState>
       if (!this.#listTab) this.#navigator.replace(this.#basePath);
       return;
     }
-    if (this.#pathFor) {
-      this.#navigator.replace(this.#pathFor(tab));
-      return;
-    }
-    if (!tab.key) {
-      this.#navigator.replace(this.#basePath);
-      return;
-    }
-    const path = `${this.#basePath}/${encodeURIComponent(tab.key)}`;
-    this.#navigator.replace(
-      tab.state.subTab === this.#defaultSubTab ? path : `${path}?tab=${tab.state.subTab}`
-    );
+    this.#navigator.replace(this.pathOf(tab));
   }
 
   #persist(): void {

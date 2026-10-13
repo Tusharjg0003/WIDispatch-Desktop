@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Archive, FilePen, FilePlus2, List, Map, PanelLeft, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { notifyDataChanged, onDataChanged } from "../windows/tabWindows";
 import { fetchAssets, fetchAsset } from "../api/metrics";
 import { computeCategoryKpis } from "../lib/assetFilters";
 import { filterAllowedAssets } from "../lib/assetTypes";
@@ -197,6 +198,13 @@ export default function AssetRegistryPage({ mode = "list" }) {
   const [railOpen, setRailOpen] = useState(() => !isPhoneViewport());
   const [refreshKey, setRefreshKey] = useState(0);
   const refreshList = useCallback(() => setRefreshKey((k) => k + 1), []);
+  // Saved here: refresh, and tell any other window (an asset taken out into
+  // its own window, or the main one) to refresh too.
+  const listChanged = useCallback(() => {
+    refreshList();
+    notifyDataChanged("asset-registry");
+  }, [refreshList]);
+  useEffect(() => onDataChanged("asset-registry", refreshList), [refreshList]);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -307,7 +315,7 @@ export default function AssetRegistryPage({ mode = "list" }) {
         {/* Every open asset tab stays mounted; only the active one shows. */}
         {recordTabs.map((tab) => (
           <div key={tab.id} className="ar-tabpane" hidden={tab.id !== activeTabId}>
-            <AssetTabPane tab={tab} onListChanged={refreshList} />
+            <AssetTabPane tab={tab} onListChanged={listChanged} />
           </div>
         ))}
 

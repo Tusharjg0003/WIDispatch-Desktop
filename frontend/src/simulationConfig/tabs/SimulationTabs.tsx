@@ -2,6 +2,8 @@ import TabStrip from "../../tabs/components/TabStrip.tsx";
 import type { TabCapabilities, TabView } from "../../tabs/components/TabStrip.tsx";
 import { useSimTabStore } from "./simTabStore.ts";
 import { simTabController } from "./simTabControllerInstance.ts";
+import { isNewSimKey } from "./simTab.types.ts";
+import { useTabWindowStrip } from "../../windows/useTabWindowStrip.ts";
 
 const CAPABILITIES: TabCapabilities = {
   rename: false,
@@ -21,11 +23,23 @@ export default function SimulationTabs({ onCreate, onDuplicate }: Props) {
   const order = useSimTabStore((state) => state.order);
   const tabs = useSimTabStore((state) => state.tabs);
   const activeTabId = useSimTabStore((state) => state.activeTabId);
+  const win = useTabWindowStrip({
+    domain: "simulation-config",
+    order,
+    tabs,
+    activeTabId,
+    pathOf: (tab) => simTabController.pathOf(tab as never),
+    activate: (id) => simTabController.activateTab(id),
+    // Unsaved setup made in the window comes back with the tab.
+    applyReturn: (id, state) => simTabController.setTabState(id, state as never),
+    // A "New simulation" tab has nothing to open elsewhere yet.
+    canDetach: (tab) => !isNewSimKey(tab.key),
+  });
 
   const views: TabView[] = order.flatMap((id) => {
     const tab = tabs[id];
     if (!tab) return [];
-    return [{ id, title: tab.title, pinned: tab.pinned, permanent: tab.permanent, dirty: Boolean(tab.state.dirty) }];
+    return [{ id, title: tab.title, pinned: tab.pinned, permanent: tab.permanent, dirty: Boolean(tab.state.dirty), windowed: win.windowedIds.has(id) }];
   });
 
   return (
@@ -44,6 +58,8 @@ export default function SimulationTabs({ onCreate, onDuplicate }: Props) {
       onTogglePin={(id) => simTabController.togglePin(id)}
       onCreate={onCreate}
       onDuplicate={onDuplicate}
+      onDetach={win.onDetach}
+      onShowWindow={win.onShowWindow}
     />
   );
 }

@@ -44,3 +44,6 @@
 @media (max-width: 640px) {
   .tpsd__grid { grid-template-columns: 1fr; }
 }
+
+/* The location map fills its card, however tall the row makes it. */
+.tpsd__card-body--map { display: flex; flex-direction: column; min-height: 0; }

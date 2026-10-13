@@ -65,6 +65,8 @@ export class WorkspaceController {
    * a background tab would never reach IndexedDB and would vanish on refresh.
    */
   #pendingRecordWrites = new Set<string>();
+  /** Workspaces out in their own windows: their recovery records are theirs. */
+  #detached = new Set<string>();
   #switchToken = 0;
   #recoveryTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -288,6 +290,8 @@ export class WorkspaceController {
   async closeWorkspace(id: string): Promise<void> {
     const store = workspaceStore.getState();
     if (!store.instances[id]) return;
+    // Out in its own window: it's closed from there.
+    if (this.#detached.has(id)) return;
 
     // Capture the live graph first when closing the displayed workspace, so
     // reopening restores what was on screen rather than the last autosave.
@@ -330,7 +334,8 @@ export class WorkspaceController {
     await this.#closeMany(doomed, id);
   }
 
-  async #closeMany(doomed: string[], survivorId: string): Promise<void> {
+  async #closeMany(candidates: string[], survivorId: string): Promise<void> {
+    const doomed = candidates.filter((id) => !this.#detached.has(id));
     if (!doomed.length) return;
     // Activate the survivor first so each removal is a plain metadata delete
     // rather than a chain of switch transactions.
@@ -487,6 +492,8 @@ export class WorkspaceController {
     if (!targets.size) return;
 
     for (const id of targets) {
+      // Its window is writing this record; don't overwrite its edits.
+      if (this.#detached.has(id)) continue;
       const workspace = workspaceStore.getState().instances[id];
       if (!workspace) continue;
       // A workspace whose document failed to load holds an empty canvas.
@@ -569,6 +576,34 @@ export class WorkspaceController {
       return;
     }
     await this.createWorkspace("Untitled 1");
+  }
+
+  // ── Tabs in their own windows (windows/tabWindows.ts) ───────────────────
+
+  /** Which workspaces are out in windows (their records belong to them). */
+  setDetached(ids: Iterable<string>): void {
+    this.#detached = new Set(ids);
+  }
+
+  /** Write a workspace's recovery record now, for a window to pick up. */
+  async prepareForWindow(id: string): Promise<void> {
+    if (!workspaceStore.getState().instances[id]) return;
+    this.#markRecordDirty(id);
+    await this.flushRecoverySnapshot();
+  }
+
+  /** A workspace came back from its window: take its record (edits and all) and show it. */
+  async reloadFromRecovery(id: string): Promise<void> {
+    this.#detached.delete(id);
+    const recovered = await this.#repository.loadAll();
+    const instance = recovered.workspaces.find((workspace) => workspace.id === id);
+    const snapshot = recovered.snapshots.get(id);
+    if (instance && workspaceStore.getState().instances[id]) {
+      if (snapshot) this.#snapshots.set(id, snapshot);
+      workspaceStore.getState().replaceWorkspace(instance);
+    }
+    if (this.#displayedWorkspaceId === id) this.#displayedWorkspaceId = null;
+    await this.activateWorkspace(id);
   }
 
   /** Test seam. */

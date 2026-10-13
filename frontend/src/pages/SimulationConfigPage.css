@@ -370,3 +370,30 @@
 .scp__canvas-host .nb-embed .nb-inspector { border-top: 0; border-bottom: 0; }
 .scp__canvas-host .nb-embed .nb-rail { border-left: 0; }
 .scp__canvas-host .nb-embed .nb-inspector { border-right: 0; }
+
+/* Views that can go out into their own window: a hover button beside each,
+   a window glyph once it's out, and a lift while it's being dragged off. */
+.scp-tab-wrap { position: relative; display: inline-flex; align-items: center; }
+.scp-tab-wrap .scp-tab { touch-action: none; }
+.scp-tab__detach {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-left: -6px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--mut);
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 0.12s ease, background-color 0.12s ease;
+}
+.scp-tab-wrap:hover .scp-tab__detach,
+.scp-tab__detach:focus-visible { opacity: 0.8; }
+.scp-tab__detach:hover { background: var(--acc-soft); color: var(--acc); opacity: 1; }
+.scp-tab__windowed { margin-left: 6px; color: var(--acc); vertical-align: -2px; }
+.scp-tab-wrap.is-windowed .scp-tab { font-style: italic; opacity: 0.8; }
+.scp-tab.is-tearing { opacity: 0.55; outline: 1px dashed var(--acc); outline-offset: 2px; }

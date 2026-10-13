@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { X } from "lucide-react";
+import { AppWindow, ExternalLink, X } from "lucide-react";
 
 export interface TabView {
   id: string;
@@ -12,6 +12,8 @@ export interface TabView {
   dirty?: boolean;
   /** Warning glyph plus tooltip, e.g. a document that failed to load. */
   warning?: string | null;
+  /** Out in its own window: clicking brings that window forward. */
+  windowed?: boolean;
 }
 
 export interface TabProps {
@@ -25,6 +27,8 @@ export interface TabProps {
   onCommitRename(title: string): void;
   onCancelRename(): void;
   onContextMenu(event: React.MouseEvent): void;
+  /** Present when the tab can be taken out into its own window. */
+  onDetach?(): void;
 }
 
 export default function Tab({
@@ -38,6 +42,7 @@ export default function Tab({
   onCommitRename,
   onCancelRename,
   onContextMenu,
+  onDetach,
 }: TabProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: tab.id, disabled: renaming });
@@ -66,6 +71,7 @@ export default function Tab({
     isDragging ? "tab--dragging" : "",
     pending ? "tab--pending" : "",
     tab.pinned || tab.permanent ? "tab--pinned" : "",
+    tab.windowed ? "tab--windowed" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -84,7 +90,13 @@ export default function Tab({
           onClose();
         }
       }}
-      title={tab.warning ? `${tab.title} — ${tab.warning}` : tab.title}
+      title={
+        tab.windowed
+          ? `${tab.title} — open in a separate window (click to show it)`
+          : tab.warning
+            ? `${tab.title} — ${tab.warning}`
+            : tab.title
+      }
     >
       {renaming ? (
         <input
@@ -118,10 +130,28 @@ export default function Tab({
             </span>
           )}
           {tab.dirty && <span className="tab__dirty" title="Unsaved changes" />}
+          {tab.windowed && <AppWindow size={12} className="tab__windowed" aria-label="In a separate window" />}
         </button>
       )}
 
-      {!tab.permanent && (
+      {onDetach && !tab.permanent && !tab.windowed && !renaming && (
+        <button
+          type="button"
+          className="tab__detach"
+          aria-label={`Open ${tab.title} in a new window`}
+          title="Open in a new window"
+          onClick={(event) => {
+            event.stopPropagation();
+            onDetach();
+          }}
+        >
+          <ExternalLink size={11} aria-hidden="true" />
+        </button>
+      )}
+
+      {/* A tab in its own window is closed from there, so its work can't be
+          lost from here. */}
+      {!tab.permanent && !tab.windowed && (
         <button
           type="button"
           className="tab__close"

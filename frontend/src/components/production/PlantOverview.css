@@ -51,3 +51,6 @@
   .pov__top, .pov__row { grid-template-columns: 1fr; }
   .pov__facts { grid-template-columns: 1fr 1fr; }
 }
+
+/* The location map fills its card, however tall the row makes it. */
+.pov__card-body--map { display: flex; flex-direction: column; min-height: 0; }

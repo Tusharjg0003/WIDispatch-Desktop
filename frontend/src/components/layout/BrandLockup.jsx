@@ -3,7 +3,9 @@ import { useTheme } from "../../contexts/ThemeContext";
 import "./BrandLockup.css";
 
 // Port of WIDispatch-Production components/layout/brand-lockup.tsx (header
-// variant): SWIIMS·WIDispatch mark | divider | WTCO logo + bilingual name.
+// variant): SWIIMS·WIDispatch mark | divider | company identity (Utility
+// Optimo — white lettering on dark backgrounds, navy on light). Narrow
+// headers, and the compact variant, keep just the company's mark.
 export default function BrandLockup({ compact = false }) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
@@ -16,14 +18,20 @@ export default function BrandLockup({ compact = false }) {
         alt="SWIIMS WIDispatch"
       />
       <span className="brand-lockup__divider" aria-hidden="true" />
-      <div className="brand-lockup__wtco">
-        <img className="brand-lockup__wtco-logo" src="/wtco-logo.png" alt="Water Transmission Company" />
+      <div className="brand-lockup__company">
         {!compact && (
-          <span className="brand-lockup__name">
-            <span className="brand-lockup__name-en">Water Transmission Co.</span>
-            <span className="brand-lockup__name-ar" dir="rtl">شركة نقل المياه</span>
-          </span>
+          <img
+            className="brand-lockup__company-logo"
+            src={isDark ? "/utility-optimo-logo-dark-bg.png" : "/utility-optimo-logo-light-bg.png"}
+            alt="Utility Optimo"
+          />
         )}
+        <img
+          className={`brand-lockup__company-mark${compact ? "" : " brand-lockup__company-mark--narrow"}`}
+          src="/utility-optimo-mark.png"
+          alt={compact ? "Utility Optimo" : ""}
+          aria-hidden={compact ? undefined : true}
+        />
       </div>
     </div>
   );
