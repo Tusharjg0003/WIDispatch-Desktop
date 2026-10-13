@@ -2,6 +2,7 @@
 // (papaparse is intentionally NOT a dependency.)
 
 import { escapeCell } from "./csvCell.js";
+import { brandCsv, titleFromFilename } from "./exportBranding.js";
 
 const COLUMNS = [
   ["generated_id", (a) => a.id || ""],
@@ -19,8 +20,12 @@ export function assetsToCsv(assets) {
   return [header, ...rows].join("\n");
 }
 
-export function downloadCsv(filename, csv) {
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+/**
+ * Every CSV download in the app: SWIIMS · Utility Optimo on top and a UTF-8
+ * byte-order mark, so Excel shows Arabic as Arabic (see brandCsv).
+ */
+export function downloadCsv(filename, csv, { title } = {}) {
+  const blob = new Blob([brandCsv(csv, { title: title || titleFromFilename(filename) })], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;

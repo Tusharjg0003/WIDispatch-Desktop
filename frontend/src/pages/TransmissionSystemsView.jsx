@@ -5,8 +5,8 @@ import { Cylinder, Download, Droplets, Factory, MapPinned, Network as NetworkIco
 import { fetchAssets, fetchTransmissionLines, fetchTransmissionSystems, deleteTransmissionLine } from "../api/metrics";
 import { fetchNetwork, fetchNetworks } from "../api/networks";
 import { buildSystemBreakdowns, groupSystemLines, removeLineFromNetworks, segmentStats, systemAssets } from "../lib/transmissionSystems";
-import { downloadCsv } from "../lib/exportCsv";
-import { recordsToCsv } from "../lib/operatorTables";
+import AssetExportDialog from "../components/AssetExportDialog";
+import { SYSTEM_COLUMNS, SYSTEM_PRESETS, sortByName } from "../lib/assetExport";
 import { ENTITY_TYPE_COLORS } from "../cytoscape/buildCyStyle";
 import { useStatusItems } from "../components/StatusBar";
 import TabStripBoundary from "../tabs/components/TabStripBoundary";
@@ -39,18 +39,8 @@ function Kpi({ icon: Icon, tone = "", colour, label, value, unit, sub }) {
   );
 }
 
-const EXPORT_COLUMNS = [
-  { key: "id", label: "System ID", get: (r) => r.system.id },
-  { key: "name", label: "Transmission system", get: (r) => r.system.name || "" },
-  { key: "networks", label: "Networks", get: (r) => r.breakdown.networkIds.size },
-  { key: "lines", label: "Registered lines", get: (r) => r.breakdown.lineIds.size },
-  { key: "segments", label: "Segments", get: (r) => r.stats.count },
-  { key: "length", label: "Length (km)", get: (r) => (r.stats.hasLength ? r.stats.length : "") },
-  { key: "plants", label: "Plants", get: (r) => r.assets.plant.length },
-  { key: "gates", label: "City gates", get: (r) => r.assets.handover_point.length },
-  { key: "pumps", label: "Pump stations", get: (r) => r.assets.pump.length },
-  { key: "tanks", label: "Tanks", get: (r) => r.assets.tank.length },
-];
+
+const SYSTEM_TAG_FILTERS = [{ key: "network", label: "Network" }];
 
 export default function TransmissionSystemsView() {
   const navigate = useNavigate();
@@ -95,6 +85,7 @@ export default function TransmissionSystemsView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [query, setQuery] = useState("");
+  const [exportOpen, setExportOpen] = useState(false);
   const [deletingLineId, setDeletingLineId] = useState(null);
   const [lineDeleteError, setLineDeleteError] = useState(null);
 
@@ -186,7 +177,31 @@ export default function TransmissionSystemsView() {
     }
   };
 
-  const exportRows = () => downloadCsv("widispatch-transmission-systems.csv", recordsToCsv(filtered, EXPORT_COLUMNS));
+  // Export: each system flattened into one row (see SYSTEM_COLUMNS), with
+  // its networks as a filter. The dialog starts from this list's search.
+  const exportRows = useMemo(() => rows.map((r) => {
+    const networkNames = Array.from(r.breakdown.networkIds).map((id) => networksById.get(id)?.name || id);
+    const namesOf = (list) => list.map((a) => a.name).filter(Boolean);
+    return {
+      id: r.system.id,
+      name: r.system.name || "Unnamed system",
+      category: "system",
+      networks: networkNames,
+      tags: { network: networkNames },
+      search_text: networkNames.join(" "),
+      meta_text: networkNames.length ? networkNames.join(", ") : "Not on a saved network",
+      lines: r.breakdown.lineIds.size,
+      segments: r.stats.count,
+      length: r.stats.hasLength ? Math.round(r.stats.length * 1000) / 1000 : null,
+      plants: namesOf(r.assets.plant),
+      gates: namesOf(r.assets.handover_point),
+      pumps: namesOf(r.assets.pump),
+      tanks: namesOf(r.assets.tank),
+      junctions: r.assets.junctions,
+    };
+  }), [rows, networksById]);
+  const exportFilters = useMemo(() => ({ query }), [query]);
+  const closeExport = useCallback(() => setExportOpen(false), []);
 
   // ── Render ──────────────────────────────────────────────────────────────
   const detailBreakdown = activeTab?.key ? breakdowns.get(activeTab.key) : null;
@@ -239,8 +254,8 @@ export default function TransmissionSystemsView() {
                 />
               </label>
               <span className="ppl__result-count">{loading ? "Loading…" : `${filtered.length} of ${rows.length} systems`}</span>
-              <button type="button" className="ppl__toolbar-btn" onClick={exportRows} disabled={!filtered.length}>
-                <Download size={13} /> Export CSV
+              <button type="button" className="ppl__toolbar-btn" onClick={() => setExportOpen(true)} disabled={loading || !rows.length} title="Export to Excel, PDF or CSV">
+                <Download size={13} /> Export
               </button>
             </header>
 
@@ -297,6 +312,21 @@ export default function TransmissionSystemsView() {
               </div>
             )}
           </div>
+          {exportOpen && (
+            <AssetExportDialog
+              assets={exportRows}
+              initialFilters={exportFilters}
+              onClose={closeExport}
+              title="Transmission systems"
+              noun="systems"
+              catalog={SYSTEM_COLUMNS}
+              presets={SYSTEM_PRESETS}
+              sort={sortByName}
+              storageKey="transmission-systems"
+              tagFilters={SYSTEM_TAG_FILTERS}
+              searchPlaceholder="Search systems by name, ID or network…"
+            />
+          )}
         </main>
       )}
     </>

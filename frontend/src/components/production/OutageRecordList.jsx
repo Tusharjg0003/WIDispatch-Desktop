@@ -7,6 +7,7 @@ import { buildOutageRows, computeOutageStats, outageDurationHours, outageLossM3,
 import "./OutageRecordList.css";
 import "./ProductionInputTable.css";
 import DateInput from "../DateInput";
+import { downloadCsv } from "../../lib/exportCsv";
 
 const fmtDT = (v) => fmtDateTime(v);
 const fmtShort = (v) => fmtShortDateTime(v);
@@ -47,11 +48,7 @@ export default function OutageRecordList({ plantId, bundle }) {
 
   const exportCsv = () => {
     const csv = outageRowsToCsv(rows, resolveUserName);
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url; link.download = `outages-${fileSlug(recordName(bundle, plantId))}-${format(new Date(), "yyyy-MM-dd")}.csv`; link.click();
-    URL.revokeObjectURL(url);
+    downloadCsv(`outages-${fileSlug(recordName(bundle, plantId))}-${format(new Date(), "yyyy-MM-dd")}.csv`, csv, { title: `Outages — ${recordName(bundle, plantId)}` });
   };
 
   return (

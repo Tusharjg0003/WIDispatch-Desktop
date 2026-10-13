@@ -7,6 +7,7 @@ import { productionRowsToCsv } from "../../lib/productionCsv";
 import "./ProductionInputTable.css";
 import DateInput from "../DateInput";
 import { defaultDataRange, fileSlug, fmtDateTime as fmtStamp, fmtDayLabel } from "../../lib/displayDates";
+import { downloadCsv } from "../../lib/exportCsv";
 
 const num = (v) => Math.round(v).toLocaleString();
 const isoInput = (d) => format(d, "yyyy-MM-dd");
@@ -40,13 +41,7 @@ export default function ProductionInputTable({ plant, plantId, bundle }) {
 
   const exportToCSV = () => {
     const csv = productionRowsToCsv(visibleRows, resolveUserName);
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `production-${fileSlug(plant?.name || plantId)}-${format(new Date(), "yyyy-MM-dd")}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadCsv(`production-${fileSlug(plant?.name || plantId)}-${format(new Date(), "yyyy-MM-dd")}.csv`, csv, { title: `Production — ${plant?.name || plantId}` });
   };
 
   return (

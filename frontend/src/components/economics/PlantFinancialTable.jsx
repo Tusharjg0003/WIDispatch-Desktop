@@ -4,6 +4,7 @@ import { Banknote, CalendarRange, Coins, Download, Landmark, TrendingDown, Wrenc
 import { currentFinancials, changedLabels, financialEntriesToCsv } from "../../lib/financialEntries";
 import { fetchEconomics } from "../../api/metrics";
 import "./PlantFinancialTable.css";
+import { downloadCsv } from "../../lib/exportCsv";
 
 // Economics → plant → Financial. The app's card language: KPI cards for the
 // current cost parameters (with the date they took effect), the plant's place
@@ -79,13 +80,7 @@ export default function PlantFinancialTable({ entries = [], plantId }) {
 
   const exportCsv = () => {
     const csv = financialEntriesToCsv(entries);
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `financial-entries-${plantId || "plant"}-${format(new Date(), "yyyy-MM-dd")}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadCsv(`financial-entries-${plantId || "plant"}-${format(new Date(), "yyyy-MM-dd")}.csv`, csv, { title: `Financial entries — ${plantId || "plant"}` });
   };
 
   return (

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Banknote, CircleCheck, Coins, Download, FlaskConical, Gauge, List, Map as MapIcon, Search, TriangleAlert, Waves } from "lucide-react";
 import { fetchProductionPlants } from "../api/production";
@@ -6,21 +6,11 @@ import { fetchEconomics } from "../api/metrics";
 import { currentFinancials } from "../lib/financialEntries";
 import { StatusBadge } from "../components/ui/WorkspacePrimitives";
 import AssetMapView from "../components/AssetMapView";
-import { downloadCsv } from "../lib/exportCsv";
-import { recordsToCsv } from "../lib/operatorTables";
+import AssetExportDialog from "../components/AssetExportDialog";
+import { ECONOMICS_COLUMNS, ECONOMICS_PRESETS, PLANT_COLUMNS, PLANT_PRESETS, sortAssets, sortByVariableOm } from "../lib/assetExport";
 import "./ProductionPlantList.css";
 
 const uniqSorted = (values) => [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
-
-const EXPORT_COLUMNS = [
-  { key: "id", label: "Asset ID", get: (plant) => plant.external_id || "" },
-  { key: "name", label: "Plant", get: (plant) => plant.name || "" },
-  { key: "type", label: "Type", get: (plant) => plant.asset_type || "" },
-  { key: "entity", label: "Entity", get: (plant) => plant.entity || "" },
-  { key: "region", label: "Region", get: (plant) => plant.region || "" },
-  { key: "status", label: "Status", get: (plant) => plant.status || "" },
-  { key: "capacity", label: "Contracted (m3/day)", get: (plant) => plant.specifications?.contracted_capacity ?? "" },
-];
 
 const typeBadgeClass = (type) => {
   const normalized = String(type || "").toLowerCase();
@@ -75,18 +65,6 @@ function costsByPlant(summary) {
   return out;
 }
 
-const EXPORT_COST_COLUMNS = [
-  { key: "id", label: "Asset ID", get: (plant) => plant.external_id || "" },
-  { key: "name", label: "Plant", get: (plant) => plant.name || "" },
-  { key: "type", label: "Type", get: (plant) => plant.asset_type || "" },
-  { key: "region", label: "Region", get: (plant) => plant.region || "" },
-  { key: "variableOm", label: "Variable O&M (SAR/m3)", get: (plant) => plant.cost?.variableOm ?? "" },
-  { key: "fixedOm", label: "Fixed O&M (SAR/month)", get: (plant) => plant.cost?.fixedOm ?? "" },
-  { key: "ccr", label: "CCR (SAR/month)", get: (plant) => plant.cost?.ccr ?? "" },
-  { key: "capex", label: "CAPEX (SAR)", get: (plant) => plant.cost?.capex ?? "" },
-  { key: "source", label: "Cost source", get: (plant) => COST_SOURCE[plant.cost?.source]?.label || "" },
-];
-
 /** Variable O&M with a bar relative to the most expensive plant (green → amber → red). */
 function CostCell({ value, max }) {
   if (value == null) return <span className="muted">—</span>;
@@ -135,6 +113,7 @@ export default function ProductionPlantList({
   const [entity, setEntity] = useState("");
   const [region, setRegion] = useState("");
   const [economics, setEconomics] = useState(null);
+  const [exportOpen, setExportOpen] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -215,10 +194,21 @@ export default function ProductionPlantList({
     if (onOpenPlant) { onOpenPlant(plant); return; }
     navigate(`${basePath}/${encodeURIComponent(plant.id)}`);
   };
-  const exportRows = () => downloadCsv(
-    `widispatch-${isEconomics ? "plant-costs" : assetLabel}.csv`,
-    recordsToCsv(filtered, isEconomics ? EXPORT_COST_COLUMNS : EXPORT_COLUMNS),
+  // Export: every plant (the list shows operational ones; the dialog starts
+  // filtered the same way, with this list's search and filters), tagged as
+  // plants and, on Economics, carrying their current costs.
+  const exportAssets = useMemo(
+    () => plants.map((plant) => ({ ...plant, category: "plant", ...(costs ? { cost: costs.get(plant.id) || null } : {}) })),
+    [plants, costs]
   );
+  const exportFilters = useMemo(() => ({
+    query,
+    statuses: ["operational"],
+    assetTypes: plantType ? [plantType] : [],
+    entities: entity ? [entity] : [],
+    regions: region ? [region] : [],
+  }), [query, plantType, entity, region]);
+  const closeExport = useCallback(() => setExportOpen(false), []);
   const maxVariableOm = costKpis?.max ?? 0;
 
   return (
@@ -264,7 +254,7 @@ export default function ProductionPlantList({
             <button type="button" className={view === "list" ? "is-active" : ""} onClick={() => setView("list")}><List size={13} /> List</button>
             <button type="button" className={view === "map" ? "is-active" : ""} onClick={() => setView("map")}><MapIcon size={13} /> Map</button>
           </div>
-          <button type="button" className="ppl__toolbar-btn" onClick={exportRows}><Download size={13} /> Export CSV</button>
+          <button type="button" className="ppl__toolbar-btn" onClick={() => setExportOpen(true)} disabled={loading || !plants.length} title="Export to Excel, PDF or CSV"><Download size={13} /> Export</button>
         </header>
 
         {loading && <div className="ppl__state">Loading {assetLabel}...</div>}
@@ -350,6 +340,19 @@ export default function ProductionPlantList({
           </div>
         )}
       </div>
+      {exportOpen && (
+        <AssetExportDialog
+          assets={exportAssets}
+          initialFilters={exportFilters}
+          onClose={closeExport}
+          title={isEconomics ? "Plant economics" : "Production plants"}
+          noun="plants"
+          catalog={isEconomics ? ECONOMICS_COLUMNS : PLANT_COLUMNS}
+          presets={isEconomics ? ECONOMICS_PRESETS : PLANT_PRESETS}
+          sort={isEconomics ? sortByVariableOm : sortAssets}
+          storageKey={isEconomics ? "economics" : "production"}
+        />
+      )}
     </main>
   );
 }

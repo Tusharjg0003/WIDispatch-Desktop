@@ -41,20 +41,32 @@ export function traceInfosToSheets(traceInfos) {
   return { "Trace Summary": summary, Endpoints: endpoints, Connections: connections };
 }
 
-export function exportTraceExcel(traceInfos, filename = "traceability") {
-  return exportSheetsToXlsx(traceInfosToSheets(traceInfos), filename);
+export function exportTraceExcel(traceInfos, filename = "traceability", { title = "Traceability report" } = {}) {
+  return exportSheetsToXlsx(traceInfosToSheets(traceInfos), filename, { title });
 }
 
-/** A4 text PDF (selectable text, automatic page breaks). meta: { title, subtitle, filename } */
+/**
+ * A4 text PDF (selectable text, automatic page breaks), branded SWIIMS ·
+ * Utility Optimo, in the Wtt font so Arabic names render. meta: { title,
+ * subtitle, filename }
+ */
 export async function exportTracePDF(traceInfos, meta = {}) {
   const { title = "Traceability report", subtitle = "", filename = "traceability" } = meta;
-  const { jsPDF } = await import("jspdf");
-  const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+  const [{ jsPDF }, { brandPdf, drawPdfFooters, drawPdfHeader, PDF_FOOTER_SPACE }] = await Promise.all([
+    import("jspdf"),
+    import("./exportBranding.js"),
+  ]);
+  const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4", compress: true });
+  const kit = await brandPdf(doc);
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   const marginX = 40;
-  const bottom = pageH - 40;
+  const bottom = pageH - PDF_FOOTER_SPACE;
   let y = 48;
+  const finish = () => {
+    drawPdfFooters(doc, kit, { title, marginX });
+    doc.save(`${filename}.pdf`);
+  };
   const ensure = (needed) => {
     if (y + needed > bottom) {
       doc.addPage();
@@ -62,27 +74,21 @@ export async function exportTracePDF(traceInfos, meta = {}) {
     }
   };
   const line = (text, { size = 10, style = "normal", color = [40, 40, 40], indent = 0, gap = 4 } = {}) => {
-    doc.setFont("helvetica", style);
+    doc.setFont(kit.font, style);
     doc.setFontSize(size);
     doc.setTextColor(color[0], color[1], color[2]);
     doc.splitTextToSize(String(text), pageW - marginX * 2 - indent).forEach((w) => {
       ensure(size + gap);
-      doc.text(w, marginX + indent, y);
+      kit.text(w, marginX + indent, y);
       y += size + gap;
     });
   };
 
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(16);
-  doc.setTextColor(0, 48, 87);
-  doc.text(title, marginX, y);
-  y += 22;
-  const stamp = new Date().toLocaleString();
-  line(subtitle ? `${subtitle} · Generated ${stamp}` : `Generated ${stamp}`, { size: 9, color: [93, 127, 150], gap: 8 });
+  y = drawPdfHeader(doc, kit, { title, marginX, lines: subtitle ? [subtitle] : [] });
 
   if (!traceInfos || traceInfos.length === 0) {
     line("No traces to report.", { size: 11, color: [150, 150, 150] });
-    doc.save(`${filename}.pdf`);
+    finish();
     return;
   }
 
@@ -113,5 +119,5 @@ export async function exportTracePDF(traceInfos, meta = {}) {
       y += 4;
     }
   });
-  doc.save(`${filename}.pdf`);
+  finish();
 }

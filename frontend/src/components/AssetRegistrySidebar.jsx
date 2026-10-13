@@ -111,7 +111,7 @@ export default function AssetRegistrySidebar({ view, onShowMap, onShowList, onCr
           <button type="button" className="sl-btn sl-btn--primary" onClick={onCreate} style={{ flex: 1 }}>
             <Plus size={14} aria-hidden="true" /> New asset
           </button>
-          <button type="button" className="sl-btn sl-btn--icon" onClick={onExport} title="Export CSV" aria-label="Export CSV">
+          <button type="button" className="sl-btn sl-btn--icon" onClick={onExport} title="Export assets (Excel, PDF or CSV)" aria-label="Export assets">
             <Download size={14} aria-hidden="true" />
           </button>
           <button type="button" className="sl-btn sl-btn--icon" onClick={onShowHelp} title="Help" aria-label="Help">

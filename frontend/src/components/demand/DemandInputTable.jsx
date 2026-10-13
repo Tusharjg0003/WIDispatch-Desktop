@@ -16,6 +16,7 @@ import "./DemandInputTable.css";
 import DateInput from "../DateInput";
 import { defaultDataRange, fileSlug, fmtDateTime as fmtStamp, fmtDayLabel } from "../../lib/displayDates";
 import { confirmDialog } from "../dialog/appDialog";
+import { downloadCsv } from "../../lib/exportCsv";
 
 const num = (v) => Math.round(v).toLocaleString();
 const isoInput = (d) => format(d, "yyyy-MM-dd");
@@ -104,13 +105,7 @@ export default function DemandInputTable({ cityGate, cityGateId, bundle }) {
 
   const exportToCSV = () => {
     const csv = demandRowsToCsv(visibleRows, resolveUserName);
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `demand-${fileSlug(cityGate?.name || cityGateId)}-${format(new Date(), "yyyy-MM-dd")}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadCsv(`demand-${fileSlug(cityGate?.name || cityGateId)}-${format(new Date(), "yyyy-MM-dd")}.csv`, csv, { title: `Demand — ${cityGate?.name || cityGateId}` });
   };
 
   return (

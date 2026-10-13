@@ -45,6 +45,7 @@ import {
   toggleTraceRoot,
 } from "../cytoscape/multiTrace";
 import { exportTraceExcel, exportTracePDF } from "../lib/traceExport";
+import { downloadCsv } from "../lib/exportCsv";
 import { buildCanvasRibbon, buildNoteFormatGroup } from "./ribbon/canvasRibbon";
 import {
   snapshotElements,
@@ -3603,7 +3604,14 @@ export default function NetworkCanvasWorkspace({
   const handleExportJSON = useCallback(() => {
     const cy = cyRef.current;
     if (!cy) return;
-    const doc = { name: network.name || "network", description: network.description || "", canvas: area, ...serializeGraph(cy) };
+    // `exportedBy` stamps the file with the brand; import ignores it.
+    const doc = {
+      exportedBy: { product: "SWIIMS", company: "Utility Optimo", exportedAt: new Date().toISOString() },
+      name: network.name || "network",
+      description: network.description || "",
+      canvas: area,
+      ...serializeGraph(cy),
+    };
     download(`${(network.name || "network").replace(/\s+/g, "_")}.json`, JSON.stringify(doc, null, 2), "application/json");
   }, [network, area]);
 
@@ -3629,7 +3637,7 @@ export default function NetworkCanvasWorkspace({
         "", "", s.pipelineLength, s.pipelineDiameter, s.pipelineMaterial,
       ].map(csvCell).join(","));
     });
-    download(`${(network.name || "network").replace(/\s+/g, "_")}.csv`, rows.join("\n"), "text/csv");
+    downloadCsv(`${(network.name || "network").replace(/\s+/g, "_")}.csv`, rows.join("\n"), { title: `${network.name || "Network"} — assets and pipes` });
   }, [network]);
 
   // Build a canvas document from a parsed KMZ/KML: points become classified
@@ -4215,7 +4223,7 @@ export default function NetworkCanvasWorkspace({
       const filename = `${base}_${label || "traceability"}`;
       try {
         if (format === "pdf") await exportTracePDF(infos, { title: "Traceability report", subtitle: network.name || "Network", filename });
-        else await exportTraceExcel(infos, filename);
+        else await exportTraceExcel(infos, filename, { title: `Traceability report — ${network.name || "Network"}` });
       } catch (err) {
         setToast(`Export failed: ${err.message}`);
       }

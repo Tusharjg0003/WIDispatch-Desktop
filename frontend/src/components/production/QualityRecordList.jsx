@@ -7,6 +7,7 @@ import { buildQualityRows, filterQualityByCompliance, computeQualityStats, quali
 import "./QualityRecordList.css";
 import "./ProductionInputTable.css"; // shared prod-* table/badge/kpi/filter classes
 import DateInput from "../DateInput";
+import { downloadCsv } from "../../lib/exportCsv";
 
 const fmtDT = (v) => fmtDateTime(v);
 const cell = (v, digits) => (v == null ? "—" : Number(v).toFixed(digits));
@@ -34,11 +35,7 @@ export default function QualityRecordList({ plantId, bundle }) {
 
   const exportCsv = () => {
     const csv = qualityRowsToCsv(rows, resolveUserName);
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url; link.download = `quality-${fileSlug(recordName(bundle, plantId))}-${format(new Date(), "yyyy-MM-dd")}.csv`; link.click();
-    URL.revokeObjectURL(url);
+    downloadCsv(`quality-${fileSlug(recordName(bundle, plantId))}-${format(new Date(), "yyyy-MM-dd")}.csv`, csv, { title: `Quality — ${recordName(bundle, plantId)}` });
   };
 
   return (

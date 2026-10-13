@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { ArrowUpRight, CircleDot, Cylinder, Droplets, Factory, MapPinned, Pencil, Search, X } from "lucide-react";
 import { ENTITY_TYPE_COLORS } from "../cytoscape/buildCyStyle";
 import "./AssetListView.css";
@@ -21,7 +21,7 @@ const clean = (v) => (v && v !== "NULL" ? v : null);
 const uniqSorted = (values) => [...new Set(values.filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b)));
 const CATEGORY_LABELS = { plant: "Plants", pump: "Pump stations", tank: "Tanks", handover_point: "City gates" };
 
-export default function AssetListView({ assets, onView, onEdit }) {
+export default function AssetListView({ assets, onView, onEdit, onFiltersChange }) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("");
   const [region, setRegion] = useState("");
@@ -45,6 +45,16 @@ export default function AssetListView({ assets, onView, onEdit }) {
         .some((field) => String(field).toLowerCase().includes(q));
     });
   }, [assets, query, category, region, status]);
+
+  // The page's Export starts from whatever the list is filtered to.
+  useEffect(() => {
+    onFiltersChange?.({
+      query,
+      categories: category ? [category] : [],
+      regions: region ? [region] : [],
+      statuses: status ? [status] : [],
+    });
+  }, [onFiltersChange, query, category, region, status]);
 
   const filtering = Boolean(query || category || region || status);
   const clearFilters = () => { setQuery(""); setCategory(""); setRegion(""); setStatus(""); };

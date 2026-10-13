@@ -1,13 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Archive, FilePen, FilePlus2, List, Map, PanelLeft, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Archive, Download, FilePen, FilePlus2, List, Map, PanelLeft, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { notifyDataChanged, onDataChanged } from "../windows/tabWindows";
 import { confirmDialog, confirmDiscard } from "../components/dialog/appDialog";
 import { addLeaveGuard } from "../lib/leaveGuard";
 import { fetchAssets, fetchAsset } from "../api/metrics";
 import { computeCategoryKpis } from "../lib/assetFilters";
 import { filterAllowedAssets } from "../lib/assetTypes";
-import { assetsToCsv, downloadCsv } from "../lib/exportCsv";
+import AssetExportDialog from "../components/AssetExportDialog";
 import AssetListView from "../components/AssetListView";
 import AssetMapView from "../components/AssetMapView";
 import AssetKpiCards from "../components/AssetKpiCards";
@@ -225,6 +225,9 @@ export default function AssetRegistryPage({ mode = "list" }) {
   const [showHelp, setShowHelp] = useState(false);
   const [railOpen, setRailOpen] = useState(() => !isPhoneViewport());
   const [refreshKey, setRefreshKey] = useState(0);
+  const [exportOpen, setExportOpen] = useState(false);
+  // The list view's filters, so Export starts from what is on screen.
+  const [listFilters, setListFilters] = useState(null);
   const refreshList = useCallback(() => setRefreshKey((k) => k + 1), []);
   // Saved here: refresh, and tell any other window (an asset taken out into
   // its own window, or the main one) to refresh too.
@@ -264,7 +267,7 @@ export default function AssetRegistryPage({ mode = "list" }) {
 
   const openView = (a) => assetTabController.openRecord(a.id, a.name || a.id, { subTab: "view" });
   const openEdit = (a) => assetTabController.openRecord(a.id, a.name || a.id, { subTab: "edit" });
-  const exportCsv = () => downloadCsv("asset-registry.csv", assetsToCsv(visibleAssets));
+  const openExport = () => setExportOpen(true);
 
   // Footer: registry counts by lifecycle, plus the browse-list toggle.
   const statusItems = useMemo(() => {
@@ -304,7 +307,7 @@ export default function AssetRegistryPage({ mode = "list" }) {
             onShowList={() => { setView("list"); assetTabController.activateTab(order[0]); }}
             onCreate={() => openNewAssetTab()}
             onShowHelp={() => setShowHelp(true)}
-            onExport={exportCsv}
+            onExport={openExport}
             onOpenAsset={openView}
             refreshKey={refreshKey}
           />
@@ -319,6 +322,7 @@ export default function AssetRegistryPage({ mode = "list" }) {
               status={`${visibleAssets.length} assets`}
               statusTone="green"
               actions={[
+                <WorkspaceHeaderButton key="export" icon={Download} onClick={openExport} disabled={loading || !visibleAssets.length}>Export</WorkspaceHeaderButton>,
                 <WorkspaceHeaderButton key="rail" icon={railOpen ? PanelLeftClose : PanelLeftOpen} onClick={() => setRailOpen((value) => !value)}>{railOpen ? "Hide list" : "Show list"}</WorkspaceHeaderButton>,
                 <div key="view" className="ar-viewtoggle" role="group" aria-label="View mode">
                   <button type="button" className={view === "map" ? "is-active" : ""} aria-pressed={view === "map"} onClick={() => setView("map")}><Map size={13} aria-hidden="true" /> Map</button>
@@ -334,7 +338,7 @@ export default function AssetRegistryPage({ mode = "list" }) {
 
             {!loading && !error && (
               view === "list"
-                ? <AssetListView assets={visibleAssets} onView={openView} onEdit={openEdit} />
+                ? <AssetListView assets={visibleAssets} onView={openView} onEdit={openEdit} onFiltersChange={setListFilters} />
                 : <AssetMapView assets={visibleAssets} onView={openView} onEdit={openEdit} />
             )}
           </div>
@@ -348,6 +352,13 @@ export default function AssetRegistryPage({ mode = "list" }) {
         ))}
 
         {showHelp && <AssetHelpModal onClose={() => setShowHelp(false)} />}
+        {exportOpen && (
+          <AssetExportDialog
+            assets={visibleAssets}
+            initialFilters={view === "list" && listFilters ? listFilters : undefined}
+            onClose={() => setExportOpen(false)}
+          />
+        )}
       </div>
     </div>
   );

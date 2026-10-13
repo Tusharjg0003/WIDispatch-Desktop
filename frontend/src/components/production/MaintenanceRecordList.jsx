@@ -9,6 +9,7 @@ import { fileSlug, fmtDateTime, fmtShortDateTime, recordName } from "../../lib/d
 import { confirmDialog } from "../dialog/appDialog";
 import "./ProductionInputTable.css";
 import DateInput from "../DateInput";
+import { downloadCsv } from "../../lib/exportCsv";
 
 const fmtDT = (v) => fmtDateTime(v);
 const fmtShort = (v) => fmtShortDateTime(v);
@@ -87,11 +88,7 @@ export default function MaintenanceRecordList({ plantId, bundle, readOnly = fals
 
   const exportCsv = () => {
     const csv = maintenanceRowsToCsv(rows, resolveUserName);
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url; link.download = `maintenance-${fileSlug(recordName(bundle, plantId))}-${format(new Date(), "yyyy-MM-dd")}.csv`; link.click();
-    URL.revokeObjectURL(url);
+    downloadCsv(`maintenance-${fileSlug(recordName(bundle, plantId))}-${format(new Date(), "yyyy-MM-dd")}.csv`, csv, { title: `Maintenance — ${recordName(bundle, plantId)}` });
   };
 
   return (

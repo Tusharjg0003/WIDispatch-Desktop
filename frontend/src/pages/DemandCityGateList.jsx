@@ -1,24 +1,15 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CircleCheck, Download, Gauge, Landmark, List, Map as MapIcon, MapPinned, Search } from "lucide-react";
 import { fetchCityGates } from "../api/demand";
 import { StatusBadge } from "../components/ui/WorkspacePrimitives";
 import AssetMapView from "../components/AssetMapView";
-import { downloadCsv } from "../lib/exportCsv";
-import { recordsToCsv } from "../lib/operatorTables";
+import AssetExportDialog from "../components/AssetExportDialog";
+import { CITY_GATE_COLUMNS, CITY_GATE_PRESETS } from "../lib/assetExport";
 import "./ProductionPlantList.css";
 import "./DemandCityGateList.css";
 
 const uniqSorted = (values) => [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
-const EXPORT_COLUMNS = [
-  { key: "id", label: "Asset ID", get: (gate) => gate.external_id || "" },
-  { key: "name", label: "City gate", get: (gate) => gate.name || "" },
-  { key: "type", label: "Type", get: (gate) => gate.asset_type || "" },
-  { key: "entity", label: "Entity", get: (gate) => gate.entity || "" },
-  { key: "region", label: "Region", get: (gate) => gate.region || "" },
-  { key: "status", label: "Status", get: (gate) => gate.status || "" },
-  { key: "capacity", label: "Contracted (m3/day)", get: (gate) => gate.specifications?.contracted_capacity ?? "" },
-];
 const isOperational = (gate) => String(gate.status || "").toLowerCase() === "operational";
 const compact = (v) => {
   if (v == null) return "—";
@@ -54,6 +45,7 @@ export default function DemandCityGateList({ basePath = "/demand", onOpenGate })
   const [gateType, setGateType] = useState("");
   const [entity, setEntity] = useState("");
   const [region, setRegion] = useState("");
+  const [exportOpen, setExportOpen] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -95,7 +87,17 @@ export default function DemandCityGateList({ basePath = "/demand", onOpenGate })
     if (onOpenGate) { onOpenGate(gate); return; }
     navigate(`${basePath}/${encodeURIComponent(gate.id)}`);
   };
-  const exportRows = () => downloadCsv("widispatch-city-gates.csv", recordsToCsv(filtered, EXPORT_COLUMNS));
+  // Export: every city gate (the list shows operational ones; the dialog
+  // starts filtered the same way, with this list's search and filters).
+  const exportAssets = useMemo(() => gates.map((gate) => ({ ...gate, category: "handover_point" })), [gates]);
+  const exportFilters = useMemo(() => ({
+    query,
+    statuses: ["operational"],
+    assetTypes: gateType ? [gateType] : [],
+    entities: entity ? [entity] : [],
+    regions: region ? [region] : [],
+  }), [query, gateType, entity, region]);
+  const closeExport = useCallback(() => setExportOpen(false), []);
 
   return (
     <main className="ppl ppl--compact demand-city-gates">
@@ -119,7 +121,7 @@ export default function DemandCityGateList({ basePath = "/demand", onOpenGate })
             <button type="button" className={view === "list" ? "is-active" : ""} onClick={() => setView("list")}><List size={13} /> List</button>
             <button type="button" className={view === "map" ? "is-active" : ""} onClick={() => setView("map")}><MapIcon size={13} /> Map</button>
           </div>
-          <button type="button" className="ppl__toolbar-btn" onClick={exportRows}><Download size={13} /> Export CSV</button>
+          <button type="button" className="ppl__toolbar-btn" onClick={() => setExportOpen(true)} disabled={loading || !gates.length} title="Export to Excel, PDF or CSV"><Download size={13} /> Export</button>
         </header>
 
         {loading && <div className="ppl__state">Loading city gates...</div>}
@@ -159,6 +161,18 @@ export default function DemandCityGateList({ basePath = "/demand", onOpenGate })
           </div>
         )}
       </div>
+      {exportOpen && (
+        <AssetExportDialog
+          assets={exportAssets}
+          initialFilters={exportFilters}
+          onClose={closeExport}
+          title="Demand city gates"
+          noun="city gates"
+          catalog={CITY_GATE_COLUMNS}
+          presets={CITY_GATE_PRESETS}
+          storageKey="demand"
+        />
+      )}
     </main>
   );
 }

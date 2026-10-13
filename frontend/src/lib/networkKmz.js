@@ -45,6 +45,8 @@ export async function exportNetworkToKmz({ nodes = [], edges = [], name = "netwo
   const kml = `<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2"><Document>
   <name>${xml(name)}</name>
+  <description>${xml(`Exported from SWIIMS · Utility Optimo, ${new Date().toISOString().slice(0, 10)}`)}</description>
+  <ExtendedData><Data name="exportedBy"><value>SWIIMS · Utility Optimo</value></Data></ExtendedData>
   <Style id="asset"><IconStyle><scale>0.8</scale></IconStyle></Style>
   <Style id="pipe"><LineStyle><color>ffff7a25</color><width>4</width></LineStyle></Style>
   <Folder><name>Assets</name>${pointPlacemarks}</Folder>

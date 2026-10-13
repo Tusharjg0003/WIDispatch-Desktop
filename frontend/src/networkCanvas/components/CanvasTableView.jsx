@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from "react";
 import { KpiStrip, SegmentedToggle } from "../../components/ui/ControlRoom";
 import { ASSET_CATEGORY_LABELS, buildAssetRows, buildPipeRows, summariseByCategory, yearOptions } from "../lib/canvasTable";
-import { exportSheetsToXlsx, downloadBlob } from "../../lib/xlsxWriter";
+import { exportSheetsToXlsx } from "../../lib/xlsxWriter";
+import { downloadCsv } from "../../lib/exportCsv";
 
 const STATUSES = ["", "operational", "maintenance", "under_construction", "planned", "decommissioned", "inactive"];
 const fmt = (v) => (v == null || v === "" ? "—" : Number(v).toLocaleString());
@@ -78,40 +79,44 @@ export default function CanvasTableView({ cyRef, version, readOnly, networkName,
   });
   const base = `${(networkName || "network").replace(/\s+/g, "_")}_tables_${year}`;
 
+  const reportTitle = (which) => `${networkName || "Network"} — ${which} (${year})`;
+  const tabLabel = tab === "assets" ? "Assets" : "Pipes";
+
   const exportCsv = () => {
-    const rows = sheets()[tab === "assets" ? "Assets" : "Pipes"];
+    const rows = sheets()[tabLabel];
     const cols = rows.length ? Object.keys(rows[0]) : [];
     const text = [cols.map(csvCell).join(","), ...rows.map((r) => cols.map((c) => csvCell(r[c])).join(","))].join("\n");
-    downloadBlob(new Blob([text], { type: "text/csv" }), `${base}_${tab}.csv`);
+    downloadCsv(`${base}_${tab}.csv`, text, { title: reportTitle(tabLabel) });
   };
+  // Branded table (SWIIMS · Utility Optimo, Wtt font for Arabic names).
   const exportPdf = async () => {
-    const { jsPDF } = await import("jspdf");
-    const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
-    const rows = sheets()[tab === "assets" ? "Assets" : "Pipes"];
+    const [{ jsPDF }, { brandPdf, drawPdfFooters, drawPdfHeader, renderPdfTable }, { pdfColumnWidths }] = await Promise.all([
+      import("jspdf"),
+      import("../../lib/exportBranding"),
+      import("../../lib/assetExport"),
+    ]);
+    const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4", compress: true });
+    const kit = await brandPdf(doc);
+    const rows = sheets()[tabLabel];
     const cols = rows.length ? Object.keys(rows[0]) : [];
-    const pageW = doc.internal.pageSize.getWidth();
-    const pageH = doc.internal.pageSize.getHeight();
-    const colW = (pageW - 60) / Math.max(1, cols.length);
-    let y = 44;
-    doc.setFont("helvetica", "bold").setFontSize(14).setTextColor(0, 48, 87).text(`${networkName || "Network"} — ${tab === "assets" ? "Assets" : "Pipes"} (${year})`, 30, y);
-    y += 22;
-    const header = () => {
-      doc.setFont("helvetica", "bold").setFontSize(8).setTextColor(93, 127, 150);
-      cols.forEach((c, i) => doc.text(String(c).slice(0, 22), 30 + i * colW, y));
-      y += 12;
-    };
-    header();
-    doc.setFont("helvetica", "normal").setTextColor(38, 81, 110);
-    rows.forEach((r) => {
-      if (y > pageH - 30) {
-        doc.addPage();
-        y = 40;
-        header();
-        doc.setFont("helvetica", "normal").setTextColor(38, 81, 110);
-      }
-      cols.forEach((c, i) => doc.text(String(r[c] ?? "").slice(0, 28), 30 + i * colW, y));
-      y += 11;
-    });
+    const marginX = 32;
+    const available = doc.internal.pageSize.getWidth() - marginX * 2;
+    const title = reportTitle(tabLabel);
+    let y = drawPdfHeader(doc, kit, { title, marginX, lines: [`${rows.length} ${tabLabel.toLowerCase()} on the canvas`] });
+    if (cols.length) {
+      const text = rows.map((r) => cols.map((c) => (r[c] == null ? "" : typeof r[c] === "number" ? r[c].toLocaleString("en-US") : String(r[c]))));
+      const numeric = cols.map((c) => rows.some((r) => typeof r[c] === "number") && rows.every((r) => r[c] == null || r[c] === "" || typeof r[c] === "number"));
+      doc.setFontSize(8);
+      y = renderPdfTable(doc, kit, {
+        headers: cols,
+        rows: text,
+        widths: pdfColumnWidths(cols.map((c) => ({ label: c })), text, available, { charW: 8 * 0.55 }),
+        numeric,
+        y,
+        marginX,
+      });
+    }
+    drawPdfFooters(doc, kit, { title, marginX });
     doc.save(`${base}_${tab}.pdf`);
   };
 
@@ -142,7 +147,7 @@ export default function CanvasTableView({ cyRef, version, readOnly, networkName,
             {years.map((y) => <option key={y} value={y}>In service {y}</option>)}
           </select>
           <span className="cr-spacer" />
-          <button type="button" className="cr-btn cr-btn--sm" onClick={() => exportSheetsToXlsx(sheets(), base)}>Excel</button>
+          <button type="button" className="cr-btn cr-btn--sm" onClick={() => exportSheetsToXlsx(sheets(), base, { title: `${networkName || "Network"} — tables (${year})` })}>Excel</button>
           <button type="button" className="cr-btn cr-btn--sm" onClick={exportCsv}>CSV</button>
           <button type="button" className="cr-btn cr-btn--sm" onClick={() => void exportPdf()}>PDF</button>
         </div>

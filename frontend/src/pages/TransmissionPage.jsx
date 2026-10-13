@@ -15,8 +15,8 @@ import AssetMapView from "../components/AssetMapView";
 import {
   CircleCheck, Download, Droplets, Gauge, List as ListIcon, Map as MapIcon, Search as SearchIcon,
 } from "lucide-react";
-import { downloadCsv } from "../lib/exportCsv";
-import { recordsToCsv } from "../lib/operatorTables";
+import AssetExportDialog from "../components/AssetExportDialog";
+import { PUMP_STATION_COLUMNS, PUMP_STATION_PRESETS } from "../lib/assetExport";
 import { ENTITY_TYPE_COLORS } from "../cytoscape/buildCyStyle";
 import "./ProductionPage.css";
 import "./ProductionPlantList.css";
@@ -35,18 +35,6 @@ const compactNum = (v) => {
   return Math.round(v).toLocaleString();
 };
 
-const STATION_EXPORT_COLUMNS = [
-  { key: "id", label: "Asset ID", get: (s) => s.external_id || "" },
-  { key: "name", label: "Pump station", get: (s) => s.name || "" },
-  { key: "entity", label: "Entity", get: (s) => s.entity || "" },
-  { key: "region", label: "Region", get: (s) => s.region || "" },
-  { key: "status", label: "Status", get: (s) => s.status || "" },
-  { key: "commissioning", label: "Commissioning", get: (s) => s.commissioning_date || "" },
-  { key: "decommissioning", label: "Decommissioning", get: (s) => s.decommissioning_date || "" },
-  { key: "active", label: "Active pumps", get: (s) => activeFunctionalPumps(s.specifications).length },
-  { key: "standby", label: "Standby pumps", get: (s) => backupPumps(s.specifications).length },
-  { key: "capacity", label: "Design capacity (m3/day)", get: (s) => totalDesignCapacity(s.specifications) },
-];
 
 function Kpi({ icon: Icon, tone = "", colour, label, value, unit, sub }) {
   return (
@@ -147,6 +135,7 @@ export default function TransmissionPage({ mode }) {
   const [entity, setEntity] = useState("");
   const [region, setRegion] = useState("");
   const [view, setView] = useState("list");
+  const [exportOpen, setExportOpen] = useState(false);
   useEffect(() => {
     let alive = true;
     setLoading(true);
@@ -215,7 +204,16 @@ export default function TransmissionPage({ mode }) {
     };
   }, [stations, stationKpis]);
 
-  const exportStations = () => downloadCsv("widispatch-pump-stations.csv", recordsToCsv(filtered, STATION_EXPORT_COLUMNS));
+  // Export: every pump station (the list shows operational ones; the dialog
+  // starts filtered the same way, with this list's search and filters).
+  const exportAssets = useMemo(() => stations.map((station) => ({ ...station, category: "pump" })), [stations]);
+  const exportFilters = useMemo(() => ({
+    query,
+    statuses: ["operational"],
+    entities: entity ? [entity] : [],
+    regions: region ? [region] : [],
+  }), [query, entity, region]);
+  const closeExport = useCallback(() => setExportOpen(false), []);
 
   return (
     <div className="production-shell transmission-shell">
@@ -265,7 +263,7 @@ export default function TransmissionPage({ mode }) {
                   <button type="button" className={view === "list" ? "is-active" : ""} onClick={() => setView("list")}><ListIcon size={13} /> List</button>
                   <button type="button" className={view === "map" ? "is-active" : ""} onClick={() => setView("map")}><MapIcon size={13} /> Map</button>
                 </div>
-                <button type="button" className="ppl__toolbar-btn" onClick={exportStations}><Download size={13} /> Export CSV</button>
+                <button type="button" className="ppl__toolbar-btn" onClick={() => setExportOpen(true)} disabled={loading || !stations.length} title="Export to Excel, PDF or CSV"><Download size={13} /> Export</button>
               </header>
 
               {loading && <div className="ppl__state">Loading pump stations…</div>}
@@ -321,6 +319,18 @@ export default function TransmissionPage({ mode }) {
                 </div>
               )}
             </div>
+            {exportOpen && (
+              <AssetExportDialog
+                assets={exportAssets}
+                initialFilters={exportFilters}
+                onClose={closeExport}
+                title="Pump stations"
+                noun="pump stations"
+                catalog={PUMP_STATION_COLUMNS}
+                presets={PUMP_STATION_PRESETS}
+                storageKey="pump-stations"
+              />
+            )}
             </main>
           )}
         </>
