@@ -28,17 +28,6 @@
 .app-shell .command-palette__state { min-height: 110px; }
 .app-shell .command-palette__footer { gap: 12px; padding: 5px 8px; }
 
-.app-shell .help-drawer__panel { width: min(340px, 94vw); }
-.app-shell .help-drawer__panel > header { min-height: var(--density-overlay-header); padding: 0 8px; }
-.app-shell .help-drawer__panel > header button { width: 24px; height: 24px; }
-.app-shell .help-drawer__content { padding: 8px; }
-.app-shell .help-drawer__content h2 { margin: 3px 0 4px; font-size: var(--density-page-title); }
-.app-shell .help-drawer__content > p:not(.help-drawer__eyebrow) { font-size: 11px; line-height: 1.4; }
-.app-shell .help-drawer__content section { margin-top: 10px; padding-top: 8px; }
-.app-shell .help-drawer__content h3 { margin-bottom: 5px; font-size: var(--density-section-font); }
-.app-shell .help-drawer__content dl > div { padding: 4px 0; }
-.app-shell .help-drawer__content ul { padding-left: 15px; line-height: 1.4; }
-.app-shell .help-drawer__panel > footer { padding: 6px 8px; }
 
 /* Shared controls and workspace primitives ----------------------------- */
 .app-shell .app-content :is(button, input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select) {
