@@ -116,7 +116,9 @@ export default function SimulationConfigPage() {
   // Like the Network Builder, the strip is never empty: with nothing open
   // there is a "New simulation" tab.
   useEffect(() => {
-    if (!tabCount) openNewSimTab();
+    // Read the live strip: on mount the session restore (an earlier effect)
+    // has already filled it, after this render's `tabCount` was taken.
+    if (!simTabStore.getState().order.length) openNewSimTab();
   }, [tabCount]);
 
   const [configs, setConfigs] = useState([]);
@@ -430,6 +432,7 @@ export default function SimulationConfigPage() {
         description: payload?.description || config.description || "",
         nodes: payload?.nodes || [],
         edges: payload?.edges || [],
+        canvas: payload?.canvas ?? null,
       });
       setNetworks((list) => [{ ...savedNetwork, nodeCount: (payload?.nodes || []).length, edgeCount: (payload?.edges || []).length }, ...list]);
       const saved = await updateSimulationConfig(config.id, { ...configBody(config), networkId: savedNetwork.id });

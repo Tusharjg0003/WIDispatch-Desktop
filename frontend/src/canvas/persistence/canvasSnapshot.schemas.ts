@@ -71,6 +71,16 @@ export const WorkspaceInstanceSchema = z.object({
     networkId: z.string().nullable(),
     name: z.string(),
     description: z.string(),
+    canvas: z
+      .object({
+        width: z.number().positive(),
+        height: z.number().positive(),
+        unit: z.enum(["km", "m"]),
+        resolution: z.number().positive(),
+        origin: z.object({ x: z.number(), y: z.number() }),
+      })
+      .nullable()
+      .optional(),
   }),
   ui: WorkspaceUiStateSchema,
   createdAt: z.number(),

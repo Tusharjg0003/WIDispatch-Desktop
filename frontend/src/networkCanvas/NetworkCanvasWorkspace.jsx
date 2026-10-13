@@ -4,7 +4,7 @@ import WorkspaceTabs from "../workspace/components/WorkspaceTabs";
 import TabStripBoundary from "../tabs/components/TabStripBoundary";
 import { workspaceController } from "../workspace/services/workspaceControllerInstance";
 import { useWorkspaceStore, workspaceStore } from "../workspace/store/workspaceStore";
-import { CanvasController, canvasController } from "../canvas/controller/CanvasController";
+import { CanvasController, canvasController, fitRect, rectViewport } from "../canvas/controller/CanvasController";
 import { createEmbeddedWorkspace } from "./embeddedWorkspace";
 import CanvasRibbon from "./components/CanvasRibbon";
 import useCanvasStatus from "./hooks/useCanvasStatus";
@@ -22,6 +22,9 @@ import CapacityRequiredModal from "./modals/CapacityRequiredModal";
 import KmzReviewModal from "./modals/KmzReviewModal";
 import { Keyboard, Map as MapIcon, Maximize2, Minimize2, PanelLeft, PanelRight, RefreshCw, Search, Spline, X } from "lucide-react";
 import CanvasLegend from "./components/CanvasLegend";
+import CanvasSheet from "./components/CanvasSheet";
+import CanvasAreaDialog from "./components/CanvasAreaDialog";
+import { areaRectPx, fitAreaToBounds, normalizeCanvasArea, sameArea } from "../cytoscape/canvasArea.js";
 import SelectionInspector from "./components/SelectionInspector";
 import ValidationPanel from "./components/ValidationPanel";
 import IsolationPanel from "./components/IsolationPanel";
@@ -411,6 +414,14 @@ const serializeGraph = (cy) => ({
   edges: cy.edges().map((e) => ({ data: { ...e.data() } })),
 });
 
+// Where the drawn assets sit (model px), for fitting/guarding the drawing area.
+const nodeBounds = (cy) => {
+  const nodes = cy?.nodes();
+  return nodes && nodes.length ? nodes.boundingBox({ includeLabels: false }) : null;
+};
+
+const nodePoints = (cy) => (cy ? cy.nodes().map((n) => ({ id: n.id(), ...n.position() })) : []);
+
 const elementData = (element) => element?.data || element || {};
 
 const graphPosition = (element, index = 0) => element?.position || {
@@ -624,6 +635,61 @@ export default function NetworkCanvasWorkspace({
   const [entityModal, setEntityModal] = useState({ open: false, type: null, position: null, mode: null, form: null, editId: null });
   const [showLabels, setShowLabels] = useState(true);
   const [showGrid, setShowGrid] = useState(true);
+  // Drawing area: the builder keeps it on the workspace document; an embedded
+  // canvas holds it here and hands it to the host on save.
+  const [controlledArea, setControlledArea] = useState(null);
+  const [areaDialogOpen, setAreaDialogOpen] = useState(false);
+  const area = useMemo(
+    () => normalizeCanvasArea(isBuilder ? activeWorkspace?.document.canvas : controlledArea),
+    [isBuilder, activeWorkspace, controlledArea]
+  );
+  const drawingAreaRef = useRef(area);
+  drawingAreaRef.current = area;
+  // A change to the drawing area is a document edit: it marks the network
+  // unsaved (and, in the builder, lands in the recovery snapshot).
+  const setAreaState = useCallback(
+    (normalized) => {
+      drawingAreaRef.current = normalized;
+      if (isBuilder) {
+        const id = workspaceStore.getState().activeWorkspaceId;
+        if (id) workspaceStore.getState().setCanvasArea(id, normalized);
+      } else {
+        setControlledArea(normalized);
+      }
+      ws.notifyDocumentMutated();
+    },
+    [isBuilder, ws]
+  );
+  // Undo history entries are element snapshots; the area each one was taken
+  // with rides alongside here, so undo/redo restore a resize too.
+  const areaHistoryRef = useRef(new WeakMap());
+  // One undo step: the same elements with the new area.
+  const applyArea = useCallback(
+    (next) => {
+      const normalized = normalizeCanvasArea(next);
+      if (!normalized || sameArea(normalized, drawingAreaRef.current)) return;
+      const h = historyRef.current;
+      const areas = areaHistoryRef.current;
+      if (h.present && !areas.has(h.present) && drawingAreaRef.current) areas.set(h.present, drawingAreaRef.current);
+      setAreaState(normalized);
+      if (h.present !== null) {
+        h.past.push(h.present);
+        if (h.past.length > 80) h.past.shift();
+      }
+      h.present = h.present ? [...h.present] : [];
+      areas.set(h.present, normalized);
+      h.future = [];
+      setHistTick((t) => t + 1);
+    },
+    [setAreaState]
+  );
+  // Stable: the footer's Reset frames whatever the area is at click time.
+  const getSheetRect = useCallback(
+    () => (drawingAreaRef.current ? areaRectPx(drawingAreaRef.current) : null),
+    []
+  );
+  const applyAreaRef = useRef(applyArea);
+  applyAreaRef.current = applyArea;
   const [snapToGrid, setSnapToGrid] = useState(() => {
     try {
       return window.localStorage.getItem(SNAP_TO_GRID_STORAGE_KEY) === "true";
@@ -757,8 +823,14 @@ export default function NetworkCanvasWorkspace({
     const cy = cyRef.current;
     if (!cy) return;
     const h = historyRef.current;
-    if (h.present !== null) h.past.push(h.present);
+    const areas = areaHistoryRef.current;
+    const currentArea = drawingAreaRef.current;
+    if (h.present !== null) {
+      if (!areas.has(h.present) && currentArea) areas.set(h.present, currentArea);
+      h.past.push(h.present);
+    }
     h.present = snapshotElements(cy);
+    if (currentArea) areas.set(h.present, currentArea);
     h.future = [];
     if (h.past.length > 80) h.past.shift();
     setHistTick((t) => t + 1);
@@ -808,14 +880,26 @@ export default function NetworkCanvasWorkspace({
     [syncGraph, syncSelection]
   );
 
+  // Bring the drawing area back to what it was when an entry was taken.
+  const restoreAreaFor = useCallback(
+    (entry) => {
+      const saved = areaHistoryRef.current.get(entry);
+      if (saved && !sameArea(saved, drawingAreaRef.current)) setAreaState(saved);
+    },
+    [setAreaState]
+  );
+
   const handleUndo = useCallback(() => {
     const h = historyRef.current;
     if (!h.past.length) return;
-    h.future.unshift(h.present);
+    const leaving = h.present;
+    if (!areaHistoryRef.current.has(leaving) && drawingAreaRef.current) areaHistoryRef.current.set(leaving, drawingAreaRef.current);
+    h.future.unshift(leaving);
     h.present = h.past.pop();
     restoreEls(h.present);
+    restoreAreaFor(h.present);
     setHistTick((t) => t + 1);
-  }, [restoreEls]);
+  }, [restoreEls, restoreAreaFor]);
 
   const handleRedo = useCallback(() => {
     const h = historyRef.current;
@@ -823,8 +907,9 @@ export default function NetworkCanvasWorkspace({
     h.past.push(h.present);
     h.present = h.future.shift();
     restoreEls(h.present);
+    restoreAreaFor(h.present);
     setHistTick((t) => t + 1);
-  }, [restoreEls]);
+  }, [restoreEls, restoreAreaFor]);
 
   // Create an ad-hoc pipe edge between two nodes. `active` drives the derived
   // `status` (used for the canvas status color band) since the pipe modal has
@@ -1926,7 +2011,10 @@ export default function NetworkCanvasWorkspace({
     const cy = cyRef.current;
     if (!cy) return;
     controller.loadDocument(controlledDocument || { nodes: [], edges: [] });
-    cy.fit(undefined, 48);
+    const loadedArea = normalizeCanvasArea(controlledDocument?.canvas) || fitAreaToBounds(nodeBounds(cy));
+    setControlledArea(loadedArea);
+    if (cy.elements().length) cy.fit(undefined, 48);
+    else fitRect(cy, areaRectPx(loadedArea), 48);
     ws.resetDirty();
     syncGraph();
     resetHistory();
@@ -2368,16 +2456,36 @@ export default function NetworkCanvasWorkspace({
   // ── View ─────────────────────────────────────────────────────────────────────
   const handleFit = useCallback(() => {
     const cy = cyRef.current;
-    if (cy && cy.elements().length) cy.fit(undefined, 48);
+    if (!cy) return;
+    // Fit the drawing together with its sheet (just the sheet when empty).
+    const sheet = drawingAreaRef.current ? areaRectPx(drawingAreaRef.current) : null;
+    const bb = cy.elements().length ? cy.elements().boundingBox() : null;
+    if (!sheet) {
+      if (bb) cy.fit(undefined, 48);
+      return;
+    }
+    const x1 = Math.min(sheet.x1, bb ? bb.x1 : sheet.x1);
+    const y1 = Math.min(sheet.y1, bb ? bb.y1 : sheet.y1);
+    const x2 = Math.max(sheet.x2, bb ? bb.x2 : sheet.x2);
+    const y2 = Math.max(sheet.y2, bb ? bb.y2 : sheet.y2);
+    fitRect(cy, { x1, y1, w: x2 - x1, h: y2 - y1 }, 48);
   }, []);
 
   const handleResetView = useCallback(() => {
     const cy = cyRef.current;
     if (!cy) return;
-    cy.reset();
-    if (cy.elements().length) cy.fit(undefined, 48);
+    // Like the footer's Reset: frame the drawing area exactly.
+    const rect = getSheetRect();
+    const viewport = rect ? rectViewport(cy, rect, 16) : null;
+    cy.stop();
+    if (viewport) {
+      cy.animate(viewport, { duration: 280, easing: "ease-out-quad" });
+    } else {
+      cy.reset();
+      if (cy.elements().length) cy.fit(undefined, 48);
+    }
     setModeSafe("select");
-  }, [setModeSafe]);
+  }, [setModeSafe, getSheetRect]);
 
   const handleZoomToSelection = useCallback(() => {
     const cy = cyRef.current;
@@ -3361,6 +3469,7 @@ export default function NetworkCanvasWorkspace({
           name: network.name || "Simulation Network",
           description: network.description || "",
           force: asNew === "force",
+          canvas: area,
           ...serializeGraph(cy),
         };
         setSaveStatus("saving");
@@ -3391,7 +3500,7 @@ export default function NetworkCanvasWorkspace({
         setToast("Give the network a name before saving.");
         return;
       }
-      const payload = { name, description: network.description || "", ...serializeGraph(cy) };
+      const payload = { name, description: network.description || "", canvas: area, ...serializeGraph(cy) };
       setSaveStatus("saving");
       try {
         const useUpdate = network.id && !asNew;
@@ -3413,7 +3522,7 @@ export default function NetworkCanvasWorkspace({
         setToast(e.message || "Save failed");
       }
     },
-    [network, navigate, isBuilder, readOnly, ws]
+    [network, area, navigate, isBuilder, readOnly, ws]
   );
 
   const handleSave = useCallback(() => persist(false), [persist]);
@@ -3431,9 +3540,9 @@ export default function NetworkCanvasWorkspace({
   const handleExportJSON = useCallback(() => {
     const cy = cyRef.current;
     if (!cy) return;
-    const doc = { name: network.name || "network", description: network.description || "", ...serializeGraph(cy) };
+    const doc = { name: network.name || "network", description: network.description || "", canvas: area, ...serializeGraph(cy) };
     download(`${(network.name || "network").replace(/\s+/g, "_")}.json`, JSON.stringify(doc, null, 2), "application/json");
-  }, [network]);
+  }, [network, area]);
 
   const handleExportCSV = useCallback(() => {
     const cy = cyRef.current;
@@ -3578,6 +3687,7 @@ export default function NetworkCanvasWorkspace({
         controller.loadDocument(doc);
         clearTraceClasses(cy);
         cy.fit(undefined, 48);
+        applyAreaRef.current?.(fitAreaToBounds(nodeBounds(cy)));
         const workspaceId = activeWorkspaceId;
         if (workspaceId) {
           ws.markSaved(workspaceId, { networkId: null, name: doc.name });
@@ -3613,6 +3723,7 @@ export default function NetworkCanvasWorkspace({
           controller.loadDocument(doc);
           clearTraceClasses(cy);
           cy.fit(undefined, 48);
+          applyAreaRef.current?.(normalizeCanvasArea(doc.canvas) || fitAreaToBounds(nodeBounds(cy)));
           // An import becomes a new unsaved document in the active workspace.
           const workspaceId = activeWorkspaceId;
           if (workspaceId) {
@@ -3959,6 +4070,7 @@ export default function NetworkCanvasWorkspace({
     selectedCount,
     saveState,
     trailing: panelToggles,
+    getResetRect: getSheetRect,
   });
 
   // ── Symbol shape (View → Symbol), remembered per browser ─────────────────
@@ -4046,25 +4158,48 @@ export default function NetworkCanvasWorkspace({
     },
     [network.name]
   );
+  // Every delivery point's trace (Tools → Trace report).
+  const allTraceInfos = useCallback(() => {
+    const cy = cyRef.current;
+    if (!cy) return [];
+    const flowByEdge = buildFlowByEdge(cy);
+    return cy
+      .nodes()
+      .filter((n) => MULTI_DELIVERY_TYPES.has(n.data("type")))
+      .map((n) => buildTraceInfo(cy, n.id(), { flowByEdge, mode: traceMode }))
+      .filter(Boolean)
+      .sort((a, b) => a.rootName.localeCompare(b.rootName));
+  }, [traceMode]);
   const handleExportAllTraceability = useCallback(
     (format) => {
-      const cy = cyRef.current;
-      if (!cy) return;
-      const flowByEdge = buildFlowByEdge(cy);
-      const infos = cy
-        .nodes()
-        .filter((n) => MULTI_DELIVERY_TYPES.has(n.data("type")))
-        .map((n) => buildTraceInfo(cy, n.id(), { flowByEdge, mode: traceMode }))
-        .filter(Boolean)
-        .sort((a, b) => a.rootName.localeCompare(b.rootName));
+      const infos = allTraceInfos();
       if (!infos.length) {
         setToast("No delivery points on the canvas to trace.");
         return;
       }
       void exportTraces(infos, format, "traceability_all");
     },
-    [exportTraces, traceMode]
+    [exportTraces, allTraceInfos]
   );
+  // The report window, kept current with the graph while it's open.
+  const [traceReportOpen, setTraceReportOpen] = useState(false);
+  const traceReportInfos = useMemo(
+    () => (traceReportOpen ? allTraceInfos() : []),
+    // histTick moves on every committed graph edit (and undo/redo).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [traceReportOpen, allTraceInfos, histTick, counts.nodes, counts.edges]
+  );
+  const toggleTraceReport = useCallback(() => {
+    if (traceReportOpen) {
+      setTraceReportOpen(false);
+      return;
+    }
+    if (!allTraceInfos().length) {
+      setToast("No delivery points on the canvas to trace.");
+      return;
+    }
+    setTraceReportOpen(true);
+  }, [traceReportOpen, allTraceInfos]);
 
   // ── Geo Anchor panel (View → Geo Anchor; SWIIMS GeoAnchorPanel) ───────────
   const [geoPanelOpen, setGeoPanelOpen] = useState(false);
@@ -4279,6 +4414,7 @@ export default function NetworkCanvasWorkspace({
     editSelected: readOnly ? null : handleEditSelected,
     groupLines: readOnly ? null : handleGroupLines,
     exportTraceability: handleExportAllTraceability,
+    toggleTraceReport,
     toggleGeoPanel: () => setGeoPanelOpen((v) => !v),
     toggleTable: () => setViewMode((v) => (v === "table" ? "schematic" : "table")),
     run: !isBuilder && onRun ? onRun : null,
@@ -4349,6 +4485,7 @@ export default function NetworkCanvasWorkspace({
     setSelectedActive: (state) => (state === "active" ? handleMakeSelectionActive() : handleMakeSelectionInactive()),
     arrange,
     fit: handleFit,
+    editArea: area && !readOnly ? () => setAreaDialogOpen((v) => !v) : null,
     zoomToSelection: handleZoomToSelection,
     toggleLabels: () => setShowLabels((v) => !v),
     toggleGrid: () => setShowGrid((v) => !v),
@@ -4360,6 +4497,7 @@ export default function NetworkCanvasWorkspace({
     toggleFullScreen: handleToggleCanvasFocus,
     resetView: handleResetView,
     exportTraceability: ribbonExtras.exportTraceability,
+    toggleTraceReport: ribbonExtras.toggleTraceReport,
     groupLines: ribbonExtras.groupLines,
     validate: handleValidateNetwork,
     showIssues: handleShowIssues,
@@ -4411,6 +4549,8 @@ export default function NetworkCanvasWorkspace({
       showLabels,
       showGrid,
       snapToGrid,
+      areaDialogOpen,
+      traceReportOpen,
       viewMode,
       geoPanelOpen: ribbonState.geoPanelOpen,
       symbolShape: ribbonState.symbolShape,
@@ -4455,7 +4595,7 @@ export default function NetworkCanvasWorkspace({
     setToolbar, isBuilder, workspaceMode, readOnly, ribbonTab, mode, pendingEntity, saveStatus, canUndo, canRedo,
     hasSelection, hasPipeSelection, hasDeletableSelection, selectedEl, isNoteSel, realNodeCount, counts.edges,
     showLibrary, canvasFocusMode, showInspector, rightPanelTab, shortcutsOpen, findOpen, isolationActive,
-    showLabels, showGrid, snapToGrid, viewMode, ribbonState, histTick, showRibbon, setShowRibbon, focusRibbonOpen,
+    showLabels, showGrid, snapToGrid, areaDialogOpen, traceReportOpen, Boolean(area), viewMode, ribbonState, histTick, showRibbon, setShowRibbon, focusRibbonOpen,
   ]);
 
   useEffect(() => {
@@ -4581,6 +4721,14 @@ export default function NetworkCanvasWorkspace({
           onDragOver={handleLibraryDragOver}
           onDrop={handleLibraryDrop}
         >
+          {viewMode !== "map" && (
+            <CanvasSheet
+              cy={cyReady ? cyRef.current : null}
+              area={area}
+              onEdit={readOnly ? null : () => setAreaDialogOpen(true)}
+              onResize={readOnly ? null : applyArea}
+            />
+          )}
           <div ref={containerRef} className="nb-canvas" />
 
           <AnnotationOverlays api={annotations} readOnly={readOnly} />
@@ -4601,6 +4749,17 @@ export default function NetworkCanvasWorkspace({
               onSet={setGeoAnchor}
               onClear={clearGeoAnchor}
               onClose={() => setGeoPanelOpen(false)}
+            />
+          )}
+
+          {traceReportOpen && traceReportInfos.length > 0 && (
+            <TracePanel
+              variant="report"
+              infos={traceReportInfos}
+              mode={traceMode}
+              onFocus={focusCanvasElement}
+              onClose={() => setTraceReportOpen(false)}
+              onExport={(infos, format) => exportTraces(infos, format, infos.length === 1 ? `trace_${infos[0].rootName}` : "traceability_all")}
             />
           )}
 
@@ -5015,6 +5174,18 @@ export default function NetworkCanvasWorkspace({
             </div>
           </div>
         </div>
+      )}
+
+      {areaDialogOpen && area && (
+        <CanvasAreaDialog
+          area={area}
+          items={nodePoints(cyRef.current)}
+          onCancel={() => setAreaDialogOpen(false)}
+          onApply={(next) => {
+            applyArea(next);
+            setAreaDialogOpen(false);
+          }}
+        />
       )}
 
       {kmzReview && (

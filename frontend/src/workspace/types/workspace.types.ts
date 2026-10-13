@@ -38,11 +38,25 @@ export interface WorkspaceUiState {
   view: WorkspaceViewToggles;
 }
 
+/**
+ * The network's drawing area (see cytoscape/canvasArea.js): `width × height`
+ * real units, `resolution` units per grid square, top-left corner in model px.
+ */
+export interface CanvasArea {
+  width: number;
+  height: number;
+  unit: "km" | "m";
+  resolution: number;
+  origin: { x: number; y: number };
+}
+
 export interface WorkspaceDocumentRef {
   /** Backend network id. `null` means this workspace was never saved. */
   networkId: string | null;
   name: string;
   description: string;
+  /** Saved with the network. Missing until loaded, fitted or set. */
+  canvas?: CanvasArea | null;
 }
 
 export interface WorkspaceInstance {
@@ -104,6 +118,7 @@ export interface CreateWorkspaceOptions {
   name?: string;
   networkId?: string | null;
   description?: string;
+  canvas?: CanvasArea | null;
   ui?: Partial<WorkspaceUiState>;
   dirty?: boolean;
 }
@@ -122,6 +137,7 @@ export const createWorkspaceInstance = (
       networkId: options.networkId ?? null,
       name: options.name ?? "Untitled",
       description: options.description ?? "",
+      canvas: options.canvas ?? null,
     },
     ui: { ...DEFAULT_UI_STATE, ...options.ui },
     createdAt: now,

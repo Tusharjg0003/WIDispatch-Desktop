@@ -42,6 +42,7 @@ import {
   Redo2,
   RotateCcw,
   Route,
+  Ruler,
   Save,
   SaveAll,
   ScanSearch,
@@ -357,9 +358,16 @@ export function buildCanvasRibbon(ctx) {
             rows: [
               [when(cmd.zoomToSelection, { id: "zoom-sel", label: "Zoom to selection", icon: LocateFixed, onClick: cmd.zoomToSelection, keys: "Z", tip: "Zoom in on the selected assets." })],
               [{ id: "area-zoom", label: "Zoom to area", icon: Crosshair, active: modeIs("area-zoom"), onClick: toggleMode("area-zoom"), tip: "Drag a rectangle on the canvas to zoom into it." }],
-              [when(cmd.resetView, { id: "reset-view", label: "Reset view", icon: RotateCcw, onClick: cmd.resetView, tip: "Reset pan, zoom, isolation and trace." })],
+              [when(cmd.resetView, { id: "reset-view", label: "Reset view", icon: RotateCcw, onClick: cmd.resetView, tip: "Zoom to the drawing area." })],
             ],
           },
+        ],
+      },
+      {
+        id: "area",
+        label: "Sheet",
+        columns: [
+          { large: when(cmd.editArea, { id: "drawing-area", label: "Drawing area", icon: Ruler, active: ctx.areaDialogOpen, onClick: cmd.editArea, tip: "Set the drawing area's size in km or m." }) },
         ],
       },
       {
@@ -418,18 +426,14 @@ export function buildCanvasRibbon(ctx) {
         label: "Trace",
         columns: [
           { large: { id: "trace", label: "Trace supply", icon: Workflow, active: modeIs("trace"), disabled: ctx.nodeCount < 1, onClick: toggleMode("trace"), tip: "Click delivery points, plants or tanks to highlight where their water comes from and goes." } },
-          { large: when(cmd.exportTraceability, {
-            type: "menu",
+          { large: when(cmd.toggleTraceReport, {
             id: "trace-report",
             label: "Trace report",
             icon: FileText,
+            active: ctx.traceReportOpen,
             disabled: ctx.nodeCount < 1,
-            tip: "Traceability report for every delivery point.",
-            options: [
-              { value: "pdf", label: "PDF report" },
-              { value: "xlsx", label: "Excel workbook" },
-            ],
-            onSelect: (format) => cmd.exportTraceability(format),
+            onClick: cmd.toggleTraceReport,
+            tip: "Traceability report for every delivery point, with PDF and Excel export.",
           }) },
         ],
       },

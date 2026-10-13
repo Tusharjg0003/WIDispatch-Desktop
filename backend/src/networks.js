@@ -1,4 +1,5 @@
 import { getDb } from "./db.js";
+import { sanitizeCanvasArea } from "./networkCanvasArea.js";
 
 // Persisted network-builder graphs. Each document is a saved canvas: a set of
 // placed asset nodes (with positions + a metadata snapshot) and the pipes/edges
@@ -82,6 +83,8 @@ export async function createNetwork(body = {}) {
     description: body.description ? String(body.description) : "",
     nodes: asArray(body.nodes),
     edges: asArray(body.edges),
+    // The drawing area (size + resolution); older clients send none.
+    canvas: sanitizeCanvasArea(body.canvas),
     createdAt: now,
     updatedAt: now,
   };
@@ -101,6 +104,7 @@ export async function updateNetwork(id, body = {}) {
   if (set.name != null && !set.name) throw badRequest("Network name cannot be empty");
   if (Array.isArray(body.nodes)) set.nodes = body.nodes;
   if (Array.isArray(body.edges)) set.edges = body.edges;
+  if (body.canvas !== undefined) set.canvas = sanitizeCanvasArea(body.canvas);
 
   const result = await db
     .collection(COLLECTION)

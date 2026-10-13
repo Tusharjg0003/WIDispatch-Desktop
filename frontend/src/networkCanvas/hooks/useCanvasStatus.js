@@ -2,10 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Grid3x3, Minus, Plus, RotateCcw } from "lucide-react";
 import { useStatusItems } from "../../components/StatusBar";
 import { nextZoomStop, prevZoomStop } from "../../cytoscape/canvasGeometry";
+import { rectViewport } from "../../canvas/controller/CanvasController";
 
 const MIN_ZOOM = 0.05;
 const MAX_ZOOM = 4;
 const ZOOM_ANIM_MS = 140;
+const RESET_PADDING = 16;
 
 // Canvas status bar, as SWIIMS StatusBar + NetworkSimulation2Page: zoom
 // −/+/reset stepping through ZOOM_STOPS (140ms ease-out, anchored on the
@@ -17,8 +19,8 @@ const NO_TOGGLES = [];
 // `leading` / `trailing` are the panel toggles pinned to the bar's outer
 // edges (see StatusBar). Pass memoised arrays.
 export default function useCanvasStatus({
-  cyRef, cyReady, assetCounts = NO_TOGGLES, selectedCount, saveState,
-  leading = NO_TOGGLES, trailing = NO_TOGGLES,
+  cyRef, cyReady, assetCounts = NO_TOGGLES, selectedCount, saveState, gridLabel = null,
+  leading = NO_TOGGLES, trailing = NO_TOGGLES, getResetRect = null,
 }) {
   const [zoom, setZoom] = useState(1);
 
@@ -66,7 +68,19 @@ export default function useCanvasStatus({
 
   const zoomIn = useCallback(() => zoomToLevel(nextZoomStop(cyRef.current?.zoom() ?? 1)), [zoomToLevel, cyRef]);
   const zoomOut = useCallback(() => zoomToLevel(prevZoomStop(cyRef.current?.zoom() ?? 1)), [zoomToLevel, cyRef]);
-  const zoomReset = useCallback(() => zoomToLevel(1), [zoomToLevel]);
+  // Reset frames the drawing area exactly (a small margin keeps its border
+  // in view); without one it falls back to 100%.
+  const zoomReset = useCallback(() => {
+    const cy = cyRef.current;
+    const rect = getResetRect?.();
+    const viewport = cy && rect ? rectViewport(cy, rect, RESET_PADDING) : null;
+    if (!viewport) {
+      zoomToLevel(1);
+      return;
+    }
+    cy.stop();
+    cy.animate(viewport, { duration: ZOOM_ANIM_MS * 2, easing: "ease-out-quad" });
+  }, [zoomToLevel, cyRef, getResetRect]);
 
   const zoomPercent = Math.round(zoom * 100);
   const items = useMemo(
@@ -80,13 +94,14 @@ export default function useCanvasStatus({
         { id: "zoom-out", group: "Zoom", label: "Zoom out", icon: Minus, title: "Zoom out", onClick: zoomOut },
         { id: "zoom-readout", group: "Zoom", type: "readout", label: `${zoomPercent}%` },
         { id: "zoom-in", group: "Zoom", label: "Zoom in", icon: Plus, title: "Zoom in", onClick: zoomIn },
-        { id: "zoom-reset", label: "Reset", icon: RotateCcw, showLabel: true, title: "Reset zoom to 100%", onClick: zoomReset },
+        { id: "zoom-reset", label: "Reset", icon: RotateCcw, showLabel: true, title: getResetRect ? "Zoom to the drawing area" : "Reset zoom to 100%", onClick: zoomReset },
       ],
-      right: [{ label: "Grid", value: "40m", icon: Grid3x3 }],
+      // What one grid square stands for on the drawing area.
+      right: gridLabel ? [{ label: "Grid", value: gridLabel, icon: Grid3x3 }] : [],
       leading,
       trailing,
     }),
-    [assetCounts, saveState.label, saveState.tone, selectedCount, zoomPercent, zoomIn, zoomOut, zoomReset, leading, trailing]
+    [assetCounts, saveState.label, saveState.tone, selectedCount, gridLabel, zoomPercent, zoomIn, zoomOut, zoomReset, getResetRect, leading, trailing]
   );
   useStatusItems(items);
 

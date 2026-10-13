@@ -26,6 +26,7 @@ import type { CanvasRepository } from "../../canvas/persistence/CanvasRepository
 import type { CanvasSnapshot } from "../../canvas/persistence/canvasSnapshot.types.ts";
 import { SNAPSHOT_VERSION } from "../../canvas/persistence/canvasSnapshot.types.ts";
 import type { WorkspaceInstance } from "../types/workspace.types.ts";
+import { areaRectPx, fitAreaToBounds, normalizeCanvasArea } from "../../cytoscape/canvasArea.js";
 
 const RECOVERY_DEBOUNCE_MS = 750;
 
@@ -195,10 +196,14 @@ export class WorkspaceController {
       }
     }
 
+    this.#resolveCanvasArea(nextId, doc, loadError);
+
     const next = workspaceStore.getState().instances[nextId];
     if (!next) return;
 
-    this.#canvas.restoreViewport(next.ui.viewport);
+    // A document seen for the first time with nothing drawn yet opens on its sheet.
+    const sheet = next.document.canvas ? areaRectPx(next.document.canvas) : null;
+    this.#canvas.restoreViewport(next.ui.viewport, sheet);
     // After the restore: the asset filter applies classes to elements that
     // must already exist.
     this.#viewBridge?.apply(next.ui.view ?? DEFAULT_VIEW_TOGGLES);
@@ -338,6 +343,26 @@ export class WorkspaceController {
     await this.#persistSession();
   }
 
+  /**
+   * The drawing area: the loaded network's own, else the one this workspace
+   * already has; a network saved before areas existed gets one fitted around
+   * its drawing (an unsaved change, so the next save keeps it).
+   */
+  #resolveCanvasArea(id: string, doc: unknown, loadError: boolean): void {
+    const store = workspaceStore.getState();
+    const workspace = store.instances[id];
+    if (!workspace) return;
+    const fromDoc = doc && !loadError ? normalizeCanvasArea((doc as { canvas?: unknown }).canvas) : null;
+    if (fromDoc) {
+      store.setCanvasArea(id, fromDoc, { dirty: false });
+      return;
+    }
+    if (normalizeCanvasArea(workspace.document.canvas)) return;
+    const nodes = this.#canvas.getCy()?.nodes();
+    const bounds = nodes && nodes.length ? nodes.boundingBox({ includeLabels: false } as never) : null;
+    store.setCanvasArea(id, fitAreaToBounds(bounds), { dirty: Boolean(bounds) && !loadError });
+  }
+
   async duplicateWorkspace(id: string): Promise<string | null> {
     const store = workspaceStore.getState();
     const source = store.instances[id];
@@ -352,6 +377,7 @@ export class WorkspaceController {
       // same backend record.
       networkId: null,
       description: source.document.description,
+      canvas: source.document.canvas ?? null,
       ui: { ...source.ui, selectedElementIds: [] },
       dirty: true,
     });

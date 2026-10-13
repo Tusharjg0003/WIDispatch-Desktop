@@ -1,0 +1,165 @@
+/* Drawing area: sits between the grid (the wrapper's background) and the
+   graph (.nb-canvas, later in the DOM at the same z-index). The outside is
+   washed back to the canvas colour, so the grid reads only on the sheet. */
+.nb-sheet-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.nb-sheet {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  border: 1px solid color-mix(in srgb, var(--acc) 55%, transparent);
+  border-radius: 2px;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--acc) 12%, transparent),
+    0 0 0 200vmax color-mix(in srgb, var(--surface-subtle) 74%, transparent);
+}
+
+.nb-sheet__label {
+  position: absolute;
+  bottom: 100%;
+  left: -1px;
+  margin-bottom: 4px;
+  color: var(--tx2);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Bottom-left readout: scale bar, area size, off-sheet count. */
+.nb-sheet-hud {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.nb-scalebar,
+.nb-sheet-hud__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.nb-scalebar__bar {
+  height: 6px;
+  border: 1.5px solid var(--ink);
+  border-top: 0;
+}
+
+.nb-scalebar__label {
+  font-variant-numeric: tabular-nums;
+}
+
+.nb-sheet-hud__btn {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.nb-sheet-hud__btn:hover {
+  border-color: color-mix(in srgb, var(--acc) 45%, var(--line));
+}
+
+.nb-sheet-hud__btn--warn {
+  border-color: color-mix(in srgb, var(--warn) 50%, var(--line));
+  color: var(--warn);
+}
+
+/* Resize handles: above the graph, but only the thin edge strips and corner
+   squares take the pointer. Corners show while the frame is hovered. */
+.nb-sheet-handles {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.nb-sheet-handles__frame {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.nb-sheet-handle {
+  position: absolute;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+/* Edges: an 8px strip centred on the border. */
+.nb-sheet-handle--n,
+.nb-sheet-handle--s { left: 6px; right: 6px; height: 8px; cursor: ns-resize; }
+.nb-sheet-handle--e,
+.nb-sheet-handle--w { top: 6px; bottom: 6px; width: 8px; cursor: ew-resize; }
+.nb-sheet-handle--n { top: -4px; }
+.nb-sheet-handle--s { bottom: -4px; }
+.nb-sheet-handle--e { right: -4px; }
+.nb-sheet-handle--w { left: -4px; }
+
+.nb-sheet-handle--n:hover,
+.nb-sheet-handle--s:hover,
+.nb-sheet-handle--e:hover,
+.nb-sheet-handle--w:hover {
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--acc) 22%, transparent);
+}
+
+/* Corners: small squares. */
+.nb-sheet-handle--ne,
+.nb-sheet-handle--se,
+.nb-sheet-handle--sw,
+.nb-sheet-handle--nw {
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--acc);
+  border-radius: 2px;
+  background: var(--panel);
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.nb-sheet-handle--ne { top: -5px; right: -5px; cursor: nesw-resize; }
+.nb-sheet-handle--sw { bottom: -5px; left: -5px; cursor: nesw-resize; }
+.nb-sheet-handle--se { bottom: -5px; right: -5px; cursor: nwse-resize; }
+.nb-sheet-handle--nw { top: -5px; left: -5px; cursor: nwse-resize; }
+
+.nb-sheet-handles__frame:hover .nb-sheet-handle,
+.nb-sheet-handles--dragging .nb-sheet-handle {
+  opacity: 1;
+}
+
+/* Live size beside the pointer while dragging. */
+.nb-sheet-handles__size {
+  position: absolute;
+  padding: 3px 7px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}

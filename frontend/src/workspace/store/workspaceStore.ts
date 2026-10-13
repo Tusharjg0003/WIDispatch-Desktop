@@ -17,6 +17,7 @@ import {
   DEFAULT_UI_STATE,
 } from "../types/workspace.types.ts";
 import type {
+  CanvasArea,
   ClosedWorkspace,
   CreateWorkspaceOptions,
   WorkspaceInstance,
@@ -47,6 +48,8 @@ export interface WorkspaceStoreState {
   renameWorkspace(id: string, name: string): void;
   markDirty(id: string): void;
   adoptDocumentIdentity(id: string, patch: { name: string; description: string }): void;
+  /** Set the drawing area; `dirty` when it is a change the network should save. */
+  setCanvasArea(id: string, area: CanvasArea | null, options?: { dirty?: boolean }): void;
   markSaved(id: string, patch: { networkId?: string | null; name?: string }): void;
   setLoadError(id: string, loadError: boolean): void;
   updateWorkspaceUI(id: string, patch: Partial<WorkspaceUiState>): void;
@@ -139,6 +142,18 @@ export const workspaceStore = createStore<WorkspaceStoreState>((set, get) => ({
         workspace.document.description = patch.description;
         // Naming a workspace after the document it just loaded is not an edit
         // to that document, so dirty is deliberately untouched.
+      })
+    );
+  },
+
+  setCanvasArea(id, area, { dirty = true } = {}) {
+    set(
+      produce((state: WorkspaceStoreState) => {
+        const workspace = state.instances[id];
+        if (!workspace) return;
+        workspace.document.canvas = area;
+        if (dirty) workspace.dirty = true;
+        touch(workspace);
       })
     );
   },

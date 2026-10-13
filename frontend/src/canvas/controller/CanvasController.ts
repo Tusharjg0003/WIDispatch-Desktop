@@ -16,6 +16,38 @@ import { SNAPSHOT_VERSION } from "../persistence/canvasSnapshot.types.ts";
 import type { CanvasSnapshot } from "../persistence/canvasSnapshot.types.ts";
 import type { CanvasViewport } from "../../workspace/types/workspace.types.ts";
 
+export interface SheetRect {
+  x1: number;
+  y1: number;
+  w: number;
+  h: number;
+}
+
+/** The zoom/pan that makes a model-space rectangle fill the view, centred. */
+export const rectViewport = (
+  cy: cytoscape.Core,
+  rect: SheetRect,
+  padding = 0
+): { zoom: number; pan: { x: number; y: number } } | null => {
+  const width = cy.width() - 2 * padding;
+  const height = cy.height() - 2 * padding;
+  if (width <= 0 || height <= 0 || rect.w <= 0 || rect.h <= 0) return null;
+  const zoom = Math.min(cy.maxZoom(), Math.max(cy.minZoom(), Math.min(width / rect.w, height / rect.h)));
+  return {
+    zoom,
+    pan: {
+      x: (cy.width() - rect.w * zoom) / 2 - rect.x1 * zoom,
+      y: (cy.height() - rect.h * zoom) / 2 - rect.y1 * zoom,
+    },
+  };
+};
+
+/** Zoom/pan so a model-space rectangle fills the view (cy.fit only takes elements). */
+export const fitRect = (cy: cytoscape.Core, rect: SheetRect, padding = 0): void => {
+  const viewport = rectViewport(cy, rect, padding);
+  if (viewport) cy.viewport(viewport);
+};
+
 export interface CanvasControllerApi {
   initialize(container: HTMLElement): cytoscape.Core;
   destroy(): void;
@@ -28,7 +60,8 @@ export interface CanvasControllerApi {
   clear(): void;
 
   getViewport(): CanvasViewport | null;
-  restoreViewport(viewport: CanvasViewport | null): void;
+  /** `sheet` (model px) is fitted instead when there is no viewport and nothing drawn. */
+  restoreViewport(viewport: CanvasViewport | null, sheet?: SheetRect | null): void;
 
   getSelectedIds(): string[];
   restoreSelection(ids: string[]): void;
@@ -155,12 +188,13 @@ export class CanvasController implements CanvasControllerApi {
     return { zoom: this.#cy.zoom(), pan: { x: pan.x, y: pan.y } };
   }
 
-  restoreViewport(viewport: CanvasViewport | null): void {
+  restoreViewport(viewport: CanvasViewport | null, sheet: SheetRect | null = null): void {
     const cy = this.#cy;
     if (!cy) return;
     if (!viewport) {
       // No stored viewport means a document being seen for the first time.
-      cy.fit(undefined, 48);
+      if (cy.elements().length || !sheet) cy.fit(undefined, 48);
+      else fitRect(cy, sheet, 48);
       return;
     }
     cy.viewport({ zoom: viewport.zoom, pan: viewport.pan });

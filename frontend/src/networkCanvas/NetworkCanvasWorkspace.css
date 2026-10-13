@@ -1586,6 +1586,19 @@ body.is-resizing-sidebar * {
   box-shadow: 0 14px 36px rgba(15, 23, 42, 0.28);
 }
 .nb-trace-float { top: 10px; left: 10px; width: 340px; overflow: hidden; }
+/* Trace panel in a FloatingPanel: the count + exports bar under its title. */
+.nb-trace-fp__bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+  font-size: 12px;
+}
+.nb-trace-fp__bar button { flex: none; }
+.nb-trace-fp__bar .cr-count { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nb-trace-fp .nb-trace-float__body { display: flex; flex-direction: column; }
 .nb-trace-float__head,
 .nb-geo-panel__head {
   display: flex;

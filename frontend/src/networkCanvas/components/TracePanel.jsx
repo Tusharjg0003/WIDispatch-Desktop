@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { ChevronDown, ChevronRight, X } from "lucide-react";
+import FloatingPanel from "../../components/FloatingPanel";
 import { traceEndpointSections } from "../../cytoscape/multiTrace";
 import { ENTITY_TYPE_LABELS } from "../../cytoscape/buildCyStyle";
 
@@ -12,24 +13,50 @@ const fmtFlow = (v) => {
   return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(Math.round(n));
 };
 
+// Opens at the canvas's top-left, just below its hint ("Trace HP — click a
+// handover point…") so it doesn't cover it. Used when there's no remembered spot.
+const belowCanvasHint = (width) => {
+  const canvas = document.querySelector(".nb-canvas-wrap");
+  if (!canvas) return { x: (window.innerWidth - width) / 2, y: 72 };
+  const box = canvas.getBoundingClientRect();
+  const hint = canvas.querySelector(":scope > .nb-mode-banner")?.getBoundingClientRect();
+  return { x: box.left + 10, y: (hint ? hint.bottom : box.top) + 10 };
+};
+
 // Floating "Flow traces" panel (SWIIMS trace panel): one card per traced root
 // with its direction, counts, endpoints and direct neighbours, plus per-trace
-// and all-traces PDF / Excel export.
-export default function TracePanel({ infos, mode, onFocus, onRemove, onClear, onExport }) {
+// and all-traces PDF / Excel export. A FloatingPanel like the canvas's other
+// windows: drag it anywhere on screen, or pop it out into its own window.
+// Closing it clears the traces.
+//
+// The same window, as `variant="report"`, is Tools → Trace report: every
+// delivery point's trace, read-only (no Clear / per-trace ×), closing just
+// hides it, and it opens at the canvas's top-right by default.
+export default function TracePanel({ infos, mode, onFocus, onRemove, onClear, onExport, onClose, variant = "traces" }) {
   const [collapsed, setCollapsed] = useState(false);
+  const report = variant === "report";
+  const noun = report ? "delivery point" : "root";
+
   return (
-    <section className="nb-trace-float" aria-label="Flow traces">
-      <header className="nb-trace-float__head">
-        <strong>Flow traces</strong>
-        <span className="cr-count">{infos.length} root{infos.length === 1 ? "" : "s"} · {mode === "delivered" ? "delivered" : "reachable"}</span>
+    <FloatingPanel
+      title={report ? "Traceability report" : "Flow traces"}
+      onClose={report ? onClose : onClear}
+      storageKey={report ? "trace-report" : "trace-panel"}
+      width={400}
+      className="nb-trace-fp"
+      defaultPosition={report ? undefined : belowCanvasHint}
+      autoFocus={false}
+    >
+      <div className="nb-trace-fp__bar">
+        <span className="cr-count">{infos.length} {noun}{infos.length === 1 ? "" : "s"} · {mode === "delivered" ? "delivered" : "reachable"}</span>
         <span className="cr-spacer" />
-        <button type="button" className="cr-btn cr-btn--sm" onClick={() => onExport(infos, "pdf")} title="Export these traces as PDF">PDF</button>
-        <button type="button" className="cr-btn cr-btn--sm" onClick={() => onExport(infos, "xlsx")} title="Export these traces as Excel">Excel</button>
-        <button type="button" className="cr-btn cr-btn--sm" onClick={onClear}>Clear</button>
+        <button type="button" className="cr-btn cr-btn--sm" onClick={() => onExport(infos, "pdf")} title={report ? "The whole report as PDF" : "Export these traces as PDF"}>PDF</button>
+        <button type="button" className="cr-btn cr-btn--sm" onClick={() => onExport(infos, "xlsx")} title={report ? "The whole report as an Excel workbook" : "Export these traces as Excel"}>Excel</button>
+        {onClear && <button type="button" className="cr-btn cr-btn--sm" onClick={onClear}>Clear</button>}
         <button type="button" className="cr-btn cr-btn--sm cr-btn--icon" onClick={() => setCollapsed((v) => !v)} aria-label={collapsed ? "Expand" : "Collapse"}>
           {collapsed ? <ChevronRight size={14} aria-hidden="true" /> : <ChevronDown size={14} aria-hidden="true" />}
         </button>
-      </header>
+      </div>
       {!collapsed && (
         <div className="nb-trace-float__body">
           <div className="nb-trace-legend">
@@ -45,7 +72,7 @@ export default function TracePanel({ infos, mode, onFocus, onRemove, onClear, on
                 <span className="cr-spacer" />
                 <button type="button" className="cr-btn cr-btn--sm" onClick={() => onExport([info], "pdf")} title="This trace as PDF">PDF</button>
                 <button type="button" className="cr-btn cr-btn--sm" onClick={() => onExport([info], "xlsx")} title="This trace as Excel">XLS</button>
-                <button type="button" className="cr-btn cr-btn--sm cr-btn--icon" onClick={() => onRemove(info.rootId)} aria-label={`Stop tracing ${info.rootName}`}><X size={13} aria-hidden="true" /></button>
+                {onRemove && <button type="button" className="cr-btn cr-btn--sm cr-btn--icon" onClick={() => onRemove(info.rootId)} aria-label={`Stop tracing ${info.rootName}`}><X size={13} aria-hidden="true" /></button>}
               </div>
               <div className="nb-trace-card__meta">
                 {typeLabel(info.rootType)} · {info.upCount} upstream · {info.downCount} downstream
@@ -86,6 +113,6 @@ export default function TracePanel({ infos, mode, onFocus, onRemove, onClear, on
           ))}
         </div>
       )}
-    </section>
+    </FloatingPanel>
   );
 }

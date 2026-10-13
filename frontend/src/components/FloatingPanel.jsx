@@ -91,11 +91,15 @@ export default function FloatingPanel({
   storageKey,
   width = 560,
   className = "",
+  // Where it opens when it has no remembered spot: (width) => { x, y }.
+  defaultPosition = defaultPos,
+  // Panels that only report (not forms) leave focus on the canvas.
+  autoFocus = true,
   children,
 }) {
   const panelRef = useRef(null);
   const dragRef = useRef(null);
-  const [pos, setPos] = useState(() => clamp(readPos(storageKey) || defaultPos(width), width));
+  const [pos, setPos] = useState(() => clamp(readPos(storageKey) || (defaultPosition || defaultPos)(width), width));
   const [popout, setPopout] = useState(null); // { win, container }
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
@@ -204,7 +208,7 @@ export default function FloatingPanel({
   // ── Focus & Esc ───────────────────────────────────────────────────────────
   useLayoutEffect(() => {
     const root = panelRef.current;
-    if (!root || root.contains(root.ownerDocument.activeElement)) return;
+    if (!autoFocus || !root || root.contains(root.ownerDocument.activeElement)) return;
     const first = root.querySelector("[autofocus], input:not([type=hidden]), select, textarea, button:not(.fp__icon-btn)");
     first?.focus();
   }, [popout]);
